@@ -1,0 +1,18 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.GetMeUseCase = void 0;
+const errors_1 = require("@shared/errors");
+class GetMeUseCase {
+    userRepo;
+    constructor(userRepo) {
+        this.userRepo = userRepo;
+    }
+    async execute(uid) {
+        const user = await this.userRepo.findById(uid);
+        if (!user)
+            throw (0, errors_1.createHttpError)(404, 'USER_NOT_FOUND', 'User not found.');
+        return user;
+    }
+}
+exports.GetMeUseCase = GetMeUseCase;
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiQzovVXNlcnMvQXN1cy9EZXNrdG9wL0NNUy9wYWNrYWdlcy91c2VyLXNlcnZpY2Uvc3JjL2FwcGxpY2F0aW9uL3VzZS1jYXNlcy9HZXRNZVVzZUNhc2UudHMiLCJzb3VyY2VzIjpbIkM6L1VzZXJzL0FzdXMvRGVza3RvcC9DTVMvcGFja2FnZXMvdXNlci1zZXJ2aWNlL3NyYy9hcHBsaWNhdGlvbi91c2UtY2FzZXMvR2V0TWVVc2VDYXNlLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7OztBQUFBLDJDQUFrRDtBQUlsRCxNQUFhLFlBQVk7SUFDTTtJQUE3QixZQUE2QixRQUF5QjtRQUF6QixhQUFRLEdBQVIsUUFBUSxDQUFpQjtJQUFHLENBQUM7SUFFMUQsS0FBSyxDQUFDLE9BQU8sQ0FBQyxHQUFXO1FBQ3ZCLE1BQU0sSUFBSSxHQUFHLE1BQU0sSUFBSSxDQUFDLFFBQVEsQ0FBQyxRQUFRLENBQUMsR0FBRyxDQUFDLENBQUM7UUFDL0MsSUFBSSxDQUFDLElBQUk7WUFBRSxNQUFNLElBQUEsd0JBQWUsRUFBQyxHQUFHLEVBQUUsZ0JBQWdCLEVBQUUsaUJBQWlCLENBQUMsQ0FBQztRQUMzRSxPQUFPLElBQUksQ0FBQztJQUNkLENBQUM7Q0FDRjtBQVJELG9DQVFDIiwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IHsgY3JlYXRlSHR0cEVycm9yIH0gIGZyb20gJ0BzaGFyZWQvZXJyb3JzJztcbmltcG9ydCB7IElVc2VyUmVwb3NpdG9yeSB9ICBmcm9tICcuLi8uLi9kb21haW4vcmVwb3NpdG9yaWVzL0lVc2VyUmVwb3NpdG9yeSc7XG5pbXBvcnQgeyBVc2VyIH0gICAgICAgICAgICAgZnJvbSAnLi4vLi4vZG9tYWluL2VudGl0aWVzL1VzZXInO1xuXG5leHBvcnQgY2xhc3MgR2V0TWVVc2VDYXNlIHtcbiAgY29uc3RydWN0b3IocHJpdmF0ZSByZWFkb25seSB1c2VyUmVwbzogSVVzZXJSZXBvc2l0b3J5KSB7fVxuXG4gIGFzeW5jIGV4ZWN1dGUodWlkOiBzdHJpbmcpOiBQcm9taXNlPFVzZXI+IHtcbiAgICBjb25zdCB1c2VyID0gYXdhaXQgdGhpcy51c2VyUmVwby5maW5kQnlJZCh1aWQpO1xuICAgIGlmICghdXNlcikgdGhyb3cgY3JlYXRlSHR0cEVycm9yKDQwNCwgJ1VTRVJfTk9UX0ZPVU5EJywgJ1VzZXIgbm90IGZvdW5kLicpO1xuICAgIHJldHVybiB1c2VyO1xuICB9XG59XG4iXX0=

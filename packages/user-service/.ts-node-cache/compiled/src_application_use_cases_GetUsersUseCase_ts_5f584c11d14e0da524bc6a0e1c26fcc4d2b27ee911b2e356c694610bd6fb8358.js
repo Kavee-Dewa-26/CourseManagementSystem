@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.GetUsersUseCase = void 0;
+class GetUsersUseCase {
+    userRepo;
+    constructor(userRepo) {
+        this.userRepo = userRepo;
+    }
+    async execute(opts) {
+        return this.userRepo.findAll(opts);
+    }
+}
+exports.GetUsersUseCase = GetUsersUseCase;
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiQzovVXNlcnMvQXN1cy9EZXNrdG9wL0NNUy9wYWNrYWdlcy91c2VyLXNlcnZpY2Uvc3JjL2FwcGxpY2F0aW9uL3VzZS1jYXNlcy9HZXRVc2Vyc1VzZUNhc2UudHMiLCJzb3VyY2VzIjpbIkM6L1VzZXJzL0FzdXMvRGVza3RvcC9DTVMvcGFja2FnZXMvdXNlci1zZXJ2aWNlL3NyYy9hcHBsaWNhdGlvbi91c2UtY2FzZXMvR2V0VXNlcnNVc2VDYXNlLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7OztBQUVBLE1BQWEsZUFBZTtJQUNHO0lBQTdCLFlBQTZCLFFBQXlCO1FBQXpCLGFBQVEsR0FBUixRQUFRLENBQWlCO0lBQUcsQ0FBQztJQUUxRCxLQUFLLENBQUMsT0FBTyxDQUFDLElBQW9CO1FBQ2hDLE9BQU8sSUFBSSxDQUFDLFFBQVEsQ0FBQyxPQUFPLENBQUMsSUFBSSxDQUFDLENBQUM7SUFDckMsQ0FBQztDQUNGO0FBTkQsMENBTUMiLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgeyBJVXNlclJlcG9zaXRvcnksIEZpbmRBbGxPcHRpb25zLCBGaW5kQWxsUmVzdWx0IH0gZnJvbSAnLi4vLi4vZG9tYWluL3JlcG9zaXRvcmllcy9JVXNlclJlcG9zaXRvcnknO1xuXG5leHBvcnQgY2xhc3MgR2V0VXNlcnNVc2VDYXNlIHtcbiAgY29uc3RydWN0b3IocHJpdmF0ZSByZWFkb25seSB1c2VyUmVwbzogSVVzZXJSZXBvc2l0b3J5KSB7fVxuXG4gIGFzeW5jIGV4ZWN1dGUob3B0czogRmluZEFsbE9wdGlvbnMpOiBQcm9taXNlPEZpbmRBbGxSZXN1bHQ+IHtcbiAgICByZXR1cm4gdGhpcy51c2VyUmVwby5maW5kQWxsKG9wdHMpO1xuICB9XG59XG4iXX0=

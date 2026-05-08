@@ -1,0 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CheckEmailExistsUseCase = void 0;
+class CheckEmailExistsUseCase {
+    userRepo;
+    constructor(userRepo) {
+        this.userRepo = userRepo;
+    }
+    async execute(email) {
+        const user = await this.userRepo.findByEmail(email);
+        return { exists: user !== null };
+    }
+}
+exports.CheckEmailExistsUseCase = CheckEmailExistsUseCase;
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiQzovVXNlcnMvQXN1cy9EZXNrdG9wL0NNUy9wYWNrYWdlcy91c2VyLXNlcnZpY2Uvc3JjL2FwcGxpY2F0aW9uL3VzZS1jYXNlcy9DaGVja0VtYWlsRXhpc3RzVXNlQ2FzZS50cyIsInNvdXJjZXMiOlsiQzovVXNlcnMvQXN1cy9EZXNrdG9wL0NNUy9wYWNrYWdlcy91c2VyLXNlcnZpY2Uvc3JjL2FwcGxpY2F0aW9uL3VzZS1jYXNlcy9DaGVja0VtYWlsRXhpc3RzVXNlQ2FzZS50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOzs7QUFFQSxNQUFhLHVCQUF1QjtJQUNMO0lBQTdCLFlBQTZCLFFBQXlCO1FBQXpCLGFBQVEsR0FBUixRQUFRLENBQWlCO0lBQUcsQ0FBQztJQUUxRCxLQUFLLENBQUMsT0FBTyxDQUFDLEtBQWE7UUFDekIsTUFBTSxJQUFJLEdBQUcsTUFBTSxJQUFJLENBQUMsUUFBUSxDQUFDLFdBQVcsQ0FBQyxLQUFLLENBQUMsQ0FBQztRQUNwRCxPQUFPLEVBQUUsTUFBTSxFQUFFLElBQUksS0FBSyxJQUFJLEVBQUUsQ0FBQztJQUNuQyxDQUFDO0NBQ0Y7QUFQRCwwREFPQyIsInNvdXJjZXNDb250ZW50IjpbImltcG9ydCB7IElVc2VyUmVwb3NpdG9yeSB9IGZyb20gJy4uLy4uL2RvbWFpbi9yZXBvc2l0b3JpZXMvSVVzZXJSZXBvc2l0b3J5JztcblxuZXhwb3J0IGNsYXNzIENoZWNrRW1haWxFeGlzdHNVc2VDYXNlIHtcbiAgY29uc3RydWN0b3IocHJpdmF0ZSByZWFkb25seSB1c2VyUmVwbzogSVVzZXJSZXBvc2l0b3J5KSB7fVxuXG4gIGFzeW5jIGV4ZWN1dGUoZW1haWw6IHN0cmluZyk6IFByb21pc2U8eyBleGlzdHM6IGJvb2xlYW4gfT4ge1xuICAgIGNvbnN0IHVzZXIgPSBhd2FpdCB0aGlzLnVzZXJSZXBvLmZpbmRCeUVtYWlsKGVtYWlsKTtcbiAgICByZXR1cm4geyBleGlzdHM6IHVzZXIgIT09IG51bGwgfTtcbiAgfVxufVxuIl19
