@@ -1,0 +1,22 @@
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json tsconfig.base.json ./
+COPY packages/shared ./packages/shared
+COPY packages/enrollment-service/package.json ./packages/enrollment-service/package.json
+COPY packages/enrollment-service/tsconfig.json ./packages/enrollment-service/tsconfig.json
+RUN npm install --workspace=packages/shared/firebase --workspace=packages/shared/logger \
+    --workspace=packages/shared/errors --workspace=packages/shared/auth-middleware \
+    --workspace=packages/shared/events --workspace=packages/shared/internal-http-client \
+    --workspace=packages/shared/response --workspace=packages/shared/health \
+    --workspace=packages/enrollment-service
+COPY packages/enrollment-service/src ./packages/enrollment-service/src
+RUN npm run build --workspace=packages/enrollment-service
+
+FROM node:20-alpine
+WORKDIR /app
+COPY --from=builder /app/packages/enrollment-service/dist ./dist
+COPY --from=builder /app/packages/shared ./packages/shared
+COPY --from=builder /app/node_modules ./node_modules
+ENV NODE_ENV=production
+EXPOSE 3004
+CMD ["node", "dist/server.js"]

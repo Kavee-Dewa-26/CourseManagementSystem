@@ -40,6 +40,9 @@ npm run test
 # Run integration tests (requires Firebase emulators running)
 npm run test:integration
 
+# Run a single integration test file
+npx jest --config jest.integration.config.ts packages/user-service/tests/integration/GetUserUseCase.test.ts
+
 # Run E2E tests (requires all services running via Docker Compose)
 npm run test:e2e
 
@@ -104,6 +107,14 @@ Controllers are thin — they call one use case and delegate errors with `next(e
 | `@shared/firebase` | `initFirebaseAdmin()` (idempotent) |
 | `@shared/tracing` | `initTracing(serviceName)` |
 
+### TypeScript Path Aliases
+
+`tsconfig.base.json` defines two alias groups:
+- `@shared/*` → each shared package (e.g. `@shared/errors` → `packages/shared/errors/src`)
+- `@/*` → `src/*` within the current service (intra-service imports only)
+
+Both are also mapped in `jest.config.ts` so tests resolve them without compilation.
+
 ### Dependency Injection
 
 Manual constructor injection via a `container.ts` file per service. No DI framework. Repositories are instantiated first, then use cases, then controllers.
@@ -133,6 +144,10 @@ Manual constructor injection via a `container.ts` file per service. No DI framew
 | 415 | Invalid attachment MIME type |
 | 422 | Business rule violation (e.g., publish course with no subjects) |
 | 429 | Rate limit exceeded |
+
+### Logging
+
+Never use `console.*` — the ESLint config treats it as an error. Use `logger` from `@shared/logger` (Pino). Sensitive fields (`authorization`, `password`, `token`, `idToken`) are redacted automatically. Register `httpLogger` in `app.ts` for request/response logging.
 
 ### Error Handling
 
@@ -212,7 +227,52 @@ ALLOWED_ORIGINS                         # comma-separated CORS allowlist
 - **E2E tests** — Supertest + all services running. File pattern: `tests/e2e/*.test.ts`.
 - **Firestore Security Rules** — `@firebase/rules-unit-testing`. Verify that client-side writes to `audit_log` are denied and that each service's collections enforce expected rules.
 
-Use `jest.clearAllMocks()` in `beforeEach` to prevent test bleed. Integration tests require `npx firebase emulators:start --only firestore,auth,storage` to be running first.
+Use `jest.clearAllMocks()` in `beforeEach` to prevent test bleed. Integration tests require `npx firebase emulators:start --only firestore,auth,storage` to be running first (Firestore :8080, Auth :9099, Storage :9199).
+
+Coverage thresholds enforced by `jest.config.ts`: branches 70%, functions/lines/statements 80%. `index.ts` and `server.ts` are excluded from coverage collection.
+
+---
+
+## Custom Slash Commands
+
+Project-specific commands live in `.claude/commands/`. Use them with `/command-name` in Claude Code.
+
+| Command | File | What it does |
+|---------|------|-------------|
+| `/feature-spec-creator` | `git.md` | Create a feature spec file + git branch from a short description |
+| `/new-service` | `new-service.md` | Scaffold a complete microservice (all 4 layers, Dockerfile, package.json) |
+| `/new-endpoint` | `new-endpoint.md` | Add a route + controller + use case + Zod validator + container wiring |
+| `/new-use-case` | `new-use-case.md` | Scaffold a use case (standard / with-event / idempotent templates) |
+| `/new-event` | `new-event.md` | Add a domain event — publisher, notification handler, outbox dispatcher wiring |
+| `/new-repository` | `new-repository.md` | Scaffold a Firestore repository with interface, implementation, and cursor pagination |
+| `/firestore-index` | `firestore-index.md` | Generate a composite index entry for `firestore.indexes.json` |
+| `/test-unit` | `test-unit.md` | Generate Jest unit tests for a use case |
+| `/test-integration` | `test-integration.md` | Generate Supertest + Firestore emulator integration tests for an endpoint |
+| `/test-security` | `test-security.md` | Audit a service's routes for missing auth guards and Zod validators (report only) |
+| `/run-check` | `run-check.md` | Run type-check + lint + unit tests for one service or all workspaces |
+
+---
+
+## Specification Files
+
+All specification files live in `.claude/specs/`. Read the relevant spec before implementing any feature — it defines acceptance criteria, endpoints, domain events, Firestore changes, and security constraints that the implementation must satisfy.
+
+| File | Scope | Contents |
+|------|-------|----------|
+| `cmp-backend.md` | Entire project | Master spec: ~60 acceptance criteria across all 10 services, endpoint inventory, domain events, Firestore schema, security constraints, NFRs, out-of-scope |
+| `requirements.md` | Entire project | Full functional requirements (FR-AUTH, FR-SADM, FR-ADM, FR-STU, FR-CRS, FR-ENR, FR-LRN, FR-NOT), non-functional requirements (NFR-SEC, NFR-SCL, NFR-AVL, NFR-PRF), architectural constraints, SRS traceability table |
+| `authentication-spec.md` | auth-service, shared/auth-middleware | Registration flow, login flow, logout flow, password reset, `authenticate()` middleware, `authorize()` RBAC, ownership guard, account lockout (10 attempts / 15 min), public endpoints, internal service auth |
+| `deployment-spec.md` | All services | Local dev setup, environment variables reference, Dockerfile pattern, Docker Compose ports, Kubernetes Deployment + HPA config, CI/CD pipeline stages, Firebase index + rules deployment, backup/recovery targets, observability (logging, tracing, metrics, alerts) |
+| `api-spec.md` | All services (via gateway) | API conventions, all 45+ endpoints with request/response schemas, HTTP status code policy, full error code reference, domain events reference |
+
+**Feature specs** (generated by `/feature-spec-creator`) are also saved here as `<slug>.md`. When a new feature is specced, its file appears in this folder before any code is written.
+
+When reading a spec to implement a feature:
+- **Acceptance Criteria** defines what must be true — write tests against these
+- **Security Constraints** defines auth/authz/validation rules — these are non-negotiable
+- **Firestore Changes** lists any new composite indexes needed in `firestore.indexes.json`
+- **Domain Events** lists what the outbox must publish and who consumes it
+- **Out of Scope** tells you what NOT to build — do not add features listed there
 
 ---
 
@@ -220,3 +280,6 @@ Use `jest.clearAllMocks()` in `beforeEach` to prevent test bleed. Integration te
 
 - **`.claude/blueprint/Backend_Blueprint.md`** — Full architecture specification, implementation patterns, all use case code samples, security requirements traceability.
 - **`.claude/APIdocument/API_Document.md`** — Complete REST API reference (all endpoints, request/response schemas, error codes).
+- **`.claude/tracker/tracker.md`** — Phase-by-phase implementation checklist (Phases 0–13). Update `[ ]` → `[x]` as work completes. Check this before starting any phase to understand what's done and what's blocked.
+- **`.claude/plan/implementation-plan.md`** — Detailed implementation plan with phase dependencies and sequencing.
+- **`.claude/sprints/`** — Per-sprint breakdown (`sprint-1-*.md` through `sprint-7-*.md`) with user stories and acceptance criteria.

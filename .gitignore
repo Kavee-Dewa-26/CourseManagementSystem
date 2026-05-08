@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.js.map
+.env.local
+.env.*.local
+*.tsbuildinfo
+coverage/
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+storage.rules.debug.log

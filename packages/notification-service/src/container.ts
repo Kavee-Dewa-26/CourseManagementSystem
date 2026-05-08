@@ -1,0 +1,33 @@
+import { FirestoreNotificationRepository } from './infrastructure/repositories/FirestoreNotificationRepository';
+import { EmailClient }                     from './infrastructure/clients/EmailClient';
+import { FcmClient }                       from './infrastructure/clients/FcmClient';
+import { UserServiceClient }               from './infrastructure/clients/UserServiceClient';
+import { NotificationDispatcher }          from './application/services/NotificationDispatcher';
+import { RegistrationApprovedHandler }     from './application/handlers/RegistrationApprovedHandler';
+import { RegistrationRejectedHandler }     from './application/handlers/RegistrationRejectedHandler';
+import { EnrollmentPendingHandler }        from './application/handlers/EnrollmentPendingHandler';
+import { EnrollmentApprovedHandler }       from './application/handlers/EnrollmentApprovedHandler';
+import { EnrollmentRejectedHandler }       from './application/handlers/EnrollmentRejectedHandler';
+import { UserRegisteredHandler }           from './application/handlers/UserRegisteredHandler';
+import { AdminSuspendedHandler }           from './application/handlers/AdminSuspendedHandler';
+import { NotificationController }          from './http/controllers/NotificationController';
+import { EventController }                 from './http/controllers/EventController';
+
+const notifRepo   = new FirestoreNotificationRepository();
+const emailClient = new EmailClient();
+const fcmClient   = new FcmClient();
+const userClient  = new UserServiceClient();
+const dispatcher  = new NotificationDispatcher(emailClient, fcmClient);
+
+const regApprovedHandler    = new RegistrationApprovedHandler(notifRepo, dispatcher);
+const regRejectedHandler    = new RegistrationRejectedHandler(notifRepo, dispatcher);
+const enrollPendingHandler  = new EnrollmentPendingHandler(notifRepo, userClient);
+const enrollApprovedHandler = new EnrollmentApprovedHandler(notifRepo, dispatcher);
+const enrollRejectedHandler = new EnrollmentRejectedHandler(notifRepo, dispatcher);
+const userRegHandler        = new UserRegisteredHandler(notifRepo, userClient);
+const adminSuspendedHandler = new AdminSuspendedHandler(notifRepo, dispatcher);
+
+export const container = {
+  notificationController: new NotificationController(notifRepo),
+  eventController:        new EventController(regApprovedHandler, regRejectedHandler, enrollPendingHandler, enrollApprovedHandler, enrollRejectedHandler, userRegHandler, adminSuspendedHandler),
+};

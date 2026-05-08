@@ -1,0 +1,109 @@
+import { Request, Response, NextFunction } from 'express';
+import { getAuth }                         from 'firebase-admin/auth';
+import { createHttpError }                 from '@shared/errors';
+
+export type Role = 'student' | 'admin' | 'super_admin';
+
+export interface Principal {
+  uid:   string;
+  email: string;
+  role:  Role;
+}
+
+export interface AuthenticatedRequest extends Request {
+  principal: Principal;
+}
+
+// ── authenticate ─────────────────────────────────────────────────────────────
+
+export function authenticate() {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader?.startsWith('Bearer ')) {
+      return next(createHttpError(401, 'UNAUTHENTICATED', 'Authentication required.'));
+    }
+
+    const token = authHeader.slice(7);
+
+    try {
+      const decoded = await getAuth().verifyIdToken(token, true); // checkRevoked=true
+      const role    = decoded.role as Role | undefined;
+
+      if (!role) {
+        return next(createHttpError(401, 'INVALID_TOKEN', 'Token is missing role claim.'));
+      }
+
+      (req as AuthenticatedRequest).principal = {
+        uid:   decoded.uid,
+        email: decoded.email ?? '',
+        role,
+      };
+
+      next();
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+
+      if (code === 'auth/id-token-revoked') {
+        return next(createHttpError(401, 'TOKEN_REVOKED', 'Session has been revoked.'));
+      }
+      if (code === 'auth/id-token-expired') {
+        return next(createHttpError(401, 'TOKEN_EXPIRED', 'Token has expired.'));
+      }
+
+      return next(createHttpError(401, 'INVALID_TOKEN', 'Token could not be verified.'));
+    }
+  };
+}
+
+// ── authorize ────────────────────────────────────────────────────────────────
+
+export function authorize(...roles: Role[]) {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    const principal = (req as AuthenticatedRequest).principal;
+
+    if (!principal) {
+      return next(createHttpError(401, 'UNAUTHENTICATED', 'Authentication required.'));
+    }
+
+    // super_admin inherits all admin permissions
+    const effectiveRoles: Role[] =
+      principal.role === 'super_admin' ? ['super_admin', 'admin'] : [principal.role];
+
+    const allowed = roles.some(r => effectiveRoles.includes(r));
+
+    if (!allowed) {
+      return next(
+        createHttpError(
+          403,
+          'FORBIDDEN',
+          `Role '${principal.role}' is not permitted to perform this action.`,
+        ),
+      );
+    }
+
+    next();
+  };
+}
+
+// ── mustBeOwnerOrAdmin ───────────────────────────────────────────────────────
+
+export function mustBeOwnerOrAdmin(getResourceUid: (req: Request) => string | undefined) {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    const principal   = (req as AuthenticatedRequest).principal;
+    const resourceUid = getResourceUid(req);
+
+    if (!resourceUid) return next();
+
+    const isOwner = principal.uid === resourceUid;
+    const isAdmin = principal.role === 'admin' || principal.role === 'super_admin';
+
+    if (!isOwner && !isAdmin) {
+      return next(
+        createHttpError(403, 'FORBIDDEN', 'You do not have access to this resource.'),
+      );
+    }
+
+    next();
+  };
+}

@@ -1,0 +1,244 @@
+name: CMP Backend CI/CD
+
+on:
+  push:
+    branches: [main]
+    tags:     ['v*']
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY:     ${{ secrets.CONTAINER_REGISTRY_URL }}
+
+jobs:
+  # ── Shared packages ──────────────────────────────────────────────────────────
+  shared:
+    name: Shared Packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type-check shared packages
+        run: |
+          for pkg in packages/shared/*/; do
+            npm run type-check --workspace="$pkg" 2>/dev/null || true
+          done
+
+      - name: Build shared packages
+        run: |
+          for pkg in packages/shared/firebase packages/shared/logger packages/shared/response \
+                     packages/shared/tracing packages/shared/health packages/shared/events \
+                     packages/shared/internal-http-client packages/shared/errors \
+                     packages/shared/auth-middleware; do
+            npm run build --workspace="$pkg"
+          done
+
+      - name: Run shared unit tests
+        run: npx jest --config jest.config.ts packages/shared --passWithNoTests --coverage
+
+      - name: Upload shared build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-dist
+          path: packages/shared/*/dist/
+          retention-days: 1
+
+  # ── Per-service CI matrix ────────────────────────────────────────────────────
+  service-ci:
+    name: ${{ matrix.service }} CI
+    runs-on: ubuntu-latest
+    needs: shared
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - gateway
+          - auth-service
+          - user-service
+          - course-service
+          - enrollment-service
+          - progress-service
+          - storage-service
+          - notification-service
+          - audit-service
+          - outbox-worker
+        include:
+          - service: gateway
+            port: 3000
+          - service: auth-service
+            port: 3001
+          - service: user-service
+            port: 3002
+          - service: course-service
+            port: 3003
+          - service: enrollment-service
+            port: 3004
+          - service: progress-service
+            port: 3005
+          - service: storage-service
+            port: 3006
+          - service: notification-service
+            port: 3007
+          - service: audit-service
+            port: 3008
+          - service: outbox-worker
+            port: 3009
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Download shared build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: shared-dist
+          path: packages/shared/
+
+      - name: Type-check
+        run: npm run type-check --workspace=packages/${{ matrix.service }}
+
+      - name: Lint
+        run: npx eslint packages/${{ matrix.service }}/src --max-warnings=0 || true
+
+      - name: Unit tests
+        run: npx jest --config jest.config.ts packages/${{ matrix.service }} --passWithNoTests --coverage
+
+      - name: Security audit
+        run: npm audit --audit-level=high --workspace=packages/${{ matrix.service }} || true
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -f packages/${{ matrix.service }}/Dockerfile \
+            -t ${{ env.REGISTRY }}/cmp-${{ matrix.service }}:${{ github.sha }} \
+            .
+
+      - name: Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/cmp-${{ matrix.service }}:${{ github.sha }}
+          format:    table
+          exit-code: '1'
+          severity:  HIGH,CRITICAL
+
+      - name: Push image to registry
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo ${{ secrets.REGISTRY_PASSWORD }} | docker login ${{ env.REGISTRY }} -u ${{ secrets.REGISTRY_USERNAME }} --password-stdin
+          docker push ${{ env.REGISTRY }}/cmp-${{ matrix.service }}:${{ github.sha }}
+          docker tag ${{ env.REGISTRY }}/cmp-${{ matrix.service }}:${{ github.sha }} \
+                     ${{ env.REGISTRY }}/cmp-${{ matrix.service }}:latest
+          docker push ${{ env.REGISTRY }}/cmp-${{ matrix.service }}:latest
+
+  # ── Deploy to staging ────────────────────────────────────────────────────────
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: service-ci
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > ~/.kube/config
+
+      - name: Update image tags
+        run: |
+          for service in gateway auth-service user-service course-service enrollment-service \
+                         progress-service storage-service notification-service audit-service \
+                         outbox-worker; do
+            kubectl set image deployment/cmp-${service} \
+              ${service}=${{ env.REGISTRY }}/cmp-${service}:${{ github.sha }} \
+              -n cmp-staging --record || true
+          done
+
+      - name: Wait for rollout
+        run: |
+          for service in gateway auth-service user-service course-service; do
+            kubectl rollout status deployment/cmp-${service} -n cmp-staging --timeout=120s
+          done
+
+      - name: E2E smoke tests
+        env:
+          STAGING_URL: ${{ secrets.STAGING_BASE_URL }}
+        run: npx jest --config jest.config.ts tests/e2e/smoke --passWithNoTests
+
+  # ── Deploy to production (tag-triggered) ────────────────────────────────────
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > ~/.kube/config
+
+      - name: Deploy to production
+        run: |
+          for service in gateway auth-service user-service course-service enrollment-service \
+                         progress-service storage-service notification-service audit-service \
+                         outbox-worker; do
+            kubectl set image deployment/cmp-${service} \
+              ${service}=${{ env.REGISTRY }}/cmp-${service}:${{ github.sha }} \
+              -n cmp-production --record || true
+          done
+
+      - name: Wait for rollout
+        run: |
+          for service in gateway auth-service user-service course-service; do
+            kubectl rollout status deployment/cmp-${service} -n cmp-production --timeout=180s
+          done
+
+  # ── Deploy Firebase rules & indexes ─────────────────────────────────────────
+  deploy-firebase:
+    name: Deploy Firebase Config
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - run: npm install -g firebase-tools
+
+      - name: Deploy Firestore indexes
+        run: npx firebase deploy --only firestore:indexes --project ${{ secrets.FIREBASE_PROJECT_ID }} --token ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: Deploy Firestore rules
+        run: npx firebase deploy --only firestore:rules --project ${{ secrets.FIREBASE_PROJECT_ID }} --token ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: Deploy Storage rules
+        run: npx firebase deploy --only storage --project ${{ secrets.FIREBASE_PROJECT_ID }} --token ${{ secrets.FIREBASE_TOKEN }}
