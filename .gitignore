@@ -1,6 +1,7 @@
 node_modules/
 dist/
 *.js.map
+.ts-node-cache/
 .env
 .env.local
 .env.*.local
