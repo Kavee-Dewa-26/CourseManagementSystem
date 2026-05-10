@@ -1,8 +1,9 @@
-import { getAuth }              from 'firebase-admin/auth';
-import { getFirestore }         from 'firebase-admin/firestore';
-import { createHttpError }      from '@shared/errors';
-import { OutboxEventPublisher } from '@shared/events';
-import { UserServiceClient }    from '../../infrastructure/clients/UserServiceClient';
+import { getAuth }                 from 'firebase-admin/auth';
+import { getFirestore }            from 'firebase-admin/firestore';
+import { createHttpError }         from '@shared/errors';
+import { OutboxEventPublisher }    from '@shared/events';
+import { UserServiceClient }       from '../../infrastructure/clients/UserServiceClient';
+import { EnrollmentServiceClient } from '../../infrastructure/clients/EnrollmentServiceClient';
 
 export interface RegisterInput {
   firstName: string;
@@ -13,8 +14,9 @@ export interface RegisterInput {
 
 export class RegisterUseCase {
   constructor(
-    private readonly userClient: UserServiceClient,
-    private readonly outbox:     OutboxEventPublisher,
+    private readonly userClient:       UserServiceClient,
+    private readonly enrollmentClient: EnrollmentServiceClient,
+    private readonly outbox:           OutboxEventPublisher,
   ) {}
 
   async execute(input: RegisterInput, requestId: string): Promise<void> {
@@ -53,6 +55,13 @@ export class RegisterUseCase {
       }, batch);
 
       await batch.commit();
+
+      await this.enrollmentClient.createRegistration({
+        studentUid: record.uid,
+        email:      input.email,
+        firstName:  input.firstName,
+        lastName:   input.lastName,
+      });
     } catch (err) {
       await getAuth().deleteUser(record.uid).catch(() => undefined);
       throw err;

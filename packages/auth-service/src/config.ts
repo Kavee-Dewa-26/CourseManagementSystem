@@ -4,5 +4,6 @@ export const config = {
   nodeEnv:            process.env.NODE_ENV         ?? 'development',
   internalServiceKey: process.env.INTERNAL_SERVICE_KEY ?? '',
   serviceUserUrl:     process.env.SERVICE_USER_URL ?? 'http://localhost:3002',
+  serviceEnrollUrl:   process.env.SERVICE_ENROLLMENT_URL ?? 'http://localhost:3004',
   firebaseWebApiKey:  process.env.FIREBASE_WEB_API_KEY ?? '',
 } as const;

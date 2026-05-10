@@ -1,5 +1,7 @@
 node_modules/
 dist/
+*adminsdk*.json
+*service-account*.json
 *.js.map
 .ts-node-cache/
 .env

@@ -16,6 +16,9 @@ Node.js 20 · TypeScript 5 · Express 4 · Microservice Architecture · Firebase
 ## Commands
 
 ```bash
+# Full local dev startup (emulators + seed + all 10 services)
+bash scripts/start.sh
+
 # Install all workspace dependencies
 npm install
 
@@ -41,18 +44,21 @@ npm run test
 npm run test:integration
 
 # Run a single integration test file
-npx jest --config jest.integration.config.ts packages/user-service/tests/integration/GetUserUseCase.test.ts
+npx jest --config jest.integration.config.ts packages/user-service/tests/integration/me.test.ts
 
 # Run E2E tests (requires all services running via Docker Compose)
 npm run test:e2e
 
 # Run a single test file
-npx jest packages/progress-service/tests/unit/ComputeCourseProgressUseCase.test.ts
+npx jest packages/progress-service/tests/unit/application/ComputeCourseProgressUseCase.test.ts
 
-# Start Firebase emulators (Firestore, Auth, Storage)
-npx firebase emulators:start --only firestore,auth,storage
+# Start Firebase emulators only (project: demo-cmp)
+npx firebase emulators:start --only firestore,auth,storage --project demo-cmp
 
-# Start all services locally
+# Seed test users into running emulators (idempotent)
+node scripts/seed-emulator.js
+
+# Start all services locally via Docker
 docker-compose up --build
 
 # Stop all services
@@ -92,6 +98,13 @@ The gateway rewrites all proxied paths by stripping the `/api/v1` prefix before 
 
 The gateway also blocks all `/api/v1/internal/*` paths with 404 before proxying — internal routes are never reachable from outside the cluster.
 
+**Route ordering in `gateway/src/app.ts` is load-bearing.** More-specific prefixes must be registered before their broader siblings:
+- `/api/v1/me/notifications`, `/api/v1/me/enrollments`, `/api/v1/me/progress` each before `/api/v1/me`
+- `/api/v1/courses/:id/enroll` before `/api/v1/courses`
+- `/api/v1/subjects/:id/attachments` before `/api/v1/subjects`
+
+Adding a new proxied route in the wrong order will silently send traffic to the wrong service.
+
 ### Clean Architecture Layers (per service)
 
 Each service enforces a strict one-way dependency chain:
@@ -109,7 +122,7 @@ Controllers are thin — they call one use case and delegate errors with `next(e
 
 | Package | Key Exports |
 |---------|------------|
-| `@shared/auth-middleware` | `authenticate()`, `authorize()`, `mustBeOwnerOrAdmin()`, `AuthenticatedRequest` |
+| `@shared/auth-middleware` | `authenticate()`, `authorize()`, `mustBeOwnerOrAdmin()`, `AuthenticatedRequest`, `Principal`, `Role` |
 | `@shared/errors` | `AppError`, `createHttpError()`, `fromZodError()`, `errorHandler` |
 | `@shared/events` | `DomainEvent`, `OutboxEventPublisher` |
 | `@shared/logger` | `logger` (Pino + redaction), `httpLogger` (pino-http) |
@@ -141,6 +154,7 @@ Manual constructor injection via a `container.ts` file per service. No DI framew
 - `authenticate()` calls `verifyIdToken(token, checkRevoked=true)` and attaches `req.principal = { uid, email, role }`.
 - `super_admin` inherits all `admin` permissions inside `authorize()`.
 - Ownership-sensitive routes add `mustBeOwnerOrAdmin()` after `authorize()`.
+- **`tryAuthenticate()`** — used on public routes where the response shape differs by role (e.g., `GET /courses` shows DRAFT courses to admins but not students). It attaches `req.principal` if a valid Bearer token is present but never rejects missing or invalid tokens. This is **not** in `@shared/auth-middleware` — each service that needs it keeps its own copy at `src/http/middleware/tryAuthenticate.ts`.
 
 ### HTTP Status Code Policy
 
@@ -177,6 +191,23 @@ Domain events are never lost. Services write to the `outbox` Firestore collectio
 
 `OutboxEventPublisher.publishWithBatch(event, batch?)` accepts an optional `WriteBatch`. Always pass the same batch used for the primary write so the outbox entry and the entity are committed in a single atomic operation.
 
+The outbox-worker's `EventDispatcher` routes each event type to one or more handlers. The full event routing table:
+
+| Event type | Handlers |
+|-----------|---------|
+| `user.registered` | notify, audit |
+| `registration.approved` | user-service `/internal/users/approve`, notify, audit |
+| `registration.rejected` | notify, audit |
+| `enrollment.pending` | notify, audit |
+| `enrollment.approved` | notify, audit |
+| `enrollment.rejected` | notify, audit |
+| `enrollment.withdrawn` | audit |
+| `course.published` | notify, audit |
+| `progress.subjectCompleted` | audit |
+| `admin.created` | audit |
+| `admin.suspended` | notify, audit |
+| `audit.action` | audit |
+
 ### Firestore Collection Ownership
 
 No service reads another service's Firestore collections directly. Cross-service data access is only via internal HTTP calls using `createInternalClient()`.
@@ -184,15 +215,33 @@ No service reads another service's Firestore collections directly. Cross-service
 | Collection | Owning Service | Document ID |
 |-----------|---------------|-------------|
 | `users` | user-service | Firebase Auth UID |
-| `loginAttempts` | auth-service | Firebase Auth UID (service-private; not cross-service accessible) |
+| `loginAttempts` | auth-service | **email address** — unique among all collections; every other collection uses UID |
 | `courses` | course-service | auto UUID |
 | `courses/{id}/semesters` | course-service | auto UUID |
 | `courses/{id}/semesters/{id}/subjects` | course-service | auto UUID |
+| `registrations` | enrollment-service | Firebase Auth UID (studentUid) |
 | `enrollments` | enrollment-service | `${studentUid}_${courseId}` |
 | `progress` | progress-service | `${studentUid}_${subjectId}` |
 | `notifications` | notification-service | auto UUID |
 | `audit_log` | audit-service | auto UUID (append-only, immutable) |
 | `outbox` | all services (write) / outbox-worker (read) | auto UUID |
+
+### Enrollment-Service: Two Distinct Flows
+
+enrollment-service manages two separate domain entities and state machines:
+
+**Registration** — tracks a student's one-time account approval by an admin:
+```
+pending → approve() → approved
+       → reject()  → rejected
+```
+
+**Enrollment** — tracks per-course enrollment after account is approved:
+```
+pending → approve()  → approved → withdraw() → withdrawn
+       → reject()   → rejected
+        (pending also withdrawable)
+```
 
 ### Course Lifecycle State Machine
 
@@ -223,6 +272,27 @@ Synchronous calls use `createInternalClient(serviceUrl, INTERNAL_SERVICE_KEY)`, 
 | enrollment-service | course-service | Verify course is PUBLISHED before enrollment |
 | progress-service | course-service | Get total subject count for progress % |
 | storage-service | course-service | Verify subject exists before upload |
+| outbox-worker | user-service | Approve user account on `registration.approved` event |
+
+### Internal Route Auth Pattern
+
+Every service protects its `/internal/*` routes with a local `internalAuth` middleware (`src/http/middleware/internalAuth.ts`) that validates the `X-Internal-Service-Key` header against `INTERNAL_SERVICE_KEY`. Each service has its own copy — there is no shared version. Callers use `createInternalClient()` which attaches the key automatically.
+
+```typescript
+// Protecting an internal route
+internalRouter.post('/internal/foo', internalAuth, controller.foo);
+
+// Calling another service internally
+const client = createInternalClient(config.serviceUserUrl, config.internalServiceKey);
+await client.get('/internal/users/admins');
+```
+
+### Response Envelope Shapes
+
+`sendSuccess(res, data, status?)` — sends `data` directly with no wrapper (default status 200).  
+`sendPaginated(res, items, nextCursor, total)` — wraps as `{ items, nextCursor, total }`.
+
+Error responses from `errorHandler` always use: `{ error: { code: 'ERROR_CODE', message: '...' } }`.
 
 ---
 
@@ -268,10 +338,19 @@ OTEL_SERVICE_NAME                       # OpenTelemetry service name for tracing
 
 ## Testing
 
-- **Unit tests** — Jest, no I/O. Mock repositories and service clients. File pattern: `tests/unit/*.test.ts`.
+- **Unit tests** — Jest, no I/O. Mock repositories and service clients. Files live under `tests/unit/application/` and `tests/unit/domain/`.
 - **Integration tests** — Jest + Firestore emulator. Test use cases + repositories end-to-end. File pattern: `tests/integration/*.test.ts`.
 - **E2E tests** — Supertest + all services running. File pattern: `tests/e2e/*.test.ts`.
 - **Firestore Security Rules** — `@firebase/rules-unit-testing`. Verify that client-side writes to `audit_log` are denied and that each service's collections enforce expected rules.
+
+**Local seed accounts** (created by `node scripts/seed-emulator.js`, emulators must be running):
+
+| Role | Email | Password | Status |
+|------|-------|----------|--------|
+| `super_admin` | `superadmin@cmp.com` | `SuperAdmin@123` | approved |
+| `admin` | `admin@cmp.com` | `Admin@12345` | approved |
+| `student` | `student1@cmp.com` | `Student1@123` | pending_approval |
+| `student` | `student2@cmp.com` | `Student2@123` | approved |
 
 Use `jest.clearAllMocks()` in `beforeEach` to prevent test bleed. Integration tests require `npx firebase emulators:start --only firestore,auth,storage` to be running first (Firestore :8080, Auth :9099, Storage :9199). The shared setup file at `tests/integration/setup.ts` sets `FIRESTORE_EMULATOR_HOST` automatically — do not set it manually in `.env.local`.
 

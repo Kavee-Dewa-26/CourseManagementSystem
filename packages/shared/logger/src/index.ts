@@ -9,7 +9,7 @@ export const logger = pino({
     env:     process.env.NODE_ENV,
   },
   serializers: {
-    req: req => ({
+    req: (req: { method: string; url: string; headers: Record<string, string> }) => ({
       method:    req.method,
       url:       req.url,
       requestId: req.headers['x-request-id'],

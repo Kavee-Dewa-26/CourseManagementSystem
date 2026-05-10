@@ -7,6 +7,7 @@
     "packages/*"
   ],
   "scripts": {
+    "dev:all": "bash scripts/start.sh",
     "build": "npm run build --workspaces --if-present",
     "dev": "npm run dev --workspaces --if-present",
     "type-check": "tsc --noEmit --project tsconfig.base.json && npm run type-check --workspaces --if-present",
@@ -23,6 +24,7 @@
     "@types/supertest": "^6.0.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
+    "concurrently": "^9.2.1",
     "dotenv": "^17.4.2",
     "dotenv-cli": "^11.0.0",
     "eslint": "^8.0.0",
@@ -30,6 +32,7 @@
     "prettier": "^3.0.0",
     "supertest": "^7.0.0",
     "ts-jest": "^29.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "wait-on": "^9.0.5"
   }
 }

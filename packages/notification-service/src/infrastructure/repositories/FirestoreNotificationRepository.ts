@@ -8,7 +8,7 @@ export class FirestoreNotificationRepository implements INotificationRepository 
   private readonly col = getFirestore().collection('notifications');
 
   async findByUser(userUid: string, opts: NotificationListOptions): Promise<NotificationListResult> {
-    let q = this.col.where('userUid', '==', userUid) as FirebaseFirestore.Query;
+    let q: FirebaseFirestore.Query = this.col.where('userUid', '==', userUid);
     if (opts.read !== undefined) q = q.where('read', '==', opts.read);
 
     const total = (await q.count().get()).data().count;

@@ -10,7 +10,8 @@ export function errorHandler(
 ): void {
   const requestId  = (req.headers['x-request-id'] as string | undefined) ?? 'unknown';
   const appError   = err instanceof AppError ? err : null;
-  const statusCode = appError?.status ?? (err as any)?.statusCode ?? 500;
+  const raw        = (err as Record<string, unknown>).statusCode;
+  const statusCode = appError?.status ?? (typeof raw === 'number' ? raw : 500);
 
   logger.error(
     { err, requestId, method: req.method, url: req.url },

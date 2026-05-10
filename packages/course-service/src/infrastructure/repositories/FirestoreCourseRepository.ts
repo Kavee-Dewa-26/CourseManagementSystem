@@ -18,9 +18,9 @@ export class FirestoreCourseRepository implements ICourseRepository {
   }
 
   async findPublished(opts: CourseFindPublishedOptions): Promise<CourseListResult> {
-    let q = this.col
+    let q: FirebaseFirestore.Query = this.col
       .where('state',     '==', 'published')
-      .where('deletedAt', '==', null) as FirebaseFirestore.Query;
+      .where('deletedAt', '==', null);
 
     const total = (await q.count().get()).data().count;
 
@@ -37,7 +37,7 @@ export class FirestoreCourseRepository implements ICourseRepository {
   }
 
   async findAll(opts: CourseFindAllOptions): Promise<CourseListResult> {
-    let q = this.col.where('deletedAt', '==', null) as FirebaseFirestore.Query;
+    let q: FirebaseFirestore.Query = this.col.where('deletedAt', '==', null);
     if (opts.state) q = q.where('state', '==', opts.state);
 
     const total = (await q.count().get()).data().count;

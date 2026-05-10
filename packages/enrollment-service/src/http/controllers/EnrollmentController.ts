@@ -50,7 +50,7 @@ export class EnrollmentController {
     try {
       const parsed = listSchema.safeParse(req.query);
       if (!parsed.success) return next(fromZodError(parsed.error));
-      const result = await this.enrollRepo.findAll({ limit: parsed.data.limit, cursor: parsed.data.cursor, state: parsed.data.status as 'pending' | 'approved' | 'rejected' | 'withdrawn' | undefined, courseId: parsed.data.courseId });
+      const result = await this.enrollRepo.findAll({ limit: parsed.data.limit, cursor: parsed.data.cursor, state: parsed.data.status, courseId: parsed.data.courseId });
       sendPaginated(res, result.items, result.nextCursor, result.total);
     } catch (err) { next(err); }
   };

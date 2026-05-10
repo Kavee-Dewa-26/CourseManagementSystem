@@ -18,7 +18,7 @@ export class FirestoreEnrollmentRepository implements IEnrollmentRepository {
   }
 
   async findByStudent(studentUid: string, opts: EnrollmentListOptions): Promise<EnrollmentListResult> {
-    let q = this.col.where('studentUid', '==', studentUid) as FirebaseFirestore.Query;
+    let q: FirebaseFirestore.Query = this.col.where('studentUid', '==', studentUid);
     if (opts.state) q = q.where('state', '==', opts.state);
 
     const total = (await q.count().get()).data().count;

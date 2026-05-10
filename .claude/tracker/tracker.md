@@ -3,7 +3,7 @@
 **Project:** Course Management Portal (`slp-backend`)  
 **Organisation:** Future CX Lanka (Pvt) Ltd  
 **Version:** 1.0.0  
-**Last Updated:** 2026-05-08 (All integration tests written — project functionally complete)
+**Last Updated:** 2026-05-10 (Postman collections added; gateway pathRewrite bug fixed)
 
 > Update this file as implementation progresses. Change `[ ]` to `[x]` when a task is done.
 
@@ -85,9 +85,10 @@
 - [x] Pino HTTP logger
 - [x] General rate limiter (200 req/min per IP)
 - [x] Auth rate limiter (10 req/min per IP on `/auth/*`)
-- [x] Reverse proxy to all downstream services
+- [x] Reverse proxy to all downstream services (`pathRewrite` strips `/api/v1` using `req.originalUrl`)
 - [x] `Dockerfile`
 - [x] `package.json`
+- [x] Postman collection (`postman/CMP_Backend.postman_collection.json` + `CMP_Local.postman_environment.json`)
 
 ---
 

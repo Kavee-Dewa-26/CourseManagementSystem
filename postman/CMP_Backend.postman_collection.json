@@ -1,0 +1,1373 @@
+{
+  "info": {
+    "name": "CMP Backend",
+    "description": "Course Management Portal — all service endpoints via gateway :3000.\n\nLocal setup:\n1. Run: node scripts/seed-emulator.js  (seeds 4 test users)\n2. Import CMP_Local environment and select it\n3. Run '🔐 Sign In' requests to populate tokens\n4. Work through numbered folders in order for the full flow\n\nTest users (seeded by seed-emulator.js):\n  superadmin@cmp.com  SuperAdmin@123\n  admin@cmp.com       Admin@12345\n  student1@cmp.com    Student1@123   (pending_approval)\n  student2@cmp.com    Student2@123   (pre-approved)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{idToken}}", "type": "string" }]
+  },
+  "item": [
+
+    {
+      "name": "🔐 Sign In (Get Tokens)",
+      "description": "Hits the Firebase Auth emulator REST API. Tokens are auto-saved to environment variables.",
+      "auth": { "type": "noauth" },
+      "item": [
+        {
+          "name": "Sign In — Super Admin",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.idToken) {",
+                "  pm.environment.set('superAdminToken', j.idToken);",
+                "  pm.environment.set('idToken', j.idToken);",
+                "  console.log('superAdminToken saved');",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"superadmin@cmp.com\",\n  \"password\": \"SuperAdmin@123\",\n  \"returnSecureToken\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{authBaseUrl}}/accounts:signInWithPassword?key={{firebaseWebApiKey}}" }
+          }
+        },
+        {
+          "name": "Sign In — Admin",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.idToken) {",
+                "  pm.environment.set('adminToken', j.idToken);",
+                "  pm.environment.set('idToken', j.idToken);",
+                "  console.log('adminToken saved');",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@cmp.com\",\n  \"password\": \"Admin@12345\",\n  \"returnSecureToken\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{authBaseUrl}}/accounts:signInWithPassword?key={{firebaseWebApiKey}}" }
+          }
+        },
+        {
+          "name": "Sign In — Student 1 (pending approval)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.idToken) {",
+                "  pm.environment.set('studentToken', j.idToken);",
+                "  pm.environment.set('idToken', j.idToken);",
+                "  console.log('studentToken saved');",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student1@cmp.com\",\n  \"password\": \"Student1@123\",\n  \"returnSecureToken\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{authBaseUrl}}/accounts:signInWithPassword?key={{firebaseWebApiKey}}" }
+          }
+        },
+        {
+          "name": "Sign In — Student 2 / Test2 (pre-approved)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.idToken) {",
+                "  pm.environment.set('student2Token', j.idToken);",
+                "  pm.environment.set('idToken', j.idToken);",
+                "  console.log('student2Token saved');",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student2@cmp.com\",\n  \"password\": \"Student2@123\",\n  \"returnSecureToken\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{authBaseUrl}}/accounts:signInWithPassword?key={{firebaseWebApiKey}}" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "1️⃣ Auth Service",
+      "description": "Register a brand-new student (test3). student1 and student2 are already seeded.\npassword rules: 10+ chars, uppercase, lowercase, number, special char.",
+      "item": [
+        {
+          "name": "Register New Student (test3)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student3@cmp.com\",\n  \"password\": \"Student3@123\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"Three\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register" }
+          }
+        },
+        {
+          "name": "Register — duplicate email (expect 409)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student1@cmp.com\",\n  \"password\": \"Student1@123\",\n  \"firstName\": \"Dup\",\n  \"lastName\": \"Test\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register" }
+          }
+        },
+        {
+          "name": "Register — weak password (expect 400)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"bad@cmp.com\",\n  \"password\": \"abc\",\n  \"firstName\": \"A\",\n  \"lastName\": \"B\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register" }
+          }
+        },
+        {
+          "name": "Password Reset",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student1@cmp.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/auth/password-reset" }
+          }
+        },
+        {
+          "name": "Logout (student1)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{studentToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/auth/logout" }
+          }
+        },
+        {
+          "name": "Track Login Failure",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student1@cmp.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/auth/track-failure" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "2️⃣ User Service — Me",
+      "description": "Works for any signed-in role. GET /me returns user object directly (not wrapped in data:{}).",
+      "item": [
+        {
+          "name": "Get My Profile (student1) — saves userId",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.uid) {",
+                "  pm.environment.set('userId', j.uid);",
+                "  console.log('userId saved:', j.uid);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{studentToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/me" }
+          }
+        },
+        {
+          "name": "Get My Profile (student2 / Test2) — saves student2Id",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.uid) {",
+                "  pm.environment.set('student2Id', j.uid);",
+                "  console.log('student2Id saved:', j.uid);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/me" }
+          }
+        },
+        {
+          "name": "Update My Profile (student2)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Test\",\n  \"lastName\": \"Two Updated\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/me" }
+          }
+        },
+        {
+          "name": "Change Password (student2)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"Student2@123\",\n  \"newPassword\": \"Student2@NewPass!\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/me/change-password" }
+          }
+        },
+        {
+          "name": "No token (expect 401)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/me" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "3️⃣ User Service — Admin Manage Users",
+      "description": "Requires admin token",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/users" }
+          }
+        },
+        {
+          "name": "Get User by UID (student1)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}" }
+          }
+        },
+        {
+          "name": "Suspend student2",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/users/{{student2Id}}/suspend" }
+          }
+        },
+        {
+          "name": "Reactivate student2",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/users/{{student2Id}}/reactivate" }
+          }
+        },
+        {
+          "name": "Student tries to list users (expect 403)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/users" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "4️⃣ User Service — Super Admin Manage Admins",
+      "description": "Requires super_admin token",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{superAdminToken}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "List Admins",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/super-admin/admins" }
+          }
+        },
+        {
+          "name": "Create Admin — saves adminUserId",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.uid) {",
+                "  pm.environment.set('adminUserId', j.uid);",
+                "  console.log('adminUserId saved:', j.uid);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newadmin@cmp.com\",\n  \"initialPassword\": \"Admin2@12345\",\n  \"firstName\": \"New\",\n  \"lastName\": \"Admin\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/super-admin/admins" }
+          }
+        },
+        {
+          "name": "Get Admin by UID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/super-admin/admins/{{adminUserId}}" }
+          }
+        },
+        {
+          "name": "Suspend Admin",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/super-admin/admins/{{adminUserId}}/suspend" }
+          }
+        },
+        {
+          "name": "Reactivate Admin",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/super-admin/admins/{{adminUserId}}/reactivate" }
+          }
+        },
+        {
+          "name": "Delete Admin",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/super-admin/admins/{{adminUserId}}" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "5️⃣ Course Service — Build a Course",
+      "description": "Admin builds: Course → Semester → Subject × 2, then Publishes.\nStudents see DRAFT as 404; admin sees all states.",
+      "item": [
+        {
+          "name": "List Courses (public — no auth)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/courses" }
+          }
+        },
+        {
+          "name": "Create Course — saves courseId",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.id) {",
+                "  pm.environment.set('courseId', j.id);",
+                "  console.log('courseId saved:', j.id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Introduction to Computer Science\",\n  \"description\": \"Foundational CS concepts for beginners\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/courses" }
+          }
+        },
+        {
+          "name": "Student2 tries to view DRAFT course (expect 404)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/courses/{{courseId}}" }
+          }
+        },
+        {
+          "name": "Admin views DRAFT course (expect 200)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/courses/{{courseId}}" }
+          }
+        },
+        {
+          "name": "Update Course",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Introduction to CS (Revised)\",\n  \"description\": \"Updated description\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/courses/{{courseId}}" }
+          }
+        },
+        {
+          "name": "Publish with no semesters (expect 422)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/courses/{{courseId}}/publish" }
+          }
+        },
+        {
+          "name": "Create Semester — saves semesterId",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.id) {",
+                "  pm.environment.set('semesterId', j.id);",
+                "  console.log('semesterId saved:', j.id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Semester 1\",\n  \"description\": \"Core modules for the first term\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/courses/{{courseId}}/semesters" }
+          }
+        },
+        {
+          "name": "Publish with no subjects (expect 422)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/courses/{{courseId}}/publish" }
+          }
+        },
+        {
+          "name": "Create Subject 1 — saves subjectId",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.id) {",
+                "  pm.environment.set('subjectId', j.id);",
+                "  console.log('subjectId saved:', j.id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Introduction to Algorithms\",\n  \"description\": \"Sorting, searching, and complexity\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/semesters/{{semesterId}}/subjects" }
+          }
+        },
+        {
+          "name": "Create Subject 2 — save response id as subjectId2",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.id) {",
+                "  pm.environment.set('subjectId2', j.id);",
+                "  console.log('subjectId2 saved:', j.id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Data Structures\",\n  \"description\": \"Arrays, linked lists, and trees\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/semesters/{{semesterId}}/subjects" }
+          }
+        },
+        {
+          "name": "Publish Course",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/courses/{{courseId}}/publish" }
+          }
+        },
+        {
+          "name": "Student2 now sees PUBLISHED course (expect 200)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/courses/{{courseId}}" }
+          }
+        },
+        {
+          "name": "Unpublish Course → back to DRAFT",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/courses/{{courseId}}/unpublish" }
+          }
+        },
+        {
+          "name": "Re-publish Course",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/courses/{{courseId}}/publish" }
+          }
+        },
+        {
+          "name": "Update Subject 1",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Intro to Algorithms (Updated)\",\n  \"description\": \"Revised sorting and complexity module\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/subjects/{{subjectId}}" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "6️⃣ Enrollment — student1 Registration Approval Flow",
+      "description": "student1 is pending_approval. Admin approves the registration first, then student1 can enroll in courses.",
+      "item": [
+        {
+          "name": "Admin — List Pending Registrations",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "const items = j.items || [];",
+                "const pending = items.find(r => r.state === 'pending');",
+                "if (pending) {",
+                "  pm.environment.set('registrationId', pending.id);",
+                "  console.log('registrationId saved:', pending.id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/admin/registrations" }
+          }
+        },
+        {
+          "name": "Admin — Reject Registration (optional test)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Prerequisites not met\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/admin/registrations/{{registrationId}}/reject" }
+          }
+        },
+        {
+          "name": "Admin — Approve Registration",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/admin/registrations/{{registrationId}}/approve" }
+          }
+        },
+        {
+          "name": "Admin — Approve again (expect 409 INVALID_STATE)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/admin/registrations/{{registrationId}}/approve" }
+          }
+        },
+        {
+          "name": "Admin — Bulk Approve (register test3 first if needed)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"{{registrationId}}\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/admin/registrations/bulk-approve" }
+          }
+        },
+        {
+          "name": "student1 — Enroll in Course — saves enrollmentId",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.id) {",
+                "  pm.environment.set('enrollmentId', j.id);",
+                "  console.log('enrollmentId saved:', j.id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{studentToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/courses/{{courseId}}/enroll" }
+          }
+        },
+        {
+          "name": "student1 — Enroll duplicate (expect 409)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{studentToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/courses/{{courseId}}/enroll" }
+          }
+        },
+        {
+          "name": "student1 — My Enrollments",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{studentToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/me/enrollments" }
+          }
+        },
+        {
+          "name": "Admin — List All Enrollments",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/admin/enrollments" }
+          }
+        },
+        {
+          "name": "Admin — Approve student1 Enrollment",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/admin/enrollments/{{enrollmentId}}/approve" }
+          }
+        },
+        {
+          "name": "Admin — Reject student1 Enrollment (expect 409 — already approved)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Capacity reached\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/admin/enrollments/{{enrollmentId}}/reject" }
+          }
+        },
+        {
+          "name": "student1 — Withdraw Enrollment",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{studentToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/enrollments/{{enrollmentId}}/withdraw" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "7️⃣ Enrollment — student2 (Test2) Fast-track Flow",
+      "description": "student2 is pre-approved — no registration approval needed. Tests parallel multi-student enrollment on same course.",
+      "item": [
+        {
+          "name": "student2 — Enroll in Course — saves enrollmentId2",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.id) {",
+                "  pm.environment.set('enrollmentId2', j.id);",
+                "  console.log('enrollmentId2 saved:', j.id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/courses/{{courseId}}/enroll" }
+          }
+        },
+        {
+          "name": "student2 — My Enrollments",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/me/enrollments" }
+          }
+        },
+        {
+          "name": "Admin — Approve student2 Enrollment",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/admin/enrollments/{{enrollmentId2}}/approve" }
+          }
+        },
+        {
+          "name": "Admin — Reject student2 Enrollment (alternate path — re-enroll first)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Capacity reached for this batch\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/admin/enrollments/{{enrollmentId2}}/reject" }
+          }
+        },
+        {
+          "name": "student2 — Withdraw Enrollment",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/enrollments/{{enrollmentId2}}/withdraw" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "8️⃣ Progress Service",
+      "description": "student2 (Test2) is already approved and enrolled — use for progress tests.\nAll progress endpoints require student token.",
+      "item": [
+        {
+          "name": "student2 — Mark Subject 1 Complete",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/progress/subjects/{{subjectId}}/complete" }
+          }
+        },
+        {
+          "name": "student2 — Mark Subject 1 Complete AGAIN (idempotent — expect 200 same record)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/progress/subjects/{{subjectId}}/complete" }
+          }
+        },
+        {
+          "name": "student2 — Record Subject 2 Access",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/progress/subjects/{{subjectId2}}/access" }
+          }
+        },
+        {
+          "name": "student2 — Get My Course Progress (expect 50% — 1 of 2 done)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/me/progress/courses/{{courseId}}" }
+          }
+        },
+        {
+          "name": "student2 — Get My Subject 1 Progress",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/me/progress/subjects/{{subjectId}}" }
+          }
+        },
+        {
+          "name": "student2 — Mark Subject 2 Complete (expect 100%)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/progress/subjects/{{subjectId2}}/complete" }
+          }
+        },
+        {
+          "name": "student2 — Get Course Progress (expect 100%)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/me/progress/courses/{{courseId}}" }
+          }
+        },
+        {
+          "name": "Admin — All Students Progress for Course",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/admin/progress/courses/{{courseId}}" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "9️⃣ Storage Service",
+      "description": "Upload attachments to subjects. PDF/DOC/DOCX only, max 25 MB.",
+      "item": [
+        {
+          "name": "Upload PDF to Subject 1 (Admin) — saves attachmentId",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.id) {",
+                "  pm.environment.set('attachmentId', j.id);",
+                "  console.log('attachmentId saved:', j.id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "",
+                  "description": "Select a .pdf file from your machine (max 25 MB)"
+                }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/subjects/{{subjectId}}/attachments" }
+          }
+        },
+        {
+          "name": "Upload invalid file type (expect 415)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "",
+                  "description": "Select any .jpg / .png file"
+                }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/subjects/{{subjectId}}/attachments" }
+          }
+        },
+        {
+          "name": "Get Download URL (student2)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/attachments/{{attachmentId}}/download-url" }
+          }
+        },
+        {
+          "name": "Delete Attachment (Admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/attachments/{{attachmentId}}" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🔔 Notification Service",
+      "description": "All roles can read their own notifications. Outbox events generate notifications automatically.",
+      "item": [
+        {
+          "name": "student2 — List My Notifications — saves notificationId",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "const items = (j.items || []);",
+                "if (items.length > 0) {",
+                "  pm.environment.set('notificationId', items[0].id);",
+                "  console.log('notificationId saved:', items[0].id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/me/notifications" }
+          }
+        },
+        {
+          "name": "student2 — Mark One Notification Read",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/me/notifications/{{notificationId}}/read" }
+          }
+        },
+        {
+          "name": "student2 — Mark All Notifications Read",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/me/notifications/read-all" }
+          }
+        },
+        {
+          "name": "Admin — List Admin Notifications",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/me/notifications" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "📋 Audit Log",
+      "description": "Super admin only. Append-only — shows all domain events fired during testing.",
+      "item": [
+        {
+          "name": "List Audit Log (super_admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{superAdminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/audit-log" }
+          }
+        },
+        {
+          "name": "Admin tries Audit Log (expect 403)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/audit-log" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "⚡ Course Lifecycle — Archive & Delete",
+      "description": "Complete the course lifecycle after enrollment/progress testing.",
+      "item": [
+        {
+          "name": "Archive Course (must be PUBLISHED)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/courses/{{courseId}}/archive" }
+          }
+        },
+        {
+          "name": "Archive DRAFT course (expect 409 INVALID_STATE)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/courses/{{courseId}}/archive" }
+          }
+        },
+        {
+          "name": "Delete Subject 2 (soft delete)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/subjects/{{subjectId2}}" }
+          }
+        },
+        {
+          "name": "Delete Semester (soft delete)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/semesters/{{semesterId}}" }
+          }
+        },
+        {
+          "name": "Delete Course (soft delete — expect 204)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/courses/{{courseId}}" }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "🏥 Health Checks",
+      "description": "Hit each service directly (bypassing the gateway) to confirm all are alive.",
+      "auth": { "type": "noauth" },
+      "item": [
+        { "name": "Gateway :3000",             "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/healthz" } } },
+        { "name": "Auth Service :3001",        "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3001/healthz" } } },
+        { "name": "User Service :3002",        "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3002/healthz" } } },
+        { "name": "Course Service :3003",      "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3003/healthz" } } },
+        { "name": "Enrollment Service :3004",  "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3004/healthz" } } },
+        { "name": "Progress Service :3005",    "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3005/healthz" } } },
+        { "name": "Storage Service :3006",     "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3006/healthz" } } },
+        { "name": "Notification Service :3007","request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3007/healthz" } } },
+        { "name": "Audit Service :3008",       "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3008/healthz" } } }
+      ]
+    }
+
+  ]
+}

@@ -31,7 +31,7 @@ export class FirestoreUserRepository implements IUserRepository {
   }
 
   async findAll(opts: FindAllOptions): Promise<FindAllResult> {
-    let base = this.col.where('deletedAt', '==', null) as FirebaseFirestore.Query;
+    let base: FirebaseFirestore.Query = this.col.where('deletedAt', '==', null);
     if (opts.role)   base = base.where('role',   '==', opts.role);
     if (opts.status) base = base.where('status', '==', opts.status);
 
