@@ -3,7 +3,7 @@
 **Project:** Course Management Portal (`slp-backend`)  
 **Organisation:** Future CX Lanka (Pvt) Ltd  
 **Version:** 1.0.0  
-**Last Updated:** 2026-05-10 (Postman collections added; gateway pathRewrite bug fixed)
+**Last Updated:** 2026-05-10 (all 53 endpoints smoke-tested ✅; SUMMARY.md added; dev scripts added; unused files cleaned)
 
 > Update this file as implementation progresses. Change `[ ]` to `[x]` when a task is done.
 
@@ -31,7 +31,7 @@
 - [x] `docker-compose.yml`
 - [x] `.env.example`
 - [x] `.gitignore`
-- [ ] Firebase project created (Firestore, Auth, Storage enabled)
+- [ ] Firebase project created (Firestore, Auth, Storage enabled) — running on local emulators for now
 - [x] Firebase emulators configured (`firebase.json`)
 
 ---
@@ -89,6 +89,10 @@
 - [x] `Dockerfile`
 - [x] `package.json`
 - [x] Postman collection (`postman/CMP_Backend.postman_collection.json` + `CMP_Local.postman_environment.json`)
+- [x] `scripts/start.sh` — single-command local startup (emulators + seed + all 10 services)
+- [x] `scripts/seed-emulator.js` — seeds 4 test accounts (super_admin, admin, student×2)
+- [x] `scripts/seed-admin.js` — standalone admin seed utility
+- [x] `scripts/smoke-test.js` — verifies all 53 public endpoints end-to-end
 
 ---
 
@@ -376,7 +380,8 @@
 ### Tests
 - [x] Unit: `UploadAttachmentUseCase` (2 cases — success, subject not found)
 - [x] Unit: `GetDownloadUrlUseCase` (4 cases — enrolled, non-enrolled, admin, 404)
-- [ ] Integration: `POST /subjects/:id/attachments` (requires Storage emulator — deferred)
+- [x] Smoke test: all 3 storage endpoints verified working with Storage emulator (upload 201, download-url 200, delete 204)
+- [ ] Integration: `POST /subjects/:id/attachments` Jest test (formal test file not yet written)
 
 ---
 
@@ -542,6 +547,12 @@
 ## E2E Smoke Tests
 
 - [x] `tests/e2e/smoke.test.ts` — 6 smoke tests: healthz, readyz, courses public, register validation, unauthenticated 401, rate limiter 429
+- [x] `scripts/smoke-test.js` — full 53-endpoint smoke test (all services, all roles) — **53/53 passing** ✅
+
+## Documentation
+
+- [x] `CLAUDE.md` — codebase guidance for Claude Code (architecture, patterns, commands)
+- [x] `SUMMARY.md` — full project summary (all services, API, data model, setup guide)
 
 ---
 
@@ -557,7 +568,7 @@
 | 5 | Course Service | `[x]` |
 | 6 | Enrollment Service | `[x]` |
 | 7 | Progress Service | `[x]` |
-| 8 | Storage Service | `[~]` |
+| 8 | Storage Service | `[x]` |
 | 9 | Notification Service | `[x]` |
 | 10 | Audit Service | `[x]` |
 | 11 | Outbox Worker | `[x]` |
