@@ -76,9 +76,21 @@ packages/
   storage-service/      # :3006  File upload/download (PDF/DOC/DOCX, 25 MB max), signed URLs
   notification-service/ # :3007  In-app notifications, email (3-retry backoff), push (best-effort)
   audit-service/        # :3008  Append-only audit_log; purely event-driven
-  outbox-worker/        # :3009  Polls `outbox` collection every 5 s; dispatches to notification + audit
+  outbox-worker/        #        Background worker — no HTTP port; polls outbox every 5 s
   shared/               # No Dockerfile — shared npm packages consumed by all services
+k8s/                    # Kubernetes Deployment + HPA manifests (one folder per service)
+postman/                # Postman collections for manual API testing
+firebase.json           # Firebase CLI config — indexes, rules, emulator ports
+firestore.indexes.json  # Composite indexes — update when adding new Firestore queries
+firestore.rules         # Firestore security rules — update when adding new collections
+storage.rules           # Firebase Storage security rules
 ```
+
+### Gateway Path Rewriting
+
+The gateway rewrites all proxied paths by stripping the `/api/v1` prefix before forwarding. A public request to `GET /api/v1/courses` becomes `GET /courses` at course-service:3003. **Routes inside each service must NOT include the `/api/v1` prefix.**
+
+The gateway also blocks all `/api/v1/internal/*` paths with 404 before proxying — internal routes are never reachable from outside the cluster.
 
 ### Clean Architecture Layers (per service)
 
@@ -147,15 +159,23 @@ Manual constructor injection via a `container.ts` file per service. No DI framew
 
 ### Logging
 
-Never use `console.*` — the ESLint config treats it as an error. Use `logger` from `@shared/logger` (Pino). Sensitive fields (`authorization`, `password`, `token`, `idToken`) are redacted automatically. Register `httpLogger` in `app.ts` for request/response logging.
+Never use `console.*` — the ESLint config treats it as an error (`no-console`). Unhandled promises are also a lint error (`no-floating-promises`) — always `await` or attach `.catch()`. Use `logger` from `@shared/logger` (Pino). Sensitive fields (`authorization`, `password`, `token`, `idToken`) are redacted automatically. Register `httpLogger` in `app.ts` for request/response logging.
 
 ### Error Handling
 
 Always use `createHttpError(status, 'ERROR_CODE', 'Human message')` from `@shared/errors`. Never throw plain `Error`. Controllers catch and forward with `next(err)`. The global `errorHandler` (registered last in `app.ts`) sanitises 5xx responses — stack traces never reach clients.
 
+For multi-step operations that touch external systems (e.g., Firebase Auth then Firestore), clean up earlier writes on failure — e.g., delete the Firebase Auth user if the Firestore batch commit fails — to prevent orphaned records.
+
+### TypeScript Strictness
+
+`tsconfig.base.json` enables `noUnusedLocals`, `noUnusedParameters`, `noImplicitReturns`, and `noFallthroughCasesInSwitch`. Unused imports or parameters are compile errors, not warnings. The ESLint config additionally enforces `no-console` and `no-floating-promises` as errors.
+
 ### Transactional Outbox Pattern
 
 Domain events are never lost. Services write to the `outbox` Firestore collection atomically alongside primary data (using a `WriteBatch`). The outbox-worker polls every 5 seconds and dispatches to notification-service and audit-service via internal HTTP. Max 5 attempts; failed events stay as `status: 'failed'` for investigation.
+
+`OutboxEventPublisher.publishWithBatch(event, batch?)` accepts an optional `WriteBatch`. Always pass the same batch used for the primary write so the outbox entry and the entity are committed in a single atomic operation.
 
 ### Firestore Collection Ownership
 
@@ -164,6 +184,7 @@ No service reads another service's Firestore collections directly. Cross-service
 | Collection | Owning Service | Document ID |
 |-----------|---------------|-------------|
 | `users` | user-service | Firebase Auth UID |
+| `loginAttempts` | auth-service | Firebase Auth UID (service-private; not cross-service accessible) |
 | `courses` | course-service | auto UUID |
 | `courses/{id}/semesters` | course-service | auto UUID |
 | `courses/{id}/semesters/{id}/subjects` | course-service | auto UUID |
@@ -197,6 +218,7 @@ Synchronous calls use `createInternalClient(serviceUrl, INTERNAL_SERVICE_KEY)`, 
 | Caller | Callee | Purpose |
 |--------|--------|---------|
 | auth-service | user-service | Email uniqueness check on registration |
+| auth-service | enrollment-service | Create registration record after user creation (fire-and-forget) |
 | enrollment-service | user-service | Update account status on approve/reject |
 | enrollment-service | course-service | Verify course is PUBLISHED before enrollment |
 | progress-service | course-service | Get total subject count for progress % |
@@ -209,13 +231,37 @@ Synchronous calls use `createInternalClient(serviceUrl, INTERNAL_SERVICE_KEY)`, 
 Copy `.env.example` to `.env.local` (gitignored). Required variables:
 
 ```
-SERVICE_NAME, PORT, NODE_ENV, LOG_LEVEL
+# Service identity
+SERVICE_NAME, SERVICE_VERSION, PORT, NODE_ENV, LOG_LEVEL
+
+# Firebase Admin SDK (all services)
 FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY
-SERVICE_AUTH_URL … SERVICE_AUDIT_URL   # inter-service URLs
-INTERNAL_SERVICE_KEY                    # shared secret for /internal/* routes
-SENDGRID_API_KEY, EMAIL_FROM
 FIREBASE_STORAGE_BUCKET
+FIREBASE_WEB_API_KEY                    # Firebase web client key (auth-service)
+
+# Inter-service URLs (set all even if unused by a given service)
+SERVICE_AUTH_URL … SERVICE_AUDIT_URL
+
+# Internal service authentication
+INTERNAL_SERVICE_KEY                    # shared secret for /internal/* routes
+
+# Email (notification-service)
+EMAIL_PROVIDER                          # "sendgrid" | "console"
+SENDGRID_API_KEY, EMAIL_FROM
+
+# Gateway
 ALLOWED_ORIGINS                         # comma-separated CORS allowlist
+RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX    # global rate limit
+AUTH_RATE_LIMIT_MAX                     # stricter limit for /auth/* routes
+
+# Service-specific
+ATTACHMENT_MAX_SIZE_BYTES               # storage-service (default: 26214400)
+OUTBOX_POLL_INTERVAL_SECONDS            # outbox-worker (default: 5)
+OUTBOX_BATCH_SIZE                       # outbox-worker (default: 20)
+ENROLLMENT_REJECTION_COOLOFF_HOURS      # enrollment-service
+
+# Observability
+OTEL_SERVICE_NAME                       # OpenTelemetry service name for tracing
 ```
 
 ---
@@ -227,7 +273,7 @@ ALLOWED_ORIGINS                         # comma-separated CORS allowlist
 - **E2E tests** — Supertest + all services running. File pattern: `tests/e2e/*.test.ts`.
 - **Firestore Security Rules** — `@firebase/rules-unit-testing`. Verify that client-side writes to `audit_log` are denied and that each service's collections enforce expected rules.
 
-Use `jest.clearAllMocks()` in `beforeEach` to prevent test bleed. Integration tests require `npx firebase emulators:start --only firestore,auth,storage` to be running first (Firestore :8080, Auth :9099, Storage :9199).
+Use `jest.clearAllMocks()` in `beforeEach` to prevent test bleed. Integration tests require `npx firebase emulators:start --only firestore,auth,storage` to be running first (Firestore :8080, Auth :9099, Storage :9199). The shared setup file at `tests/integration/setup.ts` sets `FIRESTORE_EMULATOR_HOST` automatically — do not set it manually in `.env.local`.
 
 Coverage thresholds enforced by `jest.config.ts`: branches 70%, functions/lines/statements 80%. `index.ts` and `server.ts` are excluded from coverage collection.
 
