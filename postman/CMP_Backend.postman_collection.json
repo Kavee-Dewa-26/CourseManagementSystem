@@ -1035,7 +1035,12 @@
               "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
             },
             "method": "POST",
-            "header": [],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": \"{{courseId}}\",\n  \"semesterId\": \"{{semesterId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
             "url": { "raw": "{{baseUrl}}/progress/subjects/{{subjectId}}/complete" }
           }
         },
@@ -1047,7 +1052,12 @@
               "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
             },
             "method": "POST",
-            "header": [],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": \"{{courseId}}\",\n  \"semesterId\": \"{{semesterId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
             "url": { "raw": "{{baseUrl}}/progress/subjects/{{subjectId}}/complete" }
           }
         },
@@ -1059,7 +1069,12 @@
               "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
             },
             "method": "POST",
-            "header": [],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": \"{{courseId}}\",\n  \"semesterId\": \"{{semesterId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
             "url": { "raw": "{{baseUrl}}/progress/subjects/{{subjectId2}}/access" }
           }
         },
@@ -1095,7 +1110,12 @@
               "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
             },
             "method": "POST",
-            "header": [],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": \"{{courseId}}\",\n  \"semesterId\": \"{{semesterId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
             "url": { "raw": "{{baseUrl}}/progress/subjects/{{subjectId2}}/complete" }
           }
         },

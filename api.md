@@ -533,7 +533,15 @@ After rejection, student cannot re-enroll for `ENROLLMENT_REJECTION_COOLOFF_HOUR
 ### 11.1 `POST /progress/subjects/:id/complete`
 Idempotent — second call returns existing record; `completedAt` is immutable.
 
-**Body:** `{ "source": "manual" }` (`"manual"` or `"auto"`, default `"manual"`)
+**Body:**
+```json
+{ "courseId": "course-abc", "semesterId": "sem-001" }
+```
+
+| Field | Required |
+|-------|:--------:|
+| `courseId` | Yes |
+| `semesterId` | Yes |
 
 **Response (200):**
 ```json
@@ -548,6 +556,8 @@ Idempotent — second call returns existing record; `completedAt` is immutable.
 
 ### 11.2 `POST /progress/subjects/:id/access`
 Updates `lastAccessedAt` (powers "Continue Learning").
+
+**Body:** `{ "courseId": "course-abc", "semesterId": "sem-001" }`
 
 **Response (200):** `{ "subjectId": "sub-001", "lastAccessedAt": "..." }`
 
