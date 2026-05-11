@@ -422,6 +422,41 @@ Send a password reset email to the given address. Always returns `200` regardles
 
 ---
 
+### 2.4 `POST /auth/track-failure`
+
+Record a failed login attempt for a given email. Called by the client after each failed sign-in. After **10 failures within a 15-minute window**, the account is automatically locked (Firebase Auth `disabled: true`).
+
+**Authentication:** None (public — called before the user has a token)
+
+#### Request Body
+
+```json
+{
+  "email": "viruli@example.com"
+}
+```
+
+| Field | Type | Required | Validation |
+|-------|------|:--------:|-----------|
+| `email` | `string` | Yes | Valid email format |
+
+#### Responses
+
+**`200 OK`**
+```json
+{
+  "locked":   false,
+  "attempts": 3
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `locked` | `boolean` | `true` when attempt count hit the lockout threshold (≥ 10) |
+| `attempts` | `number` | Total failed attempts in the current 15-minute window |
+
+---
+
 ## 3. Profile Endpoints (Me)
 
 ---
