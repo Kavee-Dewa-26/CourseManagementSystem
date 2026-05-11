@@ -2,8 +2,8 @@
 ## Course Management Portal · `slp-backend`
 ### REST API · Version 1.0 · Base URL: `https://api.yourdomain.com/api/v1`
 
-**Version:** 1.0.0
-**Date:** 07 May 2026
+**Version:** 1.1.0
+**Date:** 11 May 2026
 **Organisation:** Future CX Lanka (Pvt) Ltd
 **Status:** Release Baseline
 
@@ -84,6 +84,7 @@
     - 14.4 [Suspend Admin](#144-post-super-adminadminsusidsuspend)
     - 14.5 [Reactivate Admin](#145-post-super-adminadminsuidreactivate)
     - 14.6 [Delete Admin](#146-delete-super-adminadminsuid)
+    - 14.7 [Promote Student to Admin](#147-post-super-adminusersuidmake-admin)
 15. [Audit Log — Super Admin](#15-audit-log--super-admin)
     - 15.1 [Get Audit Log](#151-get-audit-log)
 16. [Health Endpoints](#16-health-endpoints)
@@ -288,10 +289,13 @@ Retry-After:         34
 |------|-----|-------------|
 | **Public** | Unauthenticated visitors | Course catalog (published only), registration, password reset |
 | **student** | Registered + approved students | Own profile, course catalog, own enrollments, learning content, own progress, own notifications |
-| **admin** | Staff approved by Super Admin | Everything students can do + all course management, registration/enrollment queue, student management |
+| **admin** | Staff created directly by Super Admin | All course management, registration/enrollment queue, student management, notifications |
+| **admin** *(promoted from student)* | Students promoted via `POST /super-admin/users/:uid/make-admin` | **Dual-role** — all admin capabilities **plus** all student capabilities (enroll in courses, track own progress, etc.) |
 | **super_admin** | Platform owner | Everything admins can do + admin account management, audit log |
 
 > **Note:** `super_admin` inherits all `admin` permissions. Any endpoint marked `admin` is also accessible to `super_admin`.
+>
+> **Dual-role admins:** When a student is promoted to admin, their account carries both `student` and `admin` roles. They pass role guards for either role simultaneously — they can manage courses as an admin and enroll in courses as a student within the same session. Admins created directly via `POST /super-admin/admins` carry only the `admin` role.
 
 ---
 
@@ -437,6 +441,7 @@ Get the authenticated user's full profile.
   "uid":             "firebase-uid-abc123",
   "email":           "viruli@example.com",
   "role":            "student",
+  "roles":           ["student"],
   "status":          "approved",
   "firstName":       "Viruli",
   "lastName":        "Weerasinghe",
@@ -2193,11 +2198,16 @@ None.
 
 ### 14.7 `POST /super-admin/users/:uid/make-admin`
 
-Promote an existing student account to admin role. The student's role is changed to `admin`, their status is set to `approved`, and their Firebase custom claim is updated immediately. An email is sent to the promoted user notifying them of their new role.
+Promote an existing student account to admin role. The promoted user retains their student role alongside the new admin role (**dual-role**), meaning they can continue to enroll in courses and track progress as a student while also performing admin duties.
+
+- Primary `role` is set to `"admin"`
+- `roles` array becomes `["student", "admin"]`
+- `status` is set to `"approved"`
+- Firebase custom claim is updated immediately (next token refresh picks it up)
 
 **Cannot be used on:** accounts that are already `admin` or `super_admin` — returns `409 INVALID_ROLE`.
 
-**Side effects:** Publishes `admin.created` event — promoted user receives an email notification.
+**Side effects:** Publishes `admin.created` event (`promoted: true`) — promoted user receives an email notification.
 
 **Authentication:** Bearer token required
 **Roles:** `super_admin`
@@ -2214,7 +2224,7 @@ None.
 
 #### Responses
 
-**`200 OK`** — Full updated user object with `"role": "admin"`
+**`200 OK`** — Full updated user object
 ```json
 {
   "uid":             "student-uid-abc",
@@ -2222,6 +2232,7 @@ None.
   "firstName":       "Alice",
   "lastName":        "Cooper",
   "role":            "admin",
+  "roles":           ["student", "admin"],
   "status":          "approved",
   "profilePhotoUrl": null,
   "createdAt":       "2026-05-11T06:05:46.338Z",
@@ -2229,6 +2240,8 @@ None.
   "deletedAt":       null
 }
 ```
+
+> The promoted user's existing enrollments, progress records, and notifications are preserved. They can continue using student features under the same account.
 
 **`404 Not Found`** — UID does not exist
 ```json
@@ -2357,7 +2370,8 @@ Readiness probe — checks that the service is ready to handle traffic (Firestor
 interface User {
   uid:              string;        // Firebase Auth UID (primary key)
   email:            string;        // Unique email address
-  role:             UserRole;      // 'super_admin' | 'admin' | 'student'
+  role:             UserRole;      // Primary role: 'super_admin' | 'admin' | 'student'
+  roles:            UserRole[];    // Full role set — promoted admins carry ['student', 'admin']
   status:           UserStatus;    // See UserStatus enum below
   firstName:        string;
   lastName:         string;
@@ -2369,6 +2383,8 @@ interface User {
 type UserRole   = 'super_admin' | 'admin' | 'student';
 type UserStatus = 'pending_approval' | 'approved' | 'rejected' | 'suspended';
 ```
+
+> `role` is the primary role used for display and filtering. `roles` is the authoritative set used by the server's authorization middleware — a token with `roles: ["student", "admin"]` passes guards for both roles simultaneously.
 
 ---
 
@@ -2671,4 +2687,5 @@ interface DomainEvent<T = Record<string, unknown>> {
 ---
 
 *© 2026 Future CX Lanka (Pvt) Ltd — Confidential*
-*API Document version: 1.0.0 | Paired with CMP Backend Blueprint v1.0.0 and SRS dated 07 May 2026*
+*API Document version: 1.1.0 | Paired with CMP Backend Blueprint v1.0.0 and SRS dated 07 May 2026*
+*Updated 11 May 2026 — v1.1.0: dual-role support for promoted admins (`roles[]` field); Section 14.7 added to TOC; User model updated.*
