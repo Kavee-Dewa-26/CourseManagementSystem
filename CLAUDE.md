@@ -127,10 +127,12 @@ Controllers are thin — they call one use case and delegate errors with `next(e
 | `@shared/events` | `DomainEvent`, `OutboxEventPublisher` |
 | `@shared/logger` | `logger` (Pino + redaction), `httpLogger` (pino-http) |
 | `@shared/response` | `sendSuccess()`, `sendPaginated()` |
-| `@shared/internal-http-client` | `createInternalClient()` |
+| `@shared/internal-http-client` | `createInternalClient()`, `runWithRequestId()`, `getRequestId()` |
 | `@shared/health` | `healthRouter` (`/healthz`, `/readyz`) |
 | `@shared/firebase` | `initFirebaseAdmin()` (idempotent) |
 | `@shared/tracing` | `initTracing(serviceName)` |
+
+**Request ID propagation via `AsyncLocalStorage`:** `@shared/internal-http-client` uses Node's `AsyncLocalStorage` to thread request IDs across service boundaries without explicit parameter passing. The gateway calls `runWithRequestId(id, fn)` to store the ID; `createInternalClient()` reads it via `getRequestId()` in an Axios request interceptor and injects `X-Request-Id` automatically. This is why you never pass `requestId` through use case parameters.
 
 ### TypeScript Path Aliases
 
@@ -249,11 +251,32 @@ export class YouTubeVideoId {
 
 Never use `console.*` — the ESLint config treats it as an error (`no-console`). Unhandled promises are also a lint error (`no-floating-promises`) — always `await` or attach `.catch()`. Use `logger` from `@shared/logger` (Pino). Sensitive fields (`authorization`, `password`, `token`, `idToken`) are redacted automatically. Register `httpLogger` in `app.ts` for request/response logging.
 
+### Middleware Order (app.ts)
+
+Every service's `app.ts` must register middleware in this exact order or request logging and error propagation break:
+
+```
+helmet() → express.json() → httpLogger → routes → errorHandler (last)
+```
+
+`errorHandler` must be the final middleware — Express identifies it by its four-argument signature `(err, req, res, next)`.
+
 ### Error Handling
 
 Always use `createHttpError(status, 'ERROR_CODE', 'Human message')` from `@shared/errors`. Never throw plain `Error`. Controllers catch and forward with `next(err)`. The global `errorHandler` (registered last in `app.ts`) sanitises 5xx responses — stack traces never reach clients.
 
 For multi-step operations that touch external systems (e.g., Firebase Auth then Firestore), clean up earlier writes on failure — e.g., delete the Firebase Auth user if the Firestore batch commit fails — to prevent orphaned records.
+
+### Code Style
+
+Prettier is configured in `.prettierrc` with non-default settings:
+
+```
+printWidth: 100        # not the common 80 — wrap at 100 chars
+singleQuote: true
+trailingComma: 'all'   # trailing commas on multi-line params, arrays, objects
+arrowParens: 'avoid'   # omit parens for single-param arrow functions
+```
 
 ### TypeScript Strictness
 
@@ -264,6 +287,13 @@ For multi-step operations that touch external systems (e.g., Firebase Auth then 
 Domain events are never lost. Services write to the `outbox` Firestore collection atomically alongside primary data (using a `WriteBatch`). The outbox-worker polls every 5 seconds and dispatches to notification-service and audit-service via internal HTTP. Max 5 attempts; failed events stay as `status: 'failed'` for investigation.
 
 `OutboxEventPublisher.publishWithBatch(event, batch?)` accepts an optional `WriteBatch`. Always pass the same batch used for the primary write so the outbox entry and the entity are committed in a single atomic operation.
+
+**Outbox event status lifecycle:**
+```
+pending → processing → delivered
+                  ↘ (on failure, retried up to 5×, then) → failed
+```
+`processedAt` is set only on `delivered`. Events dispatched concurrently per batch via `Promise.allSettled()` — a single handler failure does not block others. Failed events remain queryable for manual investigation.
 
 The outbox-worker's `EventDispatcher` routes each event type to one or more handlers. The full event routing table:
 
@@ -336,7 +366,7 @@ Courses, semesters, subjects, and users are soft-deleted by setting `deletedAt` 
 
 ### Internal Service Communication
 
-Synchronous calls use `createInternalClient(serviceUrl, INTERNAL_SERVICE_KEY)`, which automatically propagates `X-Request-Id`, applies a 5-second timeout, and retries once on 5xx.
+Synchronous calls use `createInternalClient(serviceUrl, INTERNAL_SERVICE_KEY)`, which automatically propagates `X-Request-Id`, applies a 5-second timeout, and retries once on 5xx with a 500 ms delay. The retry is tracked via a `_retried` flag on the Axios config to prevent infinite loops — a second failure surfaces immediately to the caller.
 
 | Caller | Callee | Purpose |
 |--------|--------|---------|
@@ -370,7 +400,7 @@ await client.get('/internal/users/admins');
 `sendSuccess(res, data, status?)` — sends `data` directly with no wrapper (default status 200).  
 `sendPaginated(res, items, nextCursor, total)` — wraps as `{ items, nextCursor, total }`.
 
-Error responses from `errorHandler` always use: `{ error: { code: 'ERROR_CODE', message: '...' } }`.
+Error responses from `errorHandler` always use: `{ error: { code: 'ERROR_CODE', message: '...' }, requestId: '...' }`. The `requestId` field is always present at the root (not nested in `error`) so clients can correlate failures with server logs via the `X-Request-Id` header.
 
 ---
 
@@ -416,9 +446,17 @@ OTEL_SERVICE_NAME                       # OpenTelemetry service name for tracing
 
 ## Testing
 
-- **Unit tests** — Jest, no I/O. Mock repositories and service clients. Files live under `tests/unit/application/` and `tests/unit/domain/`.
-- **Integration tests** — Jest + Firestore emulator. Test use cases + repositories end-to-end. File pattern: `tests/integration/*.test.ts`.
-- **E2E tests** — Supertest + all services running. File pattern: `tests/e2e/*.test.ts`.
+There are three separate Jest configs — each with the same `moduleNameMapper` for path aliases:
+
+| Config | Command | Scope | Timeout |
+|--------|---------|-------|---------|
+| `jest.config.ts` | `npm run test` | `tests/unit/**/*.test.ts` | default |
+| `jest.integration.config.ts` | `npm run test:integration` | `tests/integration/**/*.test.ts` | 30 s |
+| `jest.e2e.config.ts` | `npm run test:e2e` | `tests/e2e/**/*.test.ts` | — |
+
+- **Unit tests** — No I/O. Mock repositories and service clients. Files live under `tests/unit/application/` and `tests/unit/domain/`.
+- **Integration tests** — Jest + Firestore emulator. Test use cases + repositories end-to-end.
+- **E2E tests** — Supertest + all services running via Docker Compose.
 - **Firestore Security Rules** — `@firebase/rules-unit-testing`. Verify that client-side writes to `audit_log` are denied and that each service's collections enforce expected rules.
 
 **Local seed accounts** (created by `node scripts/seed-emulator.js`, emulators must be running):
