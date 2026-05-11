@@ -11,9 +11,14 @@
  */
 'use strict';
 
-const BASE     = 'http://localhost:3000/api/v1';
-const AUTH_EMU = 'http://127.0.0.1:9099/www.googleapis.com/identitytoolkit/v3/relyingparty';
-const API_KEY  = 'demo-key'; // any value works with the emulator
+const BASE    = 'http://localhost:3000/api/v1';
+const ONLINE  = process.argv.includes('--online');
+const API_KEY = ONLINE
+  ? 'AIzaSyDudm6GFhmqLd6zVW0igYL0myX-vN9H5-0'   // e-learning-f4209 web API key
+  : 'demo-key';                                    // any value works with emulator
+const AUTH_URL = ONLINE
+  ? `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${API_KEY}`
+  : `http://127.0.0.1:9099/www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=${API_KEY}`;
 
 // ── result tracking ───────────────────────────────────────────────────────────
 
@@ -58,14 +63,11 @@ function check(method, path, res, expected, note = '') {
 }
 
 async function signIn(email, password) {
-  const res = await fetch(
-    `${AUTH_EMU}/verifyPassword?key=${API_KEY}`,
-    {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ email, password, returnSecureToken: true }),
-    },
-  );
+  const res = await fetch(AUTH_URL, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ email, password, returnSecureToken: true }),
+  });
   const d = await res.json();
   if (!res.ok) throw new Error(`Auth failed for ${email}: ${d.error?.message ?? JSON.stringify(d)}`);
   return { token: d.idToken, uid: d.localId };
@@ -76,8 +78,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 // ── main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
+  const mode = ONLINE ? 'ONLINE (e-learning-f4209)' : 'LOCAL EMULATOR';
   console.log('\n╔═══════════════════════════════════════════════════════════╗');
   console.log('║   CMP Smoke Test — 53 Public API Endpoints               ║');
+  console.log(`║   Mode: ${mode.padEnd(49)}║`);
   console.log('╚═══════════════════════════════════════════════════════════╝\n');
 
   // ─ connectivity ─────────────────────────────────────────────────────────────
