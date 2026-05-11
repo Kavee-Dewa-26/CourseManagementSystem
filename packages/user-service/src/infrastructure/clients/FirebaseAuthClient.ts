@@ -39,11 +39,7 @@ export class FirebaseAuthClient {
   }
 
   async verifyPassword(email: string, password: string): Promise<void> {
-    const emulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
-    // The emulator exposes the legacy v3 path; production uses the v1 path
-    const url = emulatorHost
-      ? `http://${emulatorHost}/www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=${config.firebaseWebApiKey}`
-      : `https://identitytoolkit.googleapis.com/v1/accounts:signInWithEmailAndPassword?key=${config.firebaseWebApiKey}`;
+    const url = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithEmailAndPassword?key=${config.firebaseWebApiKey}`;
     const res = await fetch(url, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },

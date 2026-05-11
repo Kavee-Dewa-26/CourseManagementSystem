@@ -16,7 +16,7 @@ Node.js 20 · TypeScript 5 · Express 4 · Microservice Architecture · Firebase
 ## Commands
 
 ```bash
-# Full local dev startup (emulators + seed + all 10 services)
+# Full local dev startup (all 10 services — connects to online Firebase)
 bash scripts/start.sh
 
 # Install all workspace dependencies
@@ -51,13 +51,6 @@ npm run test:e2e
 
 # Run a single test file
 npx jest packages/progress-service/tests/unit/application/ComputeCourseProgressUseCase.test.ts
-
-# Start Firebase emulators only (project: demo-cmp)
-npx firebase emulators:start --only firestore,auth,storage --project demo-cmp
-# Emulator UI available at http://127.0.0.1:4000 (Firestore browser, Auth users)
-
-# Seed test users into running emulators (idempotent)
-node scripts/seed-emulator.js
 
 # Start all services locally via Docker
 docker-compose up --build
@@ -479,7 +472,7 @@ There are three separate Jest configs — each with the same `moduleNameMapper` 
 | `student` | `student1@cmp.com` | `Student1@123` | pending_approval |
 | `student` | `student2@cmp.com` | `Student2@123` | approved |
 
-Use `jest.clearAllMocks()` in `beforeEach` to prevent test bleed. Integration tests require `npx firebase emulators:start --only firestore,auth,storage` to be running first (Firestore :8080, Auth :9099, Storage :9199). The shared setup file at `tests/integration/setup.ts` sets `FIRESTORE_EMULATOR_HOST` automatically — do not set emulator host variables in `.env.local` (they would redirect all running services to the emulator instead of the real Firebase project).
+Use `jest.clearAllMocks()` in `beforeEach` to prevent test bleed. Integration tests connect to the real Firebase project via credentials in `.env.local`.
 
 Coverage thresholds enforced by `jest.config.ts`: branches 70%, functions/lines/statements 80%. `index.ts` and `server.ts` are excluded from coverage collection.
 

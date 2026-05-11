@@ -2,11 +2,7 @@ import { config } from '../../config';
 
 export class PasswordResetUseCase {
   async execute(email: string): Promise<void> {
-    const emulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
-    const base = emulatorHost
-      ? `http://${emulatorHost}/identitytoolkit.googleapis.com/v1`
-      : 'https://identitytoolkit.googleapis.com/v1';
-    const url = `${base}/accounts:sendOobCode?key=${config.firebaseWebApiKey}`;
+    const url = `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${config.firebaseWebApiKey}`;
 
     await fetch(url, {
       method:  'POST',

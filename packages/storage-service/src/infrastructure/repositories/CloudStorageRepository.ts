@@ -9,14 +9,6 @@ export class CloudStorageRepository {
   }
 
   async getSignedUrl(storagePath: string, expiresInMs: number): Promise<string> {
-    // The Storage emulator does not support signing URLs (no real GCP credentials).
-    // Return a direct download URL instead — functionally equivalent for local dev.
-    const emulatorHost = process.env.FIREBASE_STORAGE_EMULATOR_HOST;
-    if (emulatorHost) {
-      const bucket  = this.bucket.name;
-      const encoded = encodeURIComponent(storagePath);
-      return `http://${emulatorHost}/v0/b/${bucket}/o/${encoded}?alt=media`;
-    }
     const file  = this.bucket.file(storagePath);
     const [url] = await file.getSignedUrl({ action: 'read', expires: Date.now() + expiresInMs });
     return url;
