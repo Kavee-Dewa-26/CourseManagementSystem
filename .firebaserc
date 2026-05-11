@@ -1,7 +1,8 @@
 {
   "projects": {
     "default": "cms-app-4d5f3",
-    "cms": "cms-app-4d5f3"
+    "cms": "cms-app-4d5f3",
+    "online": "e-learning-f4209"
   },
   "targets": {},
   "etags": {}

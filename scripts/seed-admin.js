@@ -31,7 +31,7 @@ async function seed() {
     displayName: `${FIRST_NAME} ${LAST_NAME}`,
   });
 
-  await auth.setCustomUserClaims(user.uid, { role: 'admin' });
+  await auth.setCustomUserClaims(user.uid, { role: 'admin', roles: ['admin'] });
 
   const now = new Date().toISOString();
   await db.collection('users').doc(user.uid).set({
@@ -39,6 +39,7 @@ async function seed() {
     firstName:       FIRST_NAME,
     lastName:        LAST_NAME,
     role:            'admin',
+    roles:           ['admin'],
     status:          'approved',
     profilePhotoUrl: null,
     createdAt:       now,

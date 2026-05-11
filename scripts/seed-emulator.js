@@ -77,7 +77,7 @@ async function seed() {
       displayName: `${u.firstName} ${u.lastName}`,
     });
 
-    await auth.setCustomUserClaims(record.uid, { role: u.role });
+    await auth.setCustomUserClaims(record.uid, { role: u.role, roles: [u.role] });
 
     // users collection (owned by user-service)
     batch.set(db.collection('users').doc(record.uid), {
@@ -85,6 +85,7 @@ async function seed() {
       firstName:       u.firstName,
       lastName:        u.lastName,
       role:            u.role,
+      roles:           [u.role],
       status:          u.status,
       profilePhotoUrl: null,
       createdAt:       now,
