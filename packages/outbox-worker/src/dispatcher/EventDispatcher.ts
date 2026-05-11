@@ -40,6 +40,7 @@ const ROUTES: Record<string, Handler[]> = {
     (p, r) => sendEvent(auditClient,  'progress.subjectCompleted', p, r),
   ],
   'admin.created': [
+    (p, r) => sendEvent(notifyClient, 'admin.created', p, r),
     (p, r) => sendEvent(auditClient,  'admin.created', p, r),
   ],
   'admin.suspended': [

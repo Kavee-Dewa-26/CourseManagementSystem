@@ -1,5 +1,6 @@
-import sgMail  from '@sendgrid/mail';
-import { config } from '../../config';
+import sgMail        from '@sendgrid/mail';
+import { logger }    from '@shared/logger';
+import { config }    from '../../config';
 
 export interface SendMailInput {
   to:      string;
@@ -8,11 +9,20 @@ export interface SendMailInput {
 }
 
 export class EmailClient {
+  private readonly useConsole: boolean;
+
   constructor() {
-    sgMail.setApiKey(config.sendgridApiKey);
+    this.useConsole = process.env.EMAIL_PROVIDER === 'console';
+    if (!this.useConsole) {
+      sgMail.setApiKey(config.sendgridApiKey);
+    }
   }
 
   async sendMail(input: SendMailInput): Promise<void> {
+    if (this.useConsole) {
+      logger.info({ to: input.to, subject: input.subject }, '[EMAIL:console] email would be sent');
+      return;
+    }
     await sgMail.send({ from: config.emailFrom, to: input.to, subject: input.subject, html: input.html });
   }
 }

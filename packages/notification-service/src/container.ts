@@ -10,6 +10,7 @@ import { EnrollmentApprovedHandler }       from './application/handlers/Enrollme
 import { EnrollmentRejectedHandler }       from './application/handlers/EnrollmentRejectedHandler';
 import { UserRegisteredHandler }           from './application/handlers/UserRegisteredHandler';
 import { AdminSuspendedHandler }           from './application/handlers/AdminSuspendedHandler';
+import { AdminCreatedHandler }             from './application/handlers/AdminCreatedHandler';
 import { NotificationController }          from './http/controllers/NotificationController';
 import { EventController }                 from './http/controllers/EventController';
 
@@ -24,10 +25,15 @@ const regRejectedHandler    = new RegistrationRejectedHandler(notifRepo, dispatc
 const enrollPendingHandler  = new EnrollmentPendingHandler(notifRepo, userClient);
 const enrollApprovedHandler = new EnrollmentApprovedHandler(notifRepo, dispatcher);
 const enrollRejectedHandler = new EnrollmentRejectedHandler(notifRepo, dispatcher);
-const userRegHandler        = new UserRegisteredHandler(notifRepo, userClient);
+const userRegHandler        = new UserRegisteredHandler(notifRepo, userClient, dispatcher);
 const adminSuspendedHandler = new AdminSuspendedHandler(notifRepo, dispatcher);
+const adminCreatedHandler   = new AdminCreatedHandler(dispatcher);
 
 export const container = {
   notificationController: new NotificationController(notifRepo),
-  eventController:        new EventController(regApprovedHandler, regRejectedHandler, enrollPendingHandler, enrollApprovedHandler, enrollRejectedHandler, userRegHandler, adminSuspendedHandler),
+  eventController:        new EventController(
+    regApprovedHandler, regRejectedHandler,
+    enrollPendingHandler, enrollApprovedHandler, enrollRejectedHandler,
+    userRegHandler, adminSuspendedHandler, adminCreatedHandler,
+  ),
 };

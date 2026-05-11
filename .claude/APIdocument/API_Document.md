@@ -2076,7 +2076,7 @@ Get a specific admin's full profile.
 
 ### 14.4 `POST /super-admin/admins/:uid/suspend`
 
-Suspend an Admin account. All refresh tokens are revoked.
+Suspend an Admin account. The admin's Firebase Auth account is disabled and all refresh tokens are revoked. An `admin.suspended` event is published — the suspended admin receives an email notification.
 
 **Authentication:** Bearer token required
 **Roles:** `super_admin`
@@ -2085,7 +2085,7 @@ Suspend an Admin account. All refresh tokens are revoked.
 
 | Parameter | Description |
 |-----------|-------------|
-| `uid` | Firebase Auth UID of the admin |
+| `uid` | Firebase Auth UID of the admin to suspend |
 
 #### Request Body
 
@@ -2095,13 +2095,33 @@ Suspend an Admin account. All refresh tokens are revoked.
 }
 ```
 
+| Field | Type | Required | Description |
+|-------|------|:--------:|-------------|
+| `reason` | `string` | No | Internal reason (max 500 chars); not shown to the admin |
+
 #### Responses
 
-**`200 OK`**
+**`200 OK`** — Full updated admin object
 ```json
 {
-  "uid":    "admin-uid-xyz",
-  "status": "suspended"
+  "uid":             "admin-uid-xyz",
+  "email":           "sapna@example.com",
+  "firstName":       "Sapna",
+  "lastName":        "Nethmini",
+  "role":            "admin",
+  "status":          "suspended",
+  "profilePhotoUrl": null,
+  "createdAt":       "2026-05-11T04:49:06.197Z",
+  "updatedAt":       "2026-05-11T05:15:02.254Z",
+  "deletedAt":       null
+}
+```
+
+**`404 Not Found`** — Admin UID does not exist
+```json
+{
+  "error": { "code": "USER_NOT_FOUND", "message": "User not found." },
+  "requestId": "..."
 }
 ```
 
@@ -2109,26 +2129,46 @@ Suspend an Admin account. All refresh tokens are revoked.
 
 ### 14.5 `POST /super-admin/admins/:uid/reactivate`
 
-Reactivate a suspended Admin account.
+Reactivate a suspended Admin account. Re-enables the Firebase Auth account so the admin can log in again.
 
 **Authentication:** Bearer token required
 **Roles:** `super_admin`
 
+#### Path Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `uid` | Firebase Auth UID of the admin to reactivate |
+
+#### Request Body
+
+None.
+
 #### Responses
 
-**`200 OK`**
+**`200 OK`** — Full updated admin object
 ```json
 {
-  "uid":    "admin-uid-xyz",
-  "status": "approved"
+  "uid":             "admin-uid-xyz",
+  "email":           "sapna@example.com",
+  "firstName":       "Sapna",
+  "lastName":        "Nethmini",
+  "role":            "admin",
+  "status":          "approved",
+  "profilePhotoUrl": null,
+  "createdAt":       "2026-05-11T04:49:06.197Z",
+  "updatedAt":       "2026-05-11T05:15:06.084Z",
+  "deletedAt":       null
 }
 ```
+
+**`404 Not Found`** — Admin UID does not exist
 
 ---
 
 ### 14.6 `DELETE /super-admin/admins/:uid`
 
-Delete an Admin account. Soft-deletes the user profile; Firebase Auth account is disabled. Any courses created by this admin are reassigned to the requesting Super Admin.
+Soft-delete an Admin account. Sets `deletedAt` on the Firestore document and disables the Firebase Auth account. The admin can no longer log in. Only accounts with `role: "admin"` may be deleted through this endpoint — attempting to delete a `super_admin` or `student` UID returns `404`.
 
 **Authentication:** Bearer token required
 **Roles:** `super_admin`
@@ -2139,9 +2179,66 @@ Delete an Admin account. Soft-deletes the user profile; Firebase Auth account is
 |-----------|-------------|
 | `uid` | Firebase Auth UID of the admin to delete |
 
+#### Request Body
+
+None.
+
 #### Responses
 
-**`204 No Content`**
+**`204 No Content`** — Deleted successfully (empty body)
+
+**`404 Not Found`** — UID does not exist or is not an admin account
+
+---
+
+### 14.7 `POST /super-admin/users/:uid/make-admin`
+
+Promote an existing student account to admin role. The student's role is changed to `admin`, their status is set to `approved`, and their Firebase custom claim is updated immediately. An email is sent to the promoted user notifying them of their new role.
+
+**Cannot be used on:** accounts that are already `admin` or `super_admin` — returns `409 INVALID_ROLE`.
+
+**Side effects:** Publishes `admin.created` event — promoted user receives an email notification.
+
+**Authentication:** Bearer token required
+**Roles:** `super_admin`
+
+#### Path Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `uid` | Firebase Auth UID of the student to promote |
+
+#### Request Body
+
+None.
+
+#### Responses
+
+**`200 OK`** — Full updated user object with `"role": "admin"`
+```json
+{
+  "uid":             "student-uid-abc",
+  "email":           "alice@test.com",
+  "firstName":       "Alice",
+  "lastName":        "Cooper",
+  "role":            "admin",
+  "status":          "approved",
+  "profilePhotoUrl": null,
+  "createdAt":       "2026-05-11T06:05:46.338Z",
+  "updatedAt":       "2026-05-11T06:06:09.447Z",
+  "deletedAt":       null
+}
+```
+
+**`404 Not Found`** — UID does not exist
+```json
+{ "error": { "code": "USER_NOT_FOUND", "message": "User not found." }, "requestId": "..." }
+```
+
+**`409 Conflict`** — User is already admin or super_admin
+```json
+{ "error": { "code": "INVALID_ROLE", "message": "Only student accounts can be promoted to admin." }, "requestId": "..." }
+```
 
 ---
 
@@ -2163,9 +2260,10 @@ Retrieve the append-only system audit log. Records are immutable once written.
 | `actorUid` | `string` | — | Filter by the UID of the actor who performed the action |
 | `action` | `string` | — | Filter by action type (e.g., `registration.approved`) |
 | `targetType` | `string` | — | Filter by target entity type (e.g., `course`, `enrollment`) |
-| `dateFrom` | `string` | — | ISO 8601 date — start of date range |
-| `dateTo` | `string` | — | ISO 8601 date — end of date range |
-| `limit` | `number` | `50` | Items per page (max 200) |
+| `targetId` | `string` | — | Filter by specific resource ID |
+| `from` | `string` | — | ISO 8601 date — start of date range |
+| `to` | `string` | — | ISO 8601 date — end of date range |
+| `limit` | `number` | `20` | Items per page (max 100) |
 | `cursor` | `string` | — | Pagination cursor |
 
 #### Responses
@@ -2552,22 +2650,23 @@ interface DomainEvent<T = Record<string, unknown>> {
 | `enrollment.rejected` | Enrollment Service | `studentUid`, `actorUid`, `courseId`, `reason?` | Notification Svc, Audit Svc |
 | `course.published` | Course Service | `actorUid`, `courseId`, `courseTitle` | Notification Svc, Audit Svc |
 | `progress.subjectCompleted` | Progress Service | `studentUid`, `subjectId`, `courseId`, `source` | Progress Svc (re-aggregate), Audit Svc |
-| `admin.created` | User Service | `actorUid`, `adminUid`, `email` | Audit Svc |
-| `admin.suspended` | User Service | `actorUid`, `adminUid` | Notification Svc, Audit Svc |
+| `admin.created` | User Service | `uid`, `email`, `firstName`, `lastName`, `actorUid`, `promoted?` | Notification Svc, Audit Svc |
+| `admin.suspended` | User Service | `uid`, `email`, `firstName`, `lastName` | Notification Svc, Audit Svc |
 | `audit.action` | Any service | `actorUid?`, `action`, `targetType`, `targetId`, `payload`, `requestId` | Audit Svc |
 
 ### Notification Triggers
 
 | Event | Who is notified | Channel(s) |
 |-------|----------------|-----------|
-| `user.registered` | All admins | In-app |
+| `user.registered` | All admins + registering user | In-app (admins) + email (user) |
 | `registration.approved` | Student | In-app + email |
 | `registration.rejected` | Student | In-app + email |
 | `enrollment.pending` | All admins | In-app |
 | `enrollment.approved` | Student | In-app + email + push |
 | `enrollment.rejected` | Student | In-app + email |
-| `course.published` | — (no user notification) | — |
-| `admin.suspended` | Suspended admin | Email |
+| `course.published` | — | — |
+| `admin.created` | New admin | Email (welcome or promotion notice) |
+| `admin.suspended` | Suspended admin | In-app + email |
 
 ---
 

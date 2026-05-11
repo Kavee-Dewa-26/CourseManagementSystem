@@ -8,6 +8,7 @@ import { EnrollmentApprovedHandler }          from '../../application/handlers/E
 import { EnrollmentRejectedHandler }          from '../../application/handlers/EnrollmentRejectedHandler';
 import { UserRegisteredHandler }              from '../../application/handlers/UserRegisteredHandler';
 import { AdminSuspendedHandler }              from '../../application/handlers/AdminSuspendedHandler';
+import { AdminCreatedHandler }                from '../../application/handlers/AdminCreatedHandler';
 import { internalEventSchema }                from '../validators/notificationValidator';
 
 export class EventController {
@@ -19,6 +20,7 @@ export class EventController {
     private readonly enrollmentRejected:   EnrollmentRejectedHandler,
     private readonly userRegistered:       UserRegisteredHandler,
     private readonly adminSuspended:       AdminSuspendedHandler,
+    private readonly adminCreated:         AdminCreatedHandler,
   ) {}
 
   receiveEvent = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -28,7 +30,6 @@ export class EventController {
 
       const { eventType, payload, requestId } = parsed.data;
 
-      // Dispatch to handler — errors are caught per handler to avoid blocking
       switch (eventType) {
         case 'registration.approved':
           await this.registrationApproved.handle(payload as unknown as Parameters<typeof this.registrationApproved.handle>[0], requestId);
@@ -50,6 +51,9 @@ export class EventController {
           break;
         case 'admin.suspended':
           await this.adminSuspended.handle(payload as unknown as Parameters<typeof this.adminSuspended.handle>[0], requestId);
+          break;
+        case 'admin.created':
+          await this.adminCreated.handle(payload as unknown as Parameters<typeof this.adminCreated.handle>[0], requestId);
           break;
         default:
           logger.warn({ eventType }, 'Unhandled event type');

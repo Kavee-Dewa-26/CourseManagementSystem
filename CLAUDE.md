@@ -142,7 +142,81 @@ Both are also mapped in `jest.config.ts` so tests resolve them without compilati
 
 ### Dependency Injection
 
-Manual constructor injection via a `container.ts` file per service. No DI framework. Repositories are instantiated first, then use cases, then controllers.
+Manual constructor injection via a `container.ts` file per service. No DI framework. Instantiation order is always: repositories → infrastructure clients → use cases → controllers. Export a single `container` object.
+
+```typescript
+// src/container.ts (example)
+const attemptsRepo = new FirestoreLoginAttemptsRepository();
+const userClient = new UserServiceClient();
+const enrollmentClient = new EnrollmentServiceClient();
+const outbox = new OutboxEventPublisher();
+const registerUseCase = new RegisterUseCase(userClient, enrollmentClient, outbox);
+export const container = {
+  authController: new AuthController(registerUseCase, ...),
+};
+```
+
+### Per-Service config.ts
+
+Every service reads environment variables in `src/config.ts` and exports a single `config` object typed `as const`. Never read `process.env` directly outside this file.
+
+```typescript
+export const config = {
+  port: Number(process.env.PORT ?? 3001),
+  internalServiceKey: process.env.INTERNAL_SERVICE_KEY ?? '',
+  serviceUserUrl: process.env.SERVICE_USER_URL ?? 'http://localhost:3002',
+} as const;
+```
+
+### Infrastructure Clients
+
+Cross-service HTTP calls are wrapped in a client class under `src/infrastructure/clients/`. The class holds a private `createInternalClient()` instance and exposes typed methods. These are instantiated in `container.ts` and injected into use cases.
+
+```typescript
+export class UserServiceClient {
+  private readonly http = createInternalClient(config.serviceUserUrl, config.internalServiceKey);
+
+  async emailExists(email: string): Promise<boolean> {
+    const res = await this.http.post<{ exists: boolean }>('/internal/users/exists', { email });
+    return res.data.exists;
+  }
+}
+```
+
+### Controller Method Pattern
+
+Controllers are classes with arrow-function methods (preserves `this`). Every method is `async`, accepts `(req, res, next)`, and wraps its body in `try/catch` forwarding to `next(err)`. Validate with `.safeParse()` before touching use cases.
+
+```typescript
+create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const parsed = createCourseSchema.safeParse(req.body);
+    if (!parsed.success) return next(fromZodError(parsed.error));
+    const result = await this.createCourseUseCase.execute(parsed.data);
+    sendSuccess(res, result, 201);
+  } catch (err) { next(err); }
+};
+```
+
+### Validator Pattern
+
+Zod schemas live in `src/http/validators/`. Use `.safeParse()` in the controller and convert failures with `fromZodError()` from `@shared/errors` — never throw Zod errors directly.
+
+### Value Objects
+
+Domain-layer validation that isn't trivial belongs in a value object at `src/domain/value-objects/`. Use a private constructor and a static `from()` factory that throws `createHttpError` on invalid input.
+
+```typescript
+export class YouTubeVideoId {
+  private constructor(readonly value: string) {}
+  static from(input: string | null | undefined): YouTubeVideoId | null {
+    if (!input) return null;
+    if (!/^[A-Za-z0-9_-]{11}$/.test(input))
+      throw createHttpError(400, 'INVALID_YOUTUBE_ID', 'YouTube video ID must be 11 chars.');
+    return new YouTubeVideoId(input);
+  }
+}
+```
 
 ---
 
@@ -273,6 +347,10 @@ Synchronous calls use `createInternalClient(serviceUrl, INTERNAL_SERVICE_KEY)`, 
 | progress-service | course-service | Get total subject count for progress % |
 | storage-service | course-service | Verify subject exists before upload |
 | outbox-worker | user-service | Approve user account on `registration.approved` event |
+
+### Repository Pagination Pattern
+
+All list repository methods return `{ items, nextCursor, total }`. Cursor is the last document ID (or `null` when exhausted). Pass `cursor` to Firestore `.startAfter()` for the next page. Repository interfaces live in `src/domain/repositories/I*Repository.ts`; implementations in `src/infrastructure/repositories/Firestore*Repository.ts`. Each implementation uses a private `toEntity(id, data)` helper to convert Firestore `DocumentSnapshot` data to domain entities.
 
 ### Internal Route Auth Pattern
 

@@ -10,6 +10,7 @@ import { SuspendUserUseCase }      from './application/use-cases/SuspendUserUseC
 import { ReactivateUserUseCase }   from './application/use-cases/ReactivateUserUseCase';
 import { CreateAdminUseCase }      from './application/use-cases/CreateAdminUseCase';
 import { DeleteAdminUseCase }      from './application/use-cases/DeleteAdminUseCase';
+import { PromoteToAdminUseCase }   from './application/use-cases/PromoteToAdminUseCase';
 import { CheckEmailExistsUseCase } from './application/use-cases/CheckEmailExistsUseCase';
 import { ApproveUserUseCase }      from './application/use-cases/ApproveUserUseCase';
 import { MeController }            from './http/controllers/MeController';
@@ -32,6 +33,7 @@ const suspendUser    = new SuspendUserUseCase(userRepo, authClient, outbox);
 const reactivate     = new ReactivateUserUseCase(userRepo, authClient);
 const createAdmin    = new CreateAdminUseCase(userRepo, authClient, outbox);
 const deleteAdmin    = new DeleteAdminUseCase(userRepo, authClient);
+const promoteToAdmin = new PromoteToAdminUseCase(userRepo, authClient, outbox);
 const checkEmail     = new CheckEmailExistsUseCase(userRepo);
 const approveUser    = new ApproveUserUseCase(userRepo, authClient);
 
@@ -39,6 +41,6 @@ const approveUser    = new ApproveUserUseCase(userRepo, authClient);
 export const container = {
   meController:         new MeController(getMe, updateProfile, changePassword),
   usersController:      new UsersController(getUsers, getUserById, suspendUser, reactivate),
-  superAdminController: new SuperAdminController(createAdmin, deleteAdmin, getUsers, getUserById, suspendUser, reactivate),
+  superAdminController: new SuperAdminController(createAdmin, deleteAdmin, getUsers, getUserById, suspendUser, reactivate, promoteToAdmin),
   internalController:   new InternalController(checkEmail, approveUser, getUsers),
 };

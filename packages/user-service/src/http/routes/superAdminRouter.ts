@@ -10,3 +10,4 @@ superAdminRouter.get(   '/super-admin/admins/:uid',               authenticate()
 superAdminRouter.post(  '/super-admin/admins/:uid/suspend',       authenticate(), authorize('super_admin'), container.superAdminController.suspendAdmin);
 superAdminRouter.post(  '/super-admin/admins/:uid/reactivate',    authenticate(), authorize('super_admin'), container.superAdminController.reactivateAdmin);
 superAdminRouter.delete('/super-admin/admins/:uid',               authenticate(), authorize('super_admin'), container.superAdminController.deleteAdmin);
+superAdminRouter.post(  '/super-admin/users/:uid/make-admin',     authenticate(), authorize('super_admin'), container.superAdminController.promoteToAdmin);
