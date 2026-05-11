@@ -1,6 +1,7 @@
-import sgMail        from '@sendgrid/mail';
-import { logger }    from '@shared/logger';
-import { config }    from '../../config';
+import sgMail           from '@sendgrid/mail';
+import nodemailer        from 'nodemailer';
+import { logger }        from '@shared/logger';
+import { config }        from '../../config';
 
 export interface SendMailInput {
   to:      string;
@@ -8,21 +9,50 @@ export interface SendMailInput {
   html:    string;
 }
 
+type Provider = 'console' | 'sendgrid' | 'smtp';
+
 export class EmailClient {
-  private readonly useConsole: boolean;
+  private readonly provider: Provider;
+  private readonly smtpTransport: nodemailer.Transporter | null = null;
 
   constructor() {
-    this.useConsole = process.env.EMAIL_PROVIDER === 'console';
-    if (!this.useConsole) {
+    const raw = (process.env.EMAIL_PROVIDER ?? 'console').toLowerCase();
+    this.provider = (raw === 'sendgrid' || raw === 'smtp') ? raw : 'console';
+
+    if (this.provider === 'sendgrid') {
       sgMail.setApiKey(config.sendgridApiKey);
+    }
+
+    if (this.provider === 'smtp') {
+      this.smtpTransport = nodemailer.createTransport({
+        host:   config.smtpHost,
+        port:   config.smtpPort,
+        secure: config.smtpPort === 465,
+        auth: {
+          user: config.smtpUser,
+          pass: config.smtpPass,
+        },
+      });
     }
   }
 
   async sendMail(input: SendMailInput): Promise<void> {
-    if (this.useConsole) {
+    if (this.provider === 'console') {
       logger.info({ to: input.to, subject: input.subject }, '[EMAIL:console] email would be sent');
       return;
     }
-    await sgMail.send({ from: config.emailFrom, to: input.to, subject: input.subject, html: input.html });
+
+    if (this.provider === 'sendgrid') {
+      await sgMail.send({ from: config.emailFrom, to: input.to, subject: input.subject, html: input.html });
+      return;
+    }
+
+    // smtp
+    await this.smtpTransport!.sendMail({
+      from:    `"CMP" <${config.emailFrom}>`,
+      to:      input.to,
+      subject: input.subject,
+      html:    input.html,
+    });
   }
 }
