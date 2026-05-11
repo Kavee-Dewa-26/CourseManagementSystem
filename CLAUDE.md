@@ -54,6 +54,7 @@ npx jest packages/progress-service/tests/unit/application/ComputeCourseProgressU
 
 # Start Firebase emulators only (project: demo-cmp)
 npx firebase emulators:start --only firestore,auth,storage --project demo-cmp
+# Emulator UI available at http://127.0.0.1:4000 (Firestore browser, Auth users)
 
 # Seed test users into running emulators (idempotent)
 node scripts/seed-emulator.js
@@ -79,7 +80,7 @@ packages/
   course-service/       # :3003  Courses → Semesters → Subjects, course lifecycle state machine
   enrollment-service/   # :3004  Registration queue, enrollment approvals, bulk operations
   progress-service/     # :3005  Subject completion (idempotent), course progress aggregates
-  storage-service/      # :3006  File upload/download (PDF/DOC/DOCX, 25 MB max), signed URLs
+  storage-service/      # :3006  File upload/download, signed URLs; allowed MIME: application/pdf, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document; max 25 MB
   notification-service/ # :3007  In-app notifications, email (3-retry backoff), push (best-effort)
   audit-service/        # :3008  Append-only audit_log; purely event-driven
   outbox-worker/        #        Background worker — no HTTP port; polls outbox every 5 s
@@ -87,7 +88,7 @@ packages/
 k8s/                    # Kubernetes Deployment + HPA manifests (one folder per service)
 postman/                # Postman collections for manual API testing
 firebase.json           # Firebase CLI config — indexes, rules, emulator ports
-firestore.indexes.json  # Composite indexes — update when adding new Firestore queries
+firestore.indexes.json  # Composite indexes — required for any query combining where() + orderBy() on different fields, or filtering deletedAt + another field + ordering
 firestore.rules         # Firestore security rules — update when adding new collections
 storage.rules           # Firebase Storage security rules
 ```
@@ -230,7 +231,7 @@ export class YouTubeVideoId {
 - `authenticate()` calls `verifyIdToken(token, checkRevoked=true)` and attaches `req.principal = { uid, email, role }`.
 - `super_admin` inherits all `admin` permissions inside `authorize()`.
 - Ownership-sensitive routes add `mustBeOwnerOrAdmin()` after `authorize()`.
-- **`tryAuthenticate()`** — used on public routes where the response shape differs by role (e.g., `GET /courses` shows DRAFT courses to admins but not students). It attaches `req.principal` if a valid Bearer token is present but never rejects missing or invalid tokens. This is **not** in `@shared/auth-middleware` — each service that needs it keeps its own copy at `src/http/middleware/tryAuthenticate.ts`.
+- **`tryAuthenticate()`** — used on public routes where the response shape differs by role (e.g., `GET /courses` shows DRAFT courses to admins but not students). It attaches `req.principal` if a valid Bearer token is present but never rejects missing or invalid tokens. This is **not** in `@shared/auth-middleware` — copy it to `src/http/middleware/tryAuthenticate.ts` in any service that needs it (currently only course-service has one).
 
 ### HTTP Status Code Policy
 
@@ -280,7 +281,14 @@ arrowParens: 'avoid'   # omit parens for single-param arrow functions
 
 ### TypeScript Strictness
 
-`tsconfig.base.json` enables `noUnusedLocals`, `noUnusedParameters`, `noImplicitReturns`, and `noFallthroughCasesInSwitch`. Unused imports or parameters are compile errors, not warnings. The ESLint config additionally enforces `no-console` and `no-floating-promises` as errors.
+`tsconfig.base.json` enables `noUnusedLocals`, `noUnusedParameters`, `noImplicitReturns`, and `noFallthroughCasesInSwitch`. Unused imports or parameters are compile errors, not warnings.
+
+The ESLint config enforces:
+- `no-console` — error (use `logger` from `@shared/logger`)
+- `no-floating-promises`, `await-thenable`, `no-misused-promises` — errors
+- `no-explicit-any` — **warning** only (not an error)
+- Unused variables prefixed with `_` are allowed (e.g., `_req`, `_next`)
+- ESLint runs with TypeScript type-checking (`recommended-requiring-type-checking`), so type errors surface at lint time too
 
 ### Transactional Outbox Pattern
 
@@ -293,7 +301,7 @@ Domain events are never lost. Services write to the `outbox` Firestore collectio
 pending → processing → delivered
                   ↘ (on failure, retried up to 5×, then) → failed
 ```
-`processedAt` is set only on `delivered`. Events dispatched concurrently per batch via `Promise.allSettled()` — a single handler failure does not block others. Failed events remain queryable for manual investigation.
+`processedAt` is set only on `delivered`. Within a single event, handlers are called **sequentially** (for-await loop) — a handler failure stops remaining handlers for that event and the event is retried on the next poll cycle. Failed events remain queryable for manual investigation.
 
 The outbox-worker's `EventDispatcher` routes each event type to one or more handlers. The full event routing table:
 
@@ -397,10 +405,13 @@ await client.get('/internal/users/admins');
 
 ### Response Envelope Shapes
 
-`sendSuccess(res, data, status?)` — sends `data` directly with no wrapper (default status 200).  
-`sendPaginated(res, items, nextCursor, total)` — wraps as `{ items, nextCursor, total }`.
+Success and error responses have **asymmetric shapes** — this is intentional:
 
-Error responses from `errorHandler` always use: `{ error: { code: 'ERROR_CODE', message: '...' }, requestId: '...' }`. The `requestId` field is always present at the root (not nested in `error`) so clients can correlate failures with server logs via the `X-Request-Id` header.
+- `sendSuccess(res, data, status?)` — sends `data` **directly** with no wrapper (e.g., `{ id, name, ... }`)
+- `sendPaginated(res, items, nextCursor, total)` — wraps as `{ items, nextCursor, total }`
+- Error responses always use `{ error: { code: 'ERROR_CODE', message: '...' }, requestId: '...' }`
+
+The `requestId` is at the root of error responses (not nested inside `error`) so clients can correlate failures with server logs via `X-Request-Id`.
 
 ---
 
@@ -468,7 +479,7 @@ There are three separate Jest configs — each with the same `moduleNameMapper` 
 | `student` | `student1@cmp.com` | `Student1@123` | pending_approval |
 | `student` | `student2@cmp.com` | `Student2@123` | approved |
 
-Use `jest.clearAllMocks()` in `beforeEach` to prevent test bleed. Integration tests require `npx firebase emulators:start --only firestore,auth,storage` to be running first (Firestore :8080, Auth :9099, Storage :9199). The shared setup file at `tests/integration/setup.ts` sets `FIRESTORE_EMULATOR_HOST` automatically — do not set it manually in `.env.local`.
+Use `jest.clearAllMocks()` in `beforeEach` to prevent test bleed. Integration tests require `npx firebase emulators:start --only firestore,auth,storage` to be running first (Firestore :8080, Auth :9099, Storage :9199). The shared setup file at `tests/integration/setup.ts` sets `FIRESTORE_EMULATOR_HOST` automatically — do not set emulator host variables in `.env.local` (they would redirect all running services to the emulator instead of the real Firebase project).
 
 Coverage thresholds enforced by `jest.config.ts`: branches 70%, functions/lines/statements 80%. `index.ts` and `server.ts` are excluded from coverage collection.
 

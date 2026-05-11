@@ -1,7 +1,6 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
       "@shared/firebase":             ["./packages/shared/firebase/src/index.ts"],
       "@shared/logger":               ["./packages/shared/logger/src/index.ts"],
@@ -11,8 +10,7 @@
       "@shared/internal-http-client": ["./packages/shared/internal-http-client/src/index.ts"],
       "@shared/response":             ["./packages/shared/response/src/index.ts"],
       "@shared/health":               ["./packages/shared/health/src/index.ts"],
-      "@shared/tracing":              ["./packages/shared/tracing/src/index.ts"],
-      "@/*":                          ["./src/*"]
+      "@shared/tracing":              ["./packages/shared/tracing/src/index.ts"]
     }
   },
   "exclude": ["**/dist/**", "**/node_modules/**"]
