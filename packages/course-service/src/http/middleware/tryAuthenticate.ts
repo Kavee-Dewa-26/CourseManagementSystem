@@ -10,9 +10,10 @@ export function tryAuthenticate() {
     if (!header?.startsWith('Bearer ')) return next();
     try {
       const decoded = await getAuth().verifyIdToken(header.slice(7), true);
-      const role    = decoded.role as string | undefined;
+      const role    = decoded.role as 'student' | 'admin' | 'super_admin' | undefined;
       if (role) {
-        (req as AuthenticatedRequest).principal = { uid: decoded.uid, email: decoded.email ?? '', role: role as 'student' | 'admin' | 'super_admin' };
+        const roles = (decoded.roles as typeof role[] | undefined) ?? [role];
+        (req as AuthenticatedRequest).principal = { uid: decoded.uid, email: decoded.email ?? '', role, roles };
       }
     } catch { /* ignore bad tokens on public routes */ }
     next();

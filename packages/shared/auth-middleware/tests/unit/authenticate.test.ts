@@ -44,6 +44,7 @@ describe('authenticate()', () => {
       uid:   'user-1',
       email: 'test@example.com',
       role:  'student',
+      roles: ['student'],
     });
     expect(next).toHaveBeenCalledWith();
   });

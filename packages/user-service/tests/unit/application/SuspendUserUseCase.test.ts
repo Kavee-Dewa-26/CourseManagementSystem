@@ -7,7 +7,7 @@ import { User }                from '../../../src/domain/entities/User';
 const makeUser = (overrides = {}): User =>
   new User({
     uid: 'uid-1', email: 'student@example.com', firstName: 'Viruli',
-    lastName: 'W', role: 'student', status: 'approved',
+    lastName: 'W', role: 'student', roles: ['student'], status: 'approved',
     profilePhotoUrl: null, createdAt: '2026-05-01T00:00:00.000Z',
     updatedAt: '2026-05-01T00:00:00.000Z', deletedAt: null, ...overrides,
   });

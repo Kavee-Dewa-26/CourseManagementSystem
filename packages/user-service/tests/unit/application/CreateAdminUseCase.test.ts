@@ -7,7 +7,7 @@ import { User }                                 from '../../../src/domain/entiti
 const makeUser = (overrides = {}): User =>
   new User({
     uid: 'uid-1', email: 'admin@example.com', firstName: 'Kavinda',
-    lastName: 'Perera', role: 'admin', status: 'approved',
+    lastName: 'Perera', role: 'admin', roles: ['admin'], status: 'approved',
     profilePhotoUrl: null, createdAt: '2026-05-01T00:00:00.000Z',
     updatedAt: '2026-05-01T00:00:00.000Z', deletedAt: null, ...overrides,
   });

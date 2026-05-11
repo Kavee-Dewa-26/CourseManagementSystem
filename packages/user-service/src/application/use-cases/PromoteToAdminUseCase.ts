@@ -24,8 +24,8 @@ export class PromoteToAdminUseCase {
       throw createHttpError(409, 'INVALID_ROLE', 'Only student accounts can be promoted to admin.');
     }
 
-    // Set Firebase custom claim to admin
-    await this.authClient.setCustomClaims(input.uid, { role: 'admin' });
+    // Retain the student role so the promoted admin can still act as a student
+    await this.authClient.setCustomClaims(input.uid, { role: 'admin', roles: ['student', 'admin'] });
 
     // Rebuild user with updated role + status (role is readonly on entity)
     const promoted = new User({
@@ -34,6 +34,7 @@ export class PromoteToAdminUseCase {
       firstName:       user.firstName,
       lastName:        user.lastName,
       role:            'admin',
+      roles:           ['student', 'admin'],
       status:          'approved',
       profilePhotoUrl: user.profilePhotoUrl,
       createdAt:       user.createdAt,

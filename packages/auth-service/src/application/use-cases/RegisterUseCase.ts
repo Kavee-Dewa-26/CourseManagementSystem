@@ -30,7 +30,7 @@ export class RegisterUseCase {
     });
 
     try {
-      await getAuth().setCustomUserClaims(record.uid, { role: 'student' });
+      await getAuth().setCustomUserClaims(record.uid, { role: 'student', roles: ['student'] });
 
       const now  = new Date().toISOString();
       const db   = getFirestore();
@@ -41,6 +41,7 @@ export class RegisterUseCase {
         firstName:       input.firstName,
         lastName:        input.lastName,
         role:            'student',
+        roles:           ['student'],
         status:          'pending_approval',
         profilePhotoUrl: null,
         createdAt:       now,

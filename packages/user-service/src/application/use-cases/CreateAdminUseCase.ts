@@ -29,7 +29,7 @@ export class CreateAdminUseCase {
     });
 
     try {
-      await this.authClient.setCustomClaims(uid, { role: 'admin' });
+      await this.authClient.setCustomClaims(uid, { role: 'admin', roles: ['admin'] });
 
       const now  = new Date().toISOString();
       const user = new User({
@@ -38,6 +38,7 @@ export class CreateAdminUseCase {
         firstName:       input.firstName,
         lastName:        input.lastName,
         role:            'admin',
+        roles:           ['admin'],
         status:          'approved',
         profilePhotoUrl: null,
         createdAt:       now,

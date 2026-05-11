@@ -1,11 +1,22 @@
 import { getFirestore }                                   from 'firebase-admin/firestore';
-import { User, UserProps }                                from '../../domain/entities/User';
+import { User, UserRole, UserProps }                      from '../../domain/entities/User';
 import { IUserRepository, FindAllOptions, FindAllResult } from '../../domain/repositories/IUserRepository';
 
-type UserDoc = Omit<UserProps, 'uid'>;
-
-function toUser(id: string, data: UserDoc): User {
-  return new User({ ...data, uid: id });
+function toUser(id: string, data: FirebaseFirestore.DocumentData): User {
+  const role = data.role as UserRole;
+  return new User({
+    uid:             id,
+    email:           data.email as string,
+    firstName:       data.firstName as string,
+    lastName:        data.lastName as string,
+    role,
+    roles:           (data.roles as UserRole[] | undefined) ?? [role],
+    status:          data.status as UserProps['status'],
+    profilePhotoUrl: (data.profilePhotoUrl as string | null) ?? null,
+    createdAt:       data.createdAt as string,
+    updatedAt:       data.updatedAt as string,
+    deletedAt:       (data.deletedAt as string | null) ?? null,
+  });
 }
 
 export class FirestoreUserRepository implements IUserRepository {
@@ -14,7 +25,7 @@ export class FirestoreUserRepository implements IUserRepository {
   async findById(uid: string): Promise<User | null> {
     const snap = await this.col.doc(uid).get();
     if (!snap.exists) return null;
-    const data = snap.data() as UserDoc;
+    const data = snap.data()!;
     if (data.deletedAt !== null) return null;
     return toUser(snap.id, data);
   }
@@ -27,7 +38,7 @@ export class FirestoreUserRepository implements IUserRepository {
       .get();
     if (snap.empty) return null;
     const doc = snap.docs[0];
-    return toUser(doc.id, doc.data() as UserDoc);
+    return toUser(doc.id, doc.data());
   }
 
   async findAll(opts: FindAllOptions): Promise<FindAllResult> {
@@ -45,7 +56,7 @@ export class FirestoreUserRepository implements IUserRepository {
     }
 
     const snap  = await query.get();
-    const items = snap.docs.map(d => toUser(d.id, d.data() as UserDoc));
+    const items = snap.docs.map(d => toUser(d.id, d.data()));
     const last  = snap.docs[snap.docs.length - 1];
     const nextCursor = snap.docs.length === opts.limit && last ? last.id : null;
 

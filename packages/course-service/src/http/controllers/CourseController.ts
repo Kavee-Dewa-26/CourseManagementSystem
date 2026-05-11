@@ -30,7 +30,7 @@ export class CourseController {
       if (!parsed.success) return next(fromZodError(parsed.error));
 
       const principal = (req as AuthenticatedRequest).principal;
-      const isAdmin   = principal?.role === 'admin' || principal?.role === 'super_admin';
+      const isAdmin   = principal?.roles?.some(r => r === 'admin' || r === 'super_admin') ?? false;
 
       let result;
       if (isAdmin) {
@@ -46,7 +46,7 @@ export class CourseController {
   getOne = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const principal = (req as AuthenticatedRequest).principal;
-      const isAdmin   = principal?.role === 'admin' || principal?.role === 'super_admin';
+      const isAdmin   = principal?.roles?.some(r => r === 'admin' || r === 'super_admin') ?? false;
       const course    = await this.getUseCase.execute(req.params.id, isAdmin);
       sendSuccess(res, course);
     } catch (err) { next(err); }

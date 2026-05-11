@@ -7,6 +7,7 @@ function makeUser(overrides: Partial<UserProps> = {}): User {
     firstName:       'Viruli',
     lastName:        'Weerasinghe',
     role:            'student',
+    roles:           ['student'],
     status:          'approved',
     profilePhotoUrl: null,
     createdAt:       '2026-05-01T08:00:00.000Z',

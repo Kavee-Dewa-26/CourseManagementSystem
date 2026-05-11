@@ -7,6 +7,7 @@ export interface UserProps {
   firstName:       string;
   lastName:        string;
   role:            UserRole;
+  roles:           UserRole[];
   status:          UserStatus;
   profilePhotoUrl: string | null;
   createdAt:       string;
@@ -20,6 +21,7 @@ export class User {
   firstName:                string;
   lastName:                 string;
   readonly role:            UserRole;
+  readonly roles:           UserRole[];
   status:                   UserStatus;
   profilePhotoUrl:          string | null;
   readonly createdAt:       string;
@@ -32,6 +34,7 @@ export class User {
     this.firstName       = props.firstName;
     this.lastName        = props.lastName;
     this.role            = props.role;
+    this.roles           = props.roles;
     this.status          = props.status;
     this.profilePhotoUrl = props.profilePhotoUrl;
     this.createdAt       = props.createdAt;

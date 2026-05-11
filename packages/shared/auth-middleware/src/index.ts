@@ -8,6 +8,7 @@ export interface Principal {
   uid:   string;
   email: string;
   role:  Role;
+  roles: Role[];
 }
 
 export interface AuthenticatedRequest extends Request {
@@ -34,10 +35,13 @@ export function authenticate() {
         return next(createHttpError(401, 'INVALID_TOKEN', 'Token is missing role claim.'));
       }
 
+      const roles = (decoded.roles as Role[] | undefined) ?? [role];
+
       (req as AuthenticatedRequest).principal = {
         uid:   decoded.uid,
         email: decoded.email ?? '',
         role,
+        roles,
       };
 
       next();
@@ -67,8 +71,9 @@ export function authorize(...roles: Role[]) {
     }
 
     // super_admin inherits all admin permissions
-    const effectiveRoles: Role[] =
-      principal.role === 'super_admin' ? ['super_admin', 'admin'] : [principal.role];
+    const effectiveRoles: Role[] = principal.roles.includes('super_admin')
+      ? ([...new Set([...principal.roles, 'admin'])] as Role[])
+      : principal.roles;
 
     const allowed = roles.some(r => effectiveRoles.includes(r));
 
@@ -96,7 +101,7 @@ export function mustBeOwnerOrAdmin(getResourceUid: (req: Request) => string | un
     if (!resourceUid) return next();
 
     const isOwner = principal.uid === resourceUid;
-    const isAdmin = principal.role === 'admin' || principal.role === 'super_admin';
+    const isAdmin = principal.roles.includes('admin') || principal.roles.includes('super_admin');
 
     if (!isOwner && !isAdmin) {
       return next(
