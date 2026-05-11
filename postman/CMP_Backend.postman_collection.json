@@ -443,6 +443,36 @@
             "header": [],
             "url": { "raw": "{{baseUrl}}/super-admin/admins/{{adminUserId}}" }
           }
+        },
+        {
+          "name": "Promote Student to Admin — saves promotedAdminId",
+          "description": "Promotes a registered student to admin role. Updates Firebase claim + Firestore role + sends email. Requires student2Id to be populated (run '2️⃣ Get My Profile (student2)' first).",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.uid) {",
+                "  pm.environment.set('promotedAdminId', j.uid);",
+                "  console.log('promotedAdminId saved:', j.uid, '| role:', j.role);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/super-admin/users/{{student2Id}}/make-admin" }
+          }
+        },
+        {
+          "name": "Promote Admin again (expect 409 INVALID_ROLE)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/super-admin/users/{{student2Id}}/make-admin" }
+          }
         }
       ]
     },
@@ -570,6 +600,7 @@
               "raw": "{\n  \"title\": \"Semester 1\",\n  \"description\": \"Core modules for the first term\"\n}",
               "options": { "raw": { "language": "json" } }
             },
+            "description": "Fields: title (required), description (optional). Note: actual validator uses 'title'/'description', not 'name'/'sortOrder'.",
             "url": { "raw": "{{baseUrl}}/courses/{{courseId}}/semesters" }
           }
         },
@@ -609,7 +640,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Introduction to Algorithms\",\n  \"description\": \"Sorting, searching, and complexity\"\n}",
+              "raw": "{\n  \"title\": \"Introduction to Algorithms\",\n  \"description\": \"Sorting, searching, and complexity\",\n  \"youtubeVideoId\": \"dQw4w9WgXcQ\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": { "raw": "{{baseUrl}}/semesters/{{semesterId}}/subjects" }
@@ -639,7 +670,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Data Structures\",\n  \"description\": \"Arrays, linked lists, and trees\"\n}",
+              "raw": "{\n  \"title\": \"Data Structures\",\n  \"description\": \"Arrays, linked lists, and trees\",\n  \"youtubeVideoId\": \"rfscVS0vtbw\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": { "raw": "{{baseUrl}}/semesters/{{semesterId}}/subjects" }
@@ -1357,15 +1388,17 @@
       "description": "Hit each service directly (bypassing the gateway) to confirm all are alive.",
       "auth": { "type": "noauth" },
       "item": [
-        { "name": "Gateway :3000",             "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/healthz" } } },
-        { "name": "Auth Service :3001",        "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3001/healthz" } } },
-        { "name": "User Service :3002",        "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3002/healthz" } } },
-        { "name": "Course Service :3003",      "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3003/healthz" } } },
-        { "name": "Enrollment Service :3004",  "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3004/healthz" } } },
-        { "name": "Progress Service :3005",    "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3005/healthz" } } },
-        { "name": "Storage Service :3006",     "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3006/healthz" } } },
-        { "name": "Notification Service :3007","request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3007/healthz" } } },
-        { "name": "Audit Service :3008",       "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3008/healthz" } } }
+        { "name": "Gateway /healthz :3000",             "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/healthz" } } },
+        { "name": "Gateway /readyz :3000",              "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3000/readyz" } } },
+        { "name": "Auth Service :3001",                 "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3001/healthz" } } },
+        { "name": "Auth Service /readyz :3001",         "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3001/readyz" } } },
+        { "name": "User Service :3002",                 "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3002/healthz" } } },
+        { "name": "Course Service :3003",               "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3003/healthz" } } },
+        { "name": "Enrollment Service :3004",           "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3004/healthz" } } },
+        { "name": "Progress Service :3005",             "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3005/healthz" } } },
+        { "name": "Storage Service :3006",              "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3006/healthz" } } },
+        { "name": "Notification Service :3007",         "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3007/healthz" } } },
+        { "name": "Audit Service :3008",                "request": { "method": "GET", "header": [], "url": { "raw": "http://localhost:3008/healthz" } } }
       ]
     }
 
