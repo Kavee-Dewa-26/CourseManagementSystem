@@ -85,7 +85,7 @@
     - 14.5 [Reactivate Admin](#145-post-super-adminadminsuidreactivate)
     - 14.6 [Delete Admin](#146-delete-super-adminadminsuid)
     - 14.7 [Promote Student to Admin](#147-post-super-adminusersuidmake-admin)
-15. [Audit Log — Super Admin](#15-audit-log--super-admin)
+15. [Audit Log — Admin & Super Admin](#15-audit-log--admin--super-admin)
     - 15.1 [Get Audit Log](#151-get-audit-log)
 16. [Health Endpoints](#16-health-endpoints)
     - 16.1 [Liveness Probe](#161-get-healthz)
@@ -2290,7 +2290,7 @@ None.
 
 ---
 
-## 15. Audit Log — Super Admin
+## 15. Audit Log — Admin & Super Admin
 
 ---
 
@@ -2299,7 +2299,7 @@ None.
 Retrieve the append-only system audit log. Records are immutable once written.
 
 **Authentication:** Bearer token required
-**Roles:** `super_admin`
+**Roles:** `admin`, `super_admin`
 
 #### Query Parameters
 
@@ -2307,6 +2307,7 @@ Retrieve the append-only system audit log. Records are immutable once written.
 |-----------|------|:-------:|-------------|
 | `actorUid` | `string` | — | Filter by the UID of the actor who performed the action |
 | `action` | `string` | — | Filter by action type (e.g., `registration.approved`) |
+| `category` | `string` | — | Filter by category (e.g., `auth`, `user`, `course`, `enrollment`, `progress`, `storage`) |
 | `targetType` | `string` | — | Filter by target entity type (e.g., `course`, `enrollment`) |
 | `targetId` | `string` | — | Filter by specific resource ID |
 | `from` | `string` | — | ISO 8601 date — start of date range |
@@ -2321,17 +2322,18 @@ Retrieve the append-only system audit log. Records are immutable once written.
 {
   "items": [
     {
-      "id":          "audit-001",
-      "actorUid":    "admin-uid-xyz",
-      "actorEmail":  "sapna@example.com",
-      "action":      "registration.approved",
-      "targetType":  "registration",
-      "targetId":    "reg-001",
-      "payload": {
-        "studentUid": "firebase-uid-abc123"
+      "id":       "audit-001",
+      "when":     "2026-05-06T09:00:00.000Z",
+      "actor": {
+        "uid":    "admin-uid-xyz",
+        "email":  "admin@cmp.com"
       },
-      "requestId":   "7f3a1c2d-4e5b-6f7a-8b9c-0d1e2f3a4b5c",
-      "createdAt":   "2026-05-06T09:00:00.000Z"
+      "action":     "registration.approved",
+      "category":   "enrollment",
+      "ip":         "192.168.1.100",
+      "targetType": "registration",
+      "targetId":   "reg-001",
+      "requestId":  "7f3a1c2d-4e5b-6f7a-8b9c-0d1e2f3a4b5c"
     }
   ],
   "nextCursor": null,
@@ -2341,8 +2343,12 @@ Retrieve the append-only system audit log. Records are immutable once written.
 
 | Field | Description |
 |-------|-------------|
-| `actorUid` | UID of the user who performed the action; `null` for system-generated events |
-| `action` | Event type string (see Section 20) |
+| `when` | ISO 8601 timestamp of when the action occurred |
+| `actor.uid` | UID of the user who performed the action; `null` for system-generated events |
+| `actor.email` | Email of the actor; `null` if not captured |
+| `action` | Event type string (e.g., `registration.approved`, `course.published`) |
+| `category` | Logical grouping: `auth`, `user`, `course`, `enrollment`, `progress`, `storage`, `system`; `null` if not set |
+| `ip` | IP address of the actor at the time of the action; `null` if not captured |
 | `targetType` | Entity type acted on: `user`, `course`, `enrollment`, `registration`, `admin`, `subject` |
 | `requestId` | End-to-end correlation ID |
 

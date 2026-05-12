@@ -1,16 +1,32 @@
 export interface AuditLogEntry {
-  actorUid:   string | null;
+  actorUid:    string | null;
+  actorEmail:  string | null;
+  action:      string;
+  category:    string | null;
+  ip:          string | null;
+  targetType:  string | null;
+  targetId:    string | null;
+  payload:     unknown;
+  requestId:   string;
+  createdAt:   string;
+}
+
+export interface AuditLogDTO {
+  id:         string;
+  when:       string;
+  actor:      { uid: string | null; email: string | null };
   action:     string;
+  category:   string | null;
+  ip:         string | null;
   targetType: string | null;
   targetId:   string | null;
-  payload:    unknown;
   requestId:  string;
-  createdAt:  string;
 }
 
 export interface AuditQueryOptions {
   actorUid?:   string;
   action?:     string;
+  category?:   string;
   targetType?: string;
   targetId?:   string;
   from?:       string;

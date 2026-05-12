@@ -17,6 +17,7 @@ export class FirestoreAuditRepository implements IAuditRepository {
 
     if (opts.actorUid)   q = q.where('actorUid',   '==', opts.actorUid);
     if (opts.action)     q = q.where('action',     '==', opts.action);
+    if (opts.category)   q = q.where('category',   '==', opts.category);
     if (opts.targetType) q = q.where('targetType', '==', opts.targetType);
     if (opts.targetId)   q = q.where('targetId',   '==', opts.targetId);
     if (opts.from)       q = q.where('createdAt',  '>=', opts.from);

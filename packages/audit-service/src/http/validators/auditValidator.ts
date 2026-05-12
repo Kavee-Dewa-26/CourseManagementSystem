@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const auditQuerySchema = z.object({
   actorUid:   z.string().optional(),
   action:     z.string().optional(),
+  category:   z.string().optional(),
   targetType: z.string().optional(),
   targetId:   z.string().optional(),
   from:       z.string().optional(),
