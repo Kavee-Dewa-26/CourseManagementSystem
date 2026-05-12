@@ -13,9 +13,25 @@
 process.env.FIRESTORE_EMULATOR_HOST     = '127.0.0.1:8080';
 process.env.FIREBASE_AUTH_EMULATOR_HOST = '127.0.0.1:9099';
 
+const fs    = require('fs');
+const path  = require('path');
 const admin = require('firebase-admin');
 
-admin.initializeApp({ projectId: 'demo-cmp' });
+// Resolve project ID: env var → .firebaserc default → fallback
+function resolveProjectId() {
+  if (process.env.FIREBASE_PROJECT_ID) return process.env.FIREBASE_PROJECT_ID;
+  try {
+    const rc = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '.firebaserc'), 'utf8'));
+    return rc.projects?.default ?? 'demo-cmp';
+  } catch (_) {
+    return 'demo-cmp';
+  }
+}
+
+const PROJECT_ID = resolveProjectId();
+console.log(`\nProject: ${PROJECT_ID}`);
+
+admin.initializeApp({ projectId: PROJECT_ID });
 
 const auth = admin.auth();
 const db   = admin.firestore();

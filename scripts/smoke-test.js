@@ -69,7 +69,16 @@ async function signIn(email, password) {
     body:    JSON.stringify({ email, password, returnSecureToken: true }),
   });
   const d = await res.json();
-  if (!res.ok) throw new Error(`Auth failed for ${email}: ${d.error?.message ?? JSON.stringify(d)}`);
+  if (!res.ok) {
+    const msg = d.error?.message ?? JSON.stringify(d);
+    if (msg === 'EMAIL_NOT_FOUND' || msg === 'INVALID_LOGIN_CREDENTIALS') {
+      throw new Error(
+        `Seed account not found: ${email}\n` +
+        '    Run:  node scripts/seed-emulator.js   (emulators must be running)',
+      );
+    }
+    throw new Error(`Auth failed for ${email}: ${msg}`);
+  }
   return { token: d.idToken, uid: d.localId };
 }
 
@@ -124,9 +133,12 @@ async function main() {
   r = await api('POST', '/auth/track-failure', { email: TS_EMAIL });
   check('POST', '/auth/track-failure', r, 200);
 
-  // 4. POST /auth/logout  (revokes ADM token — we re-sign in immediately after)
+  // 4. POST /auth/logout  (revokes ADM token — must wait ≥1 s before re-signing in)
+  // Firebase uses second-precision for auth_time; a token issued in the same second
+  // as revokeRefreshTokens will fail verifyIdToken(checkRevoked=true).
   r = await api('POST', '/auth/logout', null, ADM.token);
   check('POST', '/auth/logout', r, 204);
+  await sleep(1100);
   ADM = await signIn('admin@cmp.com', 'Admin@12345'); // fresh token
 
   // ╔══════════════════╗

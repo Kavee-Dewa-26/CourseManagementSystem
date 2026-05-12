@@ -52,8 +52,12 @@ npm run test:e2e
 # Run a single test file
 npx jest packages/progress-service/tests/unit/application/ComputeCourseProgressUseCase.test.ts
 
-# Start all services locally via Docker
+# Start all services locally via Docker (connects to online Firebase)
 docker-compose up --build
+
+# Start all services via Docker against local Firebase emulators
+# Prerequisites: npx firebase emulators:start && node scripts/seed-emulator.js
+docker-compose -f docker-compose.yml -f docker-compose.local.yml up --build
 
 # Stop all services
 docker-compose down
@@ -95,7 +99,7 @@ packages/
   gateway/              # :3000  Single entry point; rate limiting, CORS, request ID, proxy
   auth-service/         # :3001  Token verification, registration, logout, lockout tracking
   user-service/         # :3002  User profiles, admin management, account lifecycle
-  course-service/       # :3003  Courses → Semesters → Subjects, course lifecycle state machine
+  course-service/       # :3003  Courses → Semesters → Subjects → Lessons, course lifecycle state machine
   enrollment-service/   # :3004  Registration queue, enrollment approvals, bulk operations
   progress-service/     # :3005  Subject completion (idempotent), course progress aggregates
   storage-service/      # :3006  File upload/download, signed URLs; allowed MIME: application/pdf, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document; max 25 MB
@@ -120,7 +124,8 @@ The gateway also blocks all `/api/v1/internal/*` paths with 404 before proxying 
 **Route ordering in `gateway/src/app.ts` is load-bearing.** More-specific prefixes must be registered before their broader siblings:
 - `/api/v1/me/notifications`, `/api/v1/me/enrollments`, `/api/v1/me/progress` each before `/api/v1/me`
 - `/api/v1/courses/:id/enroll` before `/api/v1/courses`
-- `/api/v1/subjects/:id/attachments` before `/api/v1/subjects`
+- `/api/v1/subjects/:id/lessons` (courseProxy) and `/api/v1/subjects/:id/attachments` (storageProxy) each before `/api/v1/subjects`
+- `/api/v1/lessons` after the subject sub-routes
 
 Adding a new proxied route in the wrong order will silently send traffic to the wrong service.
 
@@ -349,6 +354,7 @@ No service reads another service's Firestore collections directly. Cross-service
 | `courses` | course-service | auto UUID |
 | `courses/{id}/semesters` | course-service | auto UUID |
 | `courses/{id}/semesters/{id}/subjects` | course-service | auto UUID |
+| `lessons` | course-service | auto UUID — flat collection; carries `subjectId`, `semesterId`, `courseId` foreign keys and `order` for sequencing |
 | `registrations` | enrollment-service | Firebase Auth UID (studentUid) |
 | `enrollments` | enrollment-service | `${studentUid}_${courseId}` |
 | `progress` | progress-service | `${studentUid}_${subjectId}` |
@@ -385,6 +391,20 @@ DRAFT → publish() → PUBLISHED → archive() → ARCHIVED
 ### Progress Idempotency
 
 `MarkSubjectCompleteUseCase` is idempotent — if a subject is already `completed`, it returns the existing record unchanged. `completedAt` is immutable once set.
+
+### Firebase Identity Toolkit REST Calls
+
+Some Firebase Auth operations (password verification, password reset email) are not available in the Admin SDK and must be called directly via the Firebase Identity Toolkit REST API. Both `FirebaseAuthClient.verifyPassword` (user-service) and `PasswordResetUseCase` (auth-service) use this pattern:
+
+```typescript
+const emulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
+const base = emulatorHost
+  ? `http://${emulatorHost}/identitytoolkit.googleapis.com/v1`
+  : 'https://identitytoolkit.googleapis.com/v1';
+const url = `${base}/accounts:signInWithPassword?key=${config.firebaseWebApiKey}`;
+```
+
+The emulator branch uses the `FIREBASE_AUTH_EMULATOR_HOST` env var (set automatically by `docker-compose.local.yml`). `FIREBASE_WEB_API_KEY` (client key, not service account) is required — set it in `.env.local`.
 
 ### Soft Deletes
 
