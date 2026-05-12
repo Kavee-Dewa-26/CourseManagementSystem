@@ -64,8 +64,21 @@ node scripts/smoke-test.js
 # Deploy Firestore composite indexes to online Firebase (reads creds from .env.local)
 node scripts/deploy-indexes-env.js
 
+# Deploy Firestore composite indexes using GOOGLE_APPLICATION_CREDENTIALS env var
+node scripts/deploy-indexes.js
+
 # Seed online Firebase with test accounts (reads creds from .env.local)
 node scripts/seed-online-env.js
+
+# Seed emulator with test accounts (emulators must be running)
+node scripts/seed-emulator.js
+
+# Seed a single admin account in the emulator
+node scripts/seed-admin.js
+
+# One-time migration: backfill `roles` array on all users in online Firebase
+# Usage: node scripts/migrate-roles.js path/to/serviceAccount.json
+node scripts/migrate-roles.js
 
 # Verify service endpoint availability
 node scripts/verify-endpoints.js
@@ -462,17 +475,17 @@ OTEL_SERVICE_NAME                       # OpenTelemetry service name for tracing
 
 ## Testing
 
-There are three separate Jest configs — each with the same `moduleNameMapper` for path aliases:
+Two Jest configs exist in the repo. A third (`jest.e2e.config.ts`) is referenced in `package.json` but has not been created yet.
 
 | Config | Command | Scope | Timeout |
 |--------|---------|-------|---------|
 | `jest.config.ts` | `npm run test` | `tests/unit/**/*.test.ts` | default |
 | `jest.integration.config.ts` | `npm run test:integration` | `tests/integration/**/*.test.ts` | 30 s |
-| `jest.e2e.config.ts` | `npm run test:e2e` | `tests/e2e/**/*.test.ts` | — |
+| *(missing)* `jest.e2e.config.ts` | `npm run test:e2e` | `tests/e2e/**/*.test.ts` | — |
 
 - **Unit tests** — No I/O. Mock repositories and service clients. Files live under `tests/unit/application/` and `tests/unit/domain/`.
-- **Integration tests** — Jest + Firestore emulator. Test use cases + repositories end-to-end.
-- **E2E tests** — Supertest + all services running via Docker Compose.
+- **Integration tests** — Jest + Firestore emulator. Test use cases + repositories end-to-end. `jest.integration.config.ts` loads `tests/integration/setup.ts` via `setupFiles` to initialise emulator environment variables before tests run.
+- **E2E tests** — Supertest + all services running via Docker Compose. `jest.e2e.config.ts` must be created before `npm run test:e2e` works.
 - **Firestore Security Rules** — `@firebase/rules-unit-testing`. Verify that client-side writes to `audit_log` are denied and that each service's collections enforce expected rules.
 
 **Local seed accounts** (created by `node scripts/seed-emulator.js`, emulators must be running):
@@ -535,7 +548,15 @@ When reading a spec to implement a feature:
 
 ## CI/CD
 
-`.github/workflows/ci.yml` runs on every push/PR: matrix type-check + lint + unit tests across all services, Docker image builds with Trivy security scanning, and `firebase deploy --only firestore:rules,firestore:indexes` on merges to `main`.
+`.github/workflows/ci.yml` has four jobs that run on every push/PR to `main`, and a tag-triggered production job:
+
+1. **`shared`** — type-checks and builds all shared packages; uploads `dist/` as a build artifact for downstream jobs.
+2. **`service-ci`** (matrix, 10 services in parallel) — downloads shared artifacts, then for each service: type-check → lint → unit tests → `npm audit --audit-level=high` → Docker build → **Trivy scan** (fails on HIGH or CRITICAL CVEs) → push image to registry (main push only).
+3. **`deploy-staging`** — runs after `service-ci` on main push; uses `kubectl set image` to update all 10 deployments in the `cmp-staging` namespace, waits for rollout, then runs E2E smoke tests against `STAGING_BASE_URL`.
+4. **`deploy-firebase`** — runs in parallel with deploy-staging on main push; deploys Firestore indexes, Firestore rules, and Storage rules via `firebase deploy`.
+5. **`deploy-production`** — triggered by a `v*` tag (not a push); requires `deploy-staging` to have passed; uses `kubectl set image` against `cmp-production` namespace.
+
+Images are tagged with `github.sha` and also re-tagged `latest` on main push.
 
 ---
 
