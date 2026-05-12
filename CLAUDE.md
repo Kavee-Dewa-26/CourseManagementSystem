@@ -142,6 +142,11 @@ infrastructure/(Firestore repos, Firebase SDK, email clients)
 
 Controllers are thin — they call one use case and delegate errors with `next(err)`. All business rules live in use cases.
 
+**Exception — notification-service and audit-service do not follow this pattern.** They have no controllers or use cases driven by HTTP. Instead they receive domain events from the outbox-worker over internal HTTP and process them through handler classes:
+
+- `notification-service` — has `src/application/handlers/` (e.g. `UserRegisteredHandler`) that call a `NotificationDispatcher` service. Email dispatch retries 3× with exponential backoff (1 s → 2 s → 4 s); failure is logged but never thrown. Push notifications are best-effort — a failure logs a warning and is silently swallowed. The service still exposes `/notifications` read endpoints for the frontend via the standard route → controller path.
+- `audit-service` — has `src/application/handlers/` that write append-only entries to `audit_log` via a repository. No HTTP creation endpoint exists; entries are only created by event handlers.
+
 ### Shared Packages
 
 | Package | Key Exports |
@@ -156,7 +161,7 @@ Controllers are thin — they call one use case and delegate errors with `next(e
 | `@shared/firebase` | `initFirebaseAdmin()` (idempotent) |
 | `@shared/tracing` | `initTracing(serviceName)` |
 
-**Request ID propagation via `AsyncLocalStorage`:** `@shared/internal-http-client` uses Node's `AsyncLocalStorage` to thread request IDs across service boundaries without explicit parameter passing. The gateway calls `runWithRequestId(id, fn)` to store the ID; `createInternalClient()` reads it via `getRequestId()` in an Axios request interceptor and injects `X-Request-Id` automatically. This is why you never pass `requestId` through use case parameters.
+**Request ID propagation via `AsyncLocalStorage`:** `@shared/internal-http-client` uses Node's `AsyncLocalStorage` to thread request IDs across service boundaries without explicit parameter passing. The gateway attaches a `requestId` middleware that generates an ID, sets `req.id`, and calls `runWithRequestId(id, next)` so the ID is stored in async context for the lifetime of that request. `createInternalClient()` reads it via `getRequestId()` in an Axios request interceptor and injects `X-Request-Id` automatically. This is why you never pass `requestId` through use case parameters.
 
 ### TypeScript Path Aliases
 
@@ -283,6 +288,12 @@ Every service's `app.ts` must register middleware in this exact order or request
 helmet() → express.json() → httpLogger → routes → errorHandler (last)
 ```
 
+The gateway additionally inserts `cors()` and `requestId` between `helmet()` and `httpLogger`:
+
+```
+helmet() → cors() → requestId → httpLogger → routes → errorHandler (last)
+```
+
 `errorHandler` must be the final middleware — Express identifies it by its four-argument signature `(err, req, res, next)`.
 
 ### Error Handling
@@ -325,6 +336,8 @@ pending → processing → delivered
                   ↘ (on failure, retried up to 5×, then) → failed
 ```
 `processedAt` is set only on `delivered`. Within a single event, handlers are called **sequentially** (for-await loop) — a handler failure stops remaining handlers for that event and the event is retried on the next poll cycle. Failed events remain queryable for manual investigation.
+
+Across a batch, the worker uses `Promise.allSettled()` so one event's failure does not abort processing of the remaining events in the same poll cycle.
 
 The outbox-worker's `EventDispatcher` routes each event type to one or more handlers. The full event routing table:
 
@@ -583,7 +596,7 @@ Images are tagged with `github.sha` and also re-tagged `latest` on main push.
 ## Reference Documents
 
 - **`.claude/blueprint/Backend_Blueprint.md`** — Full architecture specification, implementation patterns, all use case code samples, security requirements traceability.
-- **`.claude/APIdocument/API_Document.md`** — Complete REST API reference (all endpoints, request/response schemas, error codes).
+- **`.claude/APIdocument/API_Document.md`** — Complete REST API reference (all endpoints, request/response schemas, error codes). **This document has been audited and corrected to match the actual implementation** — field names, response status codes, and request bodies reflect the real code, not the original spec.
 - **`.claude/tracker/tracker.md`** — Phase-by-phase implementation checklist (Phases 0–13). Update `[ ]` → `[x]` as work completes. Check this before starting any phase to understand what's done and what's blocked.
 - **`.claude/plan/implementation-plan.md`** — Detailed implementation plan with phase dependencies and sequencing.
 - **`.claude/sprints/`** — Per-sprint breakdown (`sprint-1-*.md` through `sprint-7-*.md`) with user stories and acceptance criteria.
