@@ -16,3 +16,4 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 storage.rules.debug.log
+hs_err_pid*.log
