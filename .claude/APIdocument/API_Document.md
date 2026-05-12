@@ -24,6 +24,7 @@
    - 2.1 [Register](#21-post-authregister)
    - 2.2 [Logout](#22-post-authlogout)
    - 2.3 [Password Reset](#23-post-authpassword-reset)
+   - 2.4 [Track Login Failure](#24-post-authtrack-failure)
 3. [Profile Endpoints (Me)](#3-profile-endpoints-me)
    - 3.1 [Get Own Profile](#31-get-me)
    - 3.2 [Update Own Profile](#32-patch-me)
@@ -1242,8 +1243,7 @@ List the authenticated student's enrollments.
 
 | Parameter | Type | Default | Description |
 |-----------|------|:-------:|-------------|
-| `state` | `string` | — | Filter by enrollment state: `pending`, `approved`, `rejected`, `withdrawn` |
-| `limit` | `number` | `20` | Items per page |
+| `limit` | `number` | `20` | Items per page (max 100) |
 | `cursor` | `string` | — | Pagination cursor |
 
 #### Responses
@@ -1468,9 +1468,9 @@ List course enrollment requests awaiting review.
 
 | Parameter | Type | Default | Description |
 |-----------|------|:-------:|-------------|
-| `status` | `string` | `pending` | Filter by status: `pending`, `approved`, `rejected` |
+| `status` | `string` | — | Filter by status: `pending`, `approved`, `rejected`, `withdrawn` |
 | `courseId` | `string` | — | Filter by specific course |
-| `limit` | `number` | `25` | Items per page |
+| `limit` | `number` | `20` | Items per page (max 100) |
 | `cursor` | `string` | — | Pagination cursor |
 
 #### Responses
@@ -1595,27 +1595,28 @@ Mark a subject as completed. This operation is **idempotent** — if the subject
 
 ```json
 {
-  "source": "manual"
+  "courseId":   "course-abc",
+  "semesterId": "sem-001"
 }
 ```
 
-| Field | Type | Required | Default | Description |
-|-------|------|:--------:|:-------:|-------------|
-| `source` | `string` | No | `"manual"` | How completion was triggered: `"manual"` or `"auto"` |
+| Field | Type | Required | Description |
+|-------|------|:--------:|-------------|
+| `courseId` | `string` | **Yes** | Course the subject belongs to |
+| `semesterId` | `string` | **Yes** | Semester the subject belongs to |
 
 #### Responses
 
 **`200 OK`**
 ```json
 {
-  "studentUid":       "firebase-uid-abc123",
-  "subjectId":        "sub-001",
-  "courseId":         "course-abc",
-  "semesterId":       "sem-001",
-  "state":            "completed",
-  "completionSource": "manual",
-  "completedAt":      "2026-05-07T14:00:00.000Z",
-  "lastAccessedAt":   "2026-05-07T14:00:00.000Z"
+  "studentUid":     "firebase-uid-abc123",
+  "subjectId":      "sub-001",
+  "courseId":       "course-abc",
+  "semesterId":     "sem-001",
+  "state":          "completed",
+  "completedAt":    "2026-05-07T14:00:00.000Z",
+  "lastAccessedAt": "2026-05-07T14:00:00.000Z"
 }
 ```
 
@@ -1636,7 +1637,17 @@ Update the last-accessed timestamp for a subject (used to power the "Continue Le
 
 #### Request Body
 
-None.
+```json
+{
+  "courseId":   "course-abc",
+  "semesterId": "sem-001"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|:--------:|-------------|
+| `courseId` | `string` | **Yes** | Course the subject belongs to |
+| `semesterId` | `string` | **Yes** | Semester the subject belongs to |
 
 #### Responses
 
@@ -1778,8 +1789,8 @@ List the authenticated user's in-app notifications, newest first.
 
 | Parameter | Type | Default | Description |
 |-----------|------|:-------:|-------------|
-| `unreadOnly` | `boolean` | `false` | If `true`, return only unread notifications |
-| `limit` | `number` | `20` | Items per page |
+| `read` | `'true'` \| `'false'` | — | Filter by read state: `read=false` returns only unread, `read=true` returns only read |
+| `limit` | `number` | `20` | Items per page (max 100) |
 | `cursor` | `string` | — | Pagination cursor |
 
 #### Responses
@@ -1800,8 +1811,7 @@ List the authenticated user's in-app notifications, newest first.
     }
   ],
   "nextCursor": null,
-  "total": 3,
-  "unreadCount": 2
+  "total": 3
 }
 ```
 
