@@ -46,6 +46,10 @@
    - 6.1 [Create Subject](#61-post-semestersidsubjects)
    - 6.2 [Update Subject](#62-patch-subjectsid)
    - 6.3 [Delete Subject](#63-delete-subjectsid)
+   - 6.4 [List Lessons](#64-get-subjectsidlessons)
+   - 6.5 [Create Lesson](#65-post-subjectsidlessons)
+   - 6.6 [Update Lesson](#66-patch-lessonsid)
+   - 6.7 [Delete Lesson](#67-delete-lessonsid)
 7. [Attachment Endpoints](#7-attachment-endpoints)
    - 7.1 [Upload Attachment](#71-post-subjectsidattachments)
    - 7.2 [Get Download URL](#72-get-attachmentsiddownload-url)
@@ -1034,6 +1038,146 @@ Soft-delete a subject.
 #### Responses
 
 **`204 No Content`**
+
+---
+
+### 6.4 `GET /subjects/:id/lessons`
+
+List all lessons for a subject, ordered by `order` ascending.
+
+**Authentication:** Bearer token required
+**Roles:** `student`, `admin`, `super_admin`
+
+#### Path Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `id` | Subject document ID |
+
+#### Responses
+
+**`200 OK`**
+```json
+[
+  {
+    "id":          "lesson-001",
+    "subjectId":   "sub-001",
+    "courseId":    "course-abc",
+    "semesterId":  "sem-001",
+    "title":       "Introduction to TypeScript",
+    "description": "Overview of TypeScript features.",
+    "url":         "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "order":       1,
+    "deletedAt":   null,
+    "createdAt":   "2026-05-12T09:00:00.000Z",
+    "updatedAt":   "2026-05-12T09:00:00.000Z"
+  }
+]
+```
+
+---
+
+### 6.5 `POST /subjects/:id/lessons`
+
+Add a new lesson to a subject. Lessons support any valid video URL (YouTube, Vimeo, direct video links, etc.). Order is assigned automatically.
+
+**Authentication:** Bearer token required
+**Roles:** `admin`, `super_admin`
+
+#### Path Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `id` | Subject document ID |
+
+#### Request Body
+
+```json
+{
+  "title":       "Introduction to TypeScript",
+  "url":         "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  "description": "Overview of TypeScript features."
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|:--------:|-------------|
+| `title` | `string` | **Yes** | Lesson title (max 200 chars) |
+| `url` | `string` | **Yes** | Any valid video URL (YouTube, Vimeo, etc.) |
+| `description` | `string` | No | Lesson description (max 2000 chars) |
+
+#### Responses
+
+**`201 Created`**
+```json
+{
+  "id":          "lesson-001",
+  "subjectId":   "sub-001",
+  "courseId":    "course-abc",
+  "semesterId":  "sem-001",
+  "title":       "Introduction to TypeScript",
+  "description": "Overview of TypeScript features.",
+  "url":         "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  "order":       1,
+  "deletedAt":   null,
+  "createdAt":   "2026-05-12T09:00:00.000Z",
+  "updatedAt":   "2026-05-12T09:00:00.000Z"
+}
+```
+
+**`404 Not Found`** — Subject does not exist or is deleted
+
+---
+
+### 6.6 `PATCH /lessons/:id`
+
+Update a lesson's title, URL, or description. Only provided fields are changed.
+
+**Authentication:** Bearer token required
+**Roles:** `admin`, `super_admin`
+
+#### Path Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `id` | Lesson document ID |
+
+#### Request Body
+
+```json
+{
+  "title":       "Introduction to TypeScript — Revised",
+  "url":         "https://vimeo.com/123456789",
+  "description": "Updated lesson description."
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|:--------:|-------------|
+| `title` | `string` | No | New lesson title (max 200 chars) |
+| `url` | `string` | No | New video URL (must be a valid URL) |
+| `description` | `string` | No | New description (max 2000 chars) |
+
+#### Responses
+
+**`200 OK`** — Updated lesson object
+
+**`404 Not Found`** — Lesson does not exist or is deleted
+
+---
+
+### 6.7 `DELETE /lessons/:id`
+
+Soft-delete a lesson.
+
+**Authentication:** Bearer token required
+**Roles:** `admin`, `super_admin`
+
+#### Responses
+
+**`204 No Content`**
+
+**`404 Not Found`** — Lesson does not exist or is deleted
 
 ---
 

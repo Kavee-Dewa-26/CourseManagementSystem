@@ -47,9 +47,11 @@ app.use('/api/v1/courses/:id/enroll', enrollProxy);
 app.use('/api/v1/courses',            courseProxy);
 app.use('/api/v1/semesters',          courseProxy);
 
-// Subject attachments must come before the generic /subjects catch-all
+// Subject sub-routes — specific paths must come before the generic /subjects catch-all
+app.use('/api/v1/subjects/:id/lessons',     courseProxy);
 app.use('/api/v1/subjects/:id/attachments', storageProxy);
 app.use('/api/v1/subjects',                 courseProxy);
+app.use('/api/v1/lessons',                  courseProxy);
 
 // Enrollment routes
 app.use('/api/v1/enrollments',         enrollProxy);
