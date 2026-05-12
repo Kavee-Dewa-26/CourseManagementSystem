@@ -381,12 +381,7 @@ None.
 
 #### Responses
 
-**`200 OK`**
-```json
-{
-  "message": "Logged out successfully."
-}
-```
+**`204 No Content`** — Logged out successfully (empty body)
 
 **`401 Unauthorized`** — Invalid or missing token
 ```json
@@ -400,7 +395,7 @@ None.
 
 ### 2.3 `POST /auth/password-reset`
 
-Send a password reset email to the given address. Always returns `200` regardless of whether the email exists (prevents enumeration).
+Send a password reset email to the given address. Always returns `204` regardless of whether the email exists (prevents enumeration).
 
 **Authentication:** None (public)
 
@@ -418,12 +413,7 @@ Send a password reset email to the given address. Always returns `200` regardles
 
 #### Responses
 
-**`200 OK`**
-```json
-{
-  "message": "If an account exists for this email, a reset link has been sent."
-}
-```
+**`204 No Content`** — Reset email sent if account exists (empty body)
 
 ---
 
@@ -530,7 +520,7 @@ Update the authenticated user's own profile. Only the fields listed below may be
 
 ### 3.3 `POST /me/change-password`
 
-Initiate a server-side password change for the authenticated user.
+Initiate a server-side password change for the authenticated user. The current password is verified before the change is applied.
 
 **Authentication:** Bearer token required
 **Roles:** `student`, `admin`, `super_admin`
@@ -539,22 +529,21 @@ Initiate a server-side password change for the authenticated user.
 
 ```json
 {
-  "newPassword": "NewSecurePass@2026"
+  "currentPassword": "OldSecurePass@2026",
+  "newPassword":     "NewSecurePass@2026"
 }
 ```
 
 | Field | Type | Required | Validation |
 |-------|------|:--------:|-----------|
+| `currentPassword` | `string` | Yes | Must match the user's current password |
 | `newPassword` | `string` | Yes | Min 10 chars · uppercase · lowercase · number · special character |
 
 #### Responses
 
-**`200 OK`**
-```json
-{
-  "message": "Password updated successfully."
-}
-```
+**`204 No Content`** — Password changed successfully (empty body)
+
+**`401 Unauthorized`** — `currentPassword` is incorrect
 
 ---
 
@@ -859,15 +848,15 @@ Add a new semester to a course.
 
 ```json
 {
-  "name":      "Semester 1 — Foundations",
-  "sortOrder": 1
+  "title":       "Semester 1 — Foundations",
+  "description": "Core foundations of the course."
 }
 ```
 
 | Field | Type | Required | Validation |
 |-------|------|:--------:|-----------|
-| `name` | `string` | Yes | 1–200 characters |
-| `sortOrder` | `number` | Yes | Positive integer; controls display order |
+| `title` | `string` | Yes | 1–200 characters |
+| `description` | `string` | No | Max 1000 characters |
 
 #### Responses
 
@@ -876,8 +865,8 @@ Add a new semester to a course.
 {
   "id":           "sem-001",
   "courseId":     "course-abc",
-  "name":         "Semester 1 — Foundations",
-  "sortOrder":    1,
+  "title":        "Semester 1 — Foundations",
+  "description":  "Core foundations of the course.",
   "subjectCount": 0,
   "createdAt":    "2026-05-01T08:00:00.000Z",
   "updatedAt":    "2026-05-01T08:00:00.000Z"
@@ -888,7 +877,7 @@ Add a new semester to a course.
 
 ### 5.2 `PATCH /semesters/:id`
 
-Update a semester's name or sort order.
+Update a semester's title or description.
 
 **Authentication:** Bearer token required
 **Roles:** `admin`, `super_admin`
@@ -903,8 +892,8 @@ Update a semester's name or sort order.
 
 ```json
 {
-  "name":      "Semester 1 — Core Foundations",
-  "sortOrder": 2
+  "title":       "Semester 1 — Core Foundations",
+  "description": "Updated description."
 }
 ```
 
@@ -952,19 +941,15 @@ Add a subject (lesson) to a semester.
 {
   "title":          "TypeScript Basics",
   "description":    "Variables, types, interfaces, and enums.",
-  "youtubeVideoUrl":"https://www.youtube.com/watch?v=zQnBQ4tB3ZA",
-  "sortOrder":      1
+  "youtubeVideoId": "zQnBQ4tB3ZA"
 }
 ```
 
 | Field | Type | Required | Validation |
 |-------|------|:--------:|-----------|
 | `title` | `string` | Yes | 1–200 characters |
-| `description` | `string` | Yes | 1–5000 characters |
-| `youtubeVideoUrl` | `string` | Yes | Valid YouTube URL or 11-character video ID |
-| `sortOrder` | `number` | Yes | Positive integer |
-
-> The server extracts and stores only the 11-character YouTube video ID regardless of URL format submitted.
+| `description` | `string` | No | Max 2000 characters |
+| `youtubeVideoId` | `string` | No | 11-character YouTube video ID (e.g. `zQnBQ4tB3ZA`) |
 
 #### Responses
 
@@ -976,21 +961,9 @@ Add a subject (lesson) to a semester.
   "title":          "TypeScript Basics",
   "description":    "Variables, types, interfaces, and enums.",
   "youtubeVideoId": "zQnBQ4tB3ZA",
-  "sortOrder":      1,
   "attachments":    [],
   "createdAt":      "2026-05-01T09:00:00.000Z",
   "updatedAt":      "2026-05-01T09:00:00.000Z"
-}
-```
-
-**`400 Bad Request`**
-```json
-{
-  "error": {
-    "code":    "INVALID_YOUTUBE_ID",
-    "message": "The provided YouTube URL or video ID is not valid."
-  },
-  "requestId": "..."
 }
 ```
 
@@ -1015,8 +988,7 @@ Update subject content.
 {
   "title":          "TypeScript Basics — Revised",
   "description":    "Updated description.",
-  "youtubeVideoUrl":"https://www.youtube.com/watch?v=newVideoId",
-  "sortOrder":      2
+  "youtubeVideoId": "newVideoId11"
 }
 ```
 
@@ -1572,13 +1544,13 @@ Approve multiple pending registrations in one request. Uses `Promise.allSettled`
 
 ```json
 {
-  "registrationIds": ["reg-001", "reg-002", "reg-003"]
+  "ids": ["reg-001", "reg-002", "reg-003"]
 }
 ```
 
 | Field | Type | Required | Validation |
 |-------|------|:--------:|-----------|
-| `registrationIds` | `string[]` | Yes | 1–50 registration IDs per request |
+| `ids` | `string[]` | Yes | 1–100 registration IDs per request |
 
 #### Responses
 
@@ -2028,10 +2000,8 @@ List all users (students) in the system.
 | Parameter | Type | Default | Description |
 |-----------|------|:-------:|-------------|
 | `status` | `string` | — | Filter by: `pending_approval`, `approved`, `rejected`, `suspended` |
-| `role` | `string` | `student` | Filter by role |
-| `courseId` | `string` | — | Filter students enrolled in a specific course |
-| `q` | `string` | — | Search by name or email (partial match) |
-| `limit` | `number` | `25` | Items per page (max 100) |
+| `role` | `string` | — | Filter by role: `student`, `admin`, `super_admin` |
+| `limit` | `number` | `20` | Items per page (max 100) |
 | `cursor` | `string` | — | Pagination cursor |
 
 #### Responses
@@ -2113,15 +2083,7 @@ Suspend a student's account. The student's Firebase Auth account is disabled and
 
 #### Request Body
 
-```json
-{
-  "reason": "Violation of platform terms of service."
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|:--------:|-------------|
-| `reason` | `string` | No | Internal reason for suspension (not shown to student) |
+None.
 
 #### Responses
 
@@ -2283,15 +2245,7 @@ Suspend an Admin account. The admin's Firebase Auth account is disabled and all 
 
 #### Request Body
 
-```json
-{
-  "reason": "Under review."
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|:--------:|-------------|
-| `reason` | `string` | No | Internal reason (max 500 chars); not shown to the admin |
+None.
 
 #### Responses
 
