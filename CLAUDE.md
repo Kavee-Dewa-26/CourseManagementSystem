@@ -57,6 +57,18 @@ docker-compose up --build
 
 # Stop all services
 docker-compose down
+
+# Verify all 53 endpoints are reachable (requires all services running)
+node scripts/smoke-test.js
+
+# Deploy Firestore composite indexes to online Firebase (reads creds from .env.local)
+node scripts/deploy-indexes-env.js
+
+# Seed online Firebase with test accounts (reads creds from .env.local)
+node scripts/seed-online-env.js
+
+# Verify service endpoint availability
+node scripts/verify-endpoints.js
 ```
 
 ---
@@ -518,6 +530,12 @@ When reading a spec to implement a feature:
 - **Firestore Changes** lists any new composite indexes needed in `firestore.indexes.json`
 - **Domain Events** lists what the outbox must publish and who consumes it
 - **Out of Scope** tells you what NOT to build — do not add features listed there
+
+---
+
+## CI/CD
+
+`.github/workflows/ci.yml` runs on every push/PR: matrix type-check + lint + unit tests across all services, Docker image builds with Trivy security scanning, and `firebase deploy --only firestore:rules,firestore:indexes` on merges to `main`.
 
 ---
 
