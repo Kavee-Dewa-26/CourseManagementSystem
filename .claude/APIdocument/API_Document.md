@@ -381,7 +381,12 @@ None.
 
 #### Responses
 
-**`204 No Content`** — Logged out successfully (empty body)
+**`200 OK`**
+```json
+{
+  "message": "Logged out successfully."
+}
+```
 
 **`401 Unauthorized`** — Invalid or missing token
 ```json
@@ -395,7 +400,7 @@ None.
 
 ### 2.3 `POST /auth/password-reset`
 
-Send a password reset email to the given address. Always returns `204` regardless of whether the email exists (prevents enumeration).
+Send a password reset email to the given address. Always returns `200` regardless of whether the email exists (prevents enumeration).
 
 **Authentication:** None (public)
 
@@ -413,7 +418,12 @@ Send a password reset email to the given address. Always returns `204` regardles
 
 #### Responses
 
-**`204 No Content`** — Reset email sent if account exists (empty body)
+**`200 OK`**
+```json
+{
+  "message": "If an account exists for this email, a reset link has been sent."
+}
+```
 
 ---
 
@@ -520,7 +530,7 @@ Update the authenticated user's own profile. Only the fields listed below may be
 
 ### 3.3 `POST /me/change-password`
 
-Initiate a server-side password change for the authenticated user. The current password is verified before the change is applied.
+Initiate a server-side password change for the authenticated user.
 
 **Authentication:** Bearer token required
 **Roles:** `student`, `admin`, `super_admin`
@@ -529,21 +539,22 @@ Initiate a server-side password change for the authenticated user. The current p
 
 ```json
 {
-  "currentPassword": "OldSecurePass@2026",
-  "newPassword":     "NewSecurePass@2026"
+  "newPassword": "NewSecurePass@2026"
 }
 ```
 
 | Field | Type | Required | Validation |
 |-------|------|:--------:|-----------|
-| `currentPassword` | `string` | Yes | Must match the user's current password |
 | `newPassword` | `string` | Yes | Min 10 chars · uppercase · lowercase · number · special character |
 
 #### Responses
 
-**`204 No Content`** — Password changed successfully (empty body)
-
-**`401 Unauthorized`** — `currentPassword` is incorrect
+**`200 OK`**
+```json
+{
+  "message": "Password updated successfully."
+}
+```
 
 ---
 
@@ -848,15 +859,15 @@ Add a new semester to a course.
 
 ```json
 {
-  "title":       "Semester 1 — Foundations",
-  "description": "Core foundations of the course."
+  "name":      "Semester 1 — Foundations",
+  "sortOrder": 1
 }
 ```
 
 | Field | Type | Required | Validation |
 |-------|------|:--------:|-----------|
-| `title` | `string` | Yes | 1–200 characters |
-| `description` | `string` | No | Max 1000 characters |
+| `name` | `string` | Yes | 1–200 characters |
+| `sortOrder` | `number` | Yes | Positive integer; controls display order |
 
 #### Responses
 
@@ -865,8 +876,8 @@ Add a new semester to a course.
 {
   "id":           "sem-001",
   "courseId":     "course-abc",
-  "title":        "Semester 1 — Foundations",
-  "description":  "Core foundations of the course.",
+  "name":         "Semester 1 — Foundations",
+  "sortOrder":    1,
   "subjectCount": 0,
   "createdAt":    "2026-05-01T08:00:00.000Z",
   "updatedAt":    "2026-05-01T08:00:00.000Z"
@@ -877,7 +888,7 @@ Add a new semester to a course.
 
 ### 5.2 `PATCH /semesters/:id`
 
-Update a semester's title or description.
+Update a semester's name or sort order.
 
 **Authentication:** Bearer token required
 **Roles:** `admin`, `super_admin`
@@ -892,8 +903,8 @@ Update a semester's title or description.
 
 ```json
 {
-  "title":       "Semester 1 — Core Foundations",
-  "description": "Updated description."
+  "name":      "Semester 1 — Core Foundations",
+  "sortOrder": 2
 }
 ```
 
@@ -941,15 +952,19 @@ Add a subject (lesson) to a semester.
 {
   "title":          "TypeScript Basics",
   "description":    "Variables, types, interfaces, and enums.",
-  "youtubeVideoId": "zQnBQ4tB3ZA"
+  "youtubeVideoUrl":"https://www.youtube.com/watch?v=zQnBQ4tB3ZA",
+  "sortOrder":      1
 }
 ```
 
 | Field | Type | Required | Validation |
 |-------|------|:--------:|-----------|
 | `title` | `string` | Yes | 1–200 characters |
-| `description` | `string` | No | Max 2000 characters |
-| `youtubeVideoId` | `string` | No | 11-character YouTube video ID (e.g. `zQnBQ4tB3ZA`) |
+| `description` | `string` | Yes | 1–5000 characters |
+| `youtubeVideoUrl` | `string` | Yes | Valid YouTube URL or 11-character video ID |
+| `sortOrder` | `number` | Yes | Positive integer |
+
+> The server extracts and stores only the 11-character YouTube video ID regardless of URL format submitted.
 
 #### Responses
 
@@ -961,9 +976,21 @@ Add a subject (lesson) to a semester.
   "title":          "TypeScript Basics",
   "description":    "Variables, types, interfaces, and enums.",
   "youtubeVideoId": "zQnBQ4tB3ZA",
+  "sortOrder":      1,
   "attachments":    [],
   "createdAt":      "2026-05-01T09:00:00.000Z",
   "updatedAt":      "2026-05-01T09:00:00.000Z"
+}
+```
+
+**`400 Bad Request`**
+```json
+{
+  "error": {
+    "code":    "INVALID_YOUTUBE_ID",
+    "message": "The provided YouTube URL or video ID is not valid."
+  },
+  "requestId": "..."
 }
 ```
 
@@ -988,7 +1015,8 @@ Update subject content.
 {
   "title":          "TypeScript Basics — Revised",
   "description":    "Updated description.",
-  "youtubeVideoId": "newVideoId11"
+  "youtubeVideoUrl":"https://www.youtube.com/watch?v=newVideoId",
+  "sortOrder":      2
 }
 ```
 
@@ -1544,13 +1572,13 @@ Approve multiple pending registrations in one request. Uses `Promise.allSettled`
 
 ```json
 {
-  "ids": ["reg-001", "reg-002", "reg-003"]
+  "registrationIds": ["reg-001", "reg-002", "reg-003"]
 }
 ```
 
 | Field | Type | Required | Validation |
 |-------|------|:--------:|-----------|
-| `ids` | `string[]` | Yes | 1–100 registration IDs per request |
+| `registrationIds` | `string[]` | Yes | 1–50 registration IDs per request |
 
 #### Responses
 
@@ -2000,8 +2028,10 @@ List all users (students) in the system.
 | Parameter | Type | Default | Description |
 |-----------|------|:-------:|-------------|
 | `status` | `string` | — | Filter by: `pending_approval`, `approved`, `rejected`, `suspended` |
-| `role` | `string` | — | Filter by role: `student`, `admin`, `super_admin` |
-| `limit` | `number` | `20` | Items per page (max 100) |
+| `role` | `string` | `student` | Filter by role |
+| `courseId` | `string` | — | Filter students enrolled in a specific course |
+| `q` | `string` | — | Search by name or email (partial match) |
+| `limit` | `number` | `25` | Items per page (max 100) |
 | `cursor` | `string` | — | Pagination cursor |
 
 #### Responses
@@ -2039,802 +2069,4 @@ Get a specific user's full profile including enrollment history and per-course p
 
 | Parameter | Description |
 |-----------|-------------|
-| `uid` | Firebase Auth UID |
-
-#### Responses
-
-**`200 OK`**
-```json
-{
-  "uid":             "firebase-uid-abc123",
-  "email":           "viruli@example.com",
-  "role":            "student",
-  "status":          "approved",
-  "firstName":       "Viruli",
-  "lastName":        "Weerasinghe",
-  "profilePhotoUrl": null,
-  "createdAt":       "2026-05-01T08:00:00.000Z",
-  "enrollments": [
-    {
-      "courseId":          "course-abc",
-      "courseTitle":       "Introduction to TypeScript",
-      "enrollmentState":   "approved",
-      "completionPercent": 40.0,
-      "approvedAt":        "2026-05-06T09:00:00.000Z"
-    }
-  ]
-}
-```
-
----
-
-### 13.3 `POST /users/:uid/suspend`
-
-Suspend a student's account. The student's Firebase Auth account is disabled and all refresh tokens are revoked.
-
-**Authentication:** Bearer token required
-**Roles:** `admin`, `super_admin`
-
-#### Path Parameters
-
-| Parameter | Description |
-|-----------|-------------|
-| `uid` | Firebase Auth UID of the student to suspend |
-
-#### Request Body
-
-None.
-
-#### Responses
-
-**`200 OK`**
-```json
-{
-  "uid":    "firebase-uid-abc123",
-  "status": "suspended"
-}
-```
-
-**`409 Conflict`** — User is already suspended
-
----
-
-### 13.4 `POST /users/:uid/reactivate`
-
-Reactivate a suspended student's account.
-
-**Authentication:** Bearer token required
-**Roles:** `admin`, `super_admin`
-
-#### Path Parameters
-
-| Parameter | Description |
-|-----------|-------------|
-| `uid` | Firebase Auth UID |
-
-#### Responses
-
-**`200 OK`**
-```json
-{
-  "uid":    "firebase-uid-abc123",
-  "status": "approved"
-}
-```
-
----
-
-## 14. Admin Management — Super Admin
-
----
-
-### 14.1 `GET /super-admin/admins`
-
-List all admin accounts.
-
-**Authentication:** Bearer token required
-**Roles:** `super_admin`
-
-#### Query Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|:-------:|-------------|
-| `status` | `string` | — | Filter by: `approved`, `suspended` |
-| `q` | `string` | — | Search by name or email |
-| `limit` | `number` | `25` | Items per page |
-| `cursor` | `string` | — | Pagination cursor |
-
-#### Responses
-
-**`200 OK`**
-```json
-{
-  "items": [
-    {
-      "uid":       "admin-uid-xyz",
-      "email":     "sapna@example.com",
-      "role":      "admin",
-      "status":    "approved",
-      "firstName": "Sapna",
-      "lastName":  "Nethmini",
-      "createdAt": "2026-01-10T08:00:00.000Z"
-    }
-  ],
-  "nextCursor": null,
-  "total": 3
-}
-```
-
----
-
-### 14.2 `POST /super-admin/admins`
-
-Create a new Admin account. The account is immediately active (`approved` status). An email with login credentials is sent to the new admin.
-
-**Authentication:** Bearer token required
-**Roles:** `super_admin`
-
-#### Request Body
-
-```json
-{
-  "firstName":       "Sapna",
-  "lastName":        "Nethmini",
-  "email":           "sapna@example.com",
-  "initialPassword": "TempPass@2026"
-}
-```
-
-| Field | Type | Required | Validation |
-|-------|------|:--------:|-----------|
-| `firstName` | `string` | Yes | 1–100 characters |
-| `lastName` | `string` | Yes | 1–100 characters |
-| `email` | `string` | Yes | Valid email; must be unique |
-| `initialPassword` | `string` | Yes | Min 10 chars · complexity rules |
-
-#### Responses
-
-**`201 Created`**
-```json
-{
-  "uid":       "admin-uid-xyz",
-  "email":     "sapna@example.com",
-  "role":      "admin",
-  "status":    "approved",
-  "firstName": "Sapna",
-  "lastName":  "Nethmini",
-  "createdAt": "2026-05-07T08:00:00.000Z"
-}
-```
-
-**`409 Conflict`** — Email already registered
-
----
-
-### 14.3 `GET /super-admin/admins/:uid`
-
-Get a specific admin's full profile.
-
-**Authentication:** Bearer token required
-**Roles:** `super_admin`
-
-#### Path Parameters
-
-| Parameter | Description |
-|-----------|-------------|
-| `uid` | Firebase Auth UID of the admin |
-
-#### Responses
-
-**`200 OK`** — Full user object (see User data model)
-
----
-
-### 14.4 `POST /super-admin/admins/:uid/suspend`
-
-Suspend an Admin account. The admin's Firebase Auth account is disabled and all refresh tokens are revoked. An `admin.suspended` event is published — the suspended admin receives an email notification.
-
-**Authentication:** Bearer token required
-**Roles:** `super_admin`
-
-#### Path Parameters
-
-| Parameter | Description |
-|-----------|-------------|
-| `uid` | Firebase Auth UID of the admin to suspend |
-
-#### Request Body
-
-None.
-
-#### Responses
-
-**`200 OK`** — Full updated admin object
-```json
-{
-  "uid":             "admin-uid-xyz",
-  "email":           "sapna@example.com",
-  "firstName":       "Sapna",
-  "lastName":        "Nethmini",
-  "role":            "admin",
-  "status":          "suspended",
-  "profilePhotoUrl": null,
-  "createdAt":       "2026-05-11T04:49:06.197Z",
-  "updatedAt":       "2026-05-11T05:15:02.254Z",
-  "deletedAt":       null
-}
-```
-
-**`404 Not Found`** — Admin UID does not exist
-```json
-{
-  "error": { "code": "USER_NOT_FOUND", "message": "User not found." },
-  "requestId": "..."
-}
-```
-
----
-
-### 14.5 `POST /super-admin/admins/:uid/reactivate`
-
-Reactivate a suspended Admin account. Re-enables the Firebase Auth account so the admin can log in again.
-
-**Authentication:** Bearer token required
-**Roles:** `super_admin`
-
-#### Path Parameters
-
-| Parameter | Description |
-|-----------|-------------|
-| `uid` | Firebase Auth UID of the admin to reactivate |
-
-#### Request Body
-
-None.
-
-#### Responses
-
-**`200 OK`** — Full updated admin object
-```json
-{
-  "uid":             "admin-uid-xyz",
-  "email":           "sapna@example.com",
-  "firstName":       "Sapna",
-  "lastName":        "Nethmini",
-  "role":            "admin",
-  "status":          "approved",
-  "profilePhotoUrl": null,
-  "createdAt":       "2026-05-11T04:49:06.197Z",
-  "updatedAt":       "2026-05-11T05:15:06.084Z",
-  "deletedAt":       null
-}
-```
-
-**`404 Not Found`** — Admin UID does not exist
-
----
-
-### 14.6 `DELETE /super-admin/admins/:uid`
-
-Soft-delete an Admin account. Sets `deletedAt` on the Firestore document and disables the Firebase Auth account. The admin can no longer log in. Only accounts with `role: "admin"` may be deleted through this endpoint — attempting to delete a `super_admin` or `student` UID returns `404`.
-
-**Authentication:** Bearer token required
-**Roles:** `super_admin`
-
-#### Path Parameters
-
-| Parameter | Description |
-|-----------|-------------|
-| `uid` | Firebase Auth UID of the admin to delete |
-
-#### Request Body
-
-None.
-
-#### Responses
-
-**`204 No Content`** — Deleted successfully (empty body)
-
-**`404 Not Found`** — UID does not exist or is not an admin account
-
----
-
-### 14.7 `POST /super-admin/users/:uid/make-admin`
-
-Promote an existing student account to admin role. The promoted user retains their student role alongside the new admin role (**dual-role**), meaning they can continue to enroll in courses and track progress as a student while also performing admin duties.
-
-- Primary `role` is set to `"admin"`
-- `roles` array becomes `["student", "admin"]`
-- `status` is set to `"approved"`
-- Firebase custom claim is updated immediately (next token refresh picks it up)
-
-**Cannot be used on:** accounts that are already `admin` or `super_admin` — returns `409 INVALID_ROLE`.
-
-**Side effects:** Publishes `admin.created` event (`promoted: true`) — promoted user receives an email notification.
-
-**Authentication:** Bearer token required
-**Roles:** `super_admin`
-
-#### Path Parameters
-
-| Parameter | Description |
-|-----------|-------------|
-| `uid` | Firebase Auth UID of the student to promote |
-
-#### Request Body
-
-None.
-
-#### Responses
-
-**`200 OK`** — Full updated user object
-```json
-{
-  "uid":             "student-uid-abc",
-  "email":           "alice@test.com",
-  "firstName":       "Alice",
-  "lastName":        "Cooper",
-  "role":            "admin",
-  "roles":           ["student", "admin"],
-  "status":          "approved",
-  "profilePhotoUrl": null,
-  "createdAt":       "2026-05-11T06:05:46.338Z",
-  "updatedAt":       "2026-05-11T06:06:09.447Z",
-  "deletedAt":       null
-}
-```
-
-> The promoted user's existing enrollments, progress records, and notifications are preserved. They can continue using student features under the same account.
-
-**`404 Not Found`** — UID does not exist
-```json
-{ "error": { "code": "USER_NOT_FOUND", "message": "User not found." }, "requestId": "..." }
-```
-
-**`409 Conflict`** — User is already admin or super_admin
-```json
-{ "error": { "code": "INVALID_ROLE", "message": "Only student accounts can be promoted to admin." }, "requestId": "..." }
-```
-
----
-
-## 15. Audit Log — Admin & Super Admin
-
----
-
-### 15.1 `GET /audit-log`
-
-Retrieve the append-only system audit log. Records are immutable once written.
-
-**Authentication:** Bearer token required
-**Roles:** `admin`, `super_admin`
-
-#### Query Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|:-------:|-------------|
-| `actorUid` | `string` | — | Filter by the UID of the actor who performed the action |
-| `action` | `string` | — | Filter by action type (e.g., `registration.approved`) |
-| `category` | `string` | — | Filter by category (e.g., `auth`, `user`, `course`, `enrollment`, `progress`, `storage`) |
-| `targetType` | `string` | — | Filter by target entity type (e.g., `course`, `enrollment`) |
-| `targetId` | `string` | — | Filter by specific resource ID |
-| `from` | `string` | — | ISO 8601 date — start of date range |
-| `to` | `string` | — | ISO 8601 date — end of date range |
-| `limit` | `number` | `20` | Items per page (max 100) |
-| `cursor` | `string` | — | Pagination cursor |
-
-#### Responses
-
-**`200 OK`**
-```json
-{
-  "items": [
-    {
-      "id":       "audit-001",
-      "when":     "2026-05-06T09:00:00.000Z",
-      "actor": {
-        "uid":    "admin-uid-xyz",
-        "email":  "admin@cmp.com"
-      },
-      "action":     "registration.approved",
-      "category":   "enrollment",
-      "ip":         "192.168.1.100",
-      "targetType": "registration",
-      "targetId":   "reg-001",
-      "requestId":  "7f3a1c2d-4e5b-6f7a-8b9c-0d1e2f3a4b5c"
-    }
-  ],
-  "nextCursor": null,
-  "total": 142
-}
-```
-
-| Field | Description |
-|-------|-------------|
-| `when` | ISO 8601 timestamp of when the action occurred |
-| `actor.uid` | UID of the user who performed the action; `null` for system-generated events |
-| `actor.email` | Email of the actor; `null` if not captured |
-| `action` | Event type string (e.g., `registration.approved`, `course.published`) |
-| `category` | Logical grouping: `auth`, `user`, `course`, `enrollment`, `progress`, `storage`, `system`; `null` if not set |
-| `ip` | IP address of the actor at the time of the action; `null` if not captured |
-| `targetType` | Entity type acted on: `user`, `course`, `enrollment`, `registration`, `admin`, `subject` |
-| `requestId` | End-to-end correlation ID |
-
----
-
-## 16. Health Endpoints
-
----
-
-### 16.1 `GET /healthz`
-
-Liveness probe — checks that the service process is running.
-
-**Authentication:** None
-**Path:** Available directly on each service (`http://[service-host]:[port]/healthz`)
-
-#### Responses
-
-**`200 OK`**
-```json
-{
-  "status":  "ok",
-  "service": "course-service",
-  "ts":      1746684000000
-}
-```
-
----
-
-### 16.2 `GET /readyz`
-
-Readiness probe — checks that the service is ready to handle traffic (Firestore connectivity verified).
-
-**Authentication:** None
-
-#### Responses
-
-**`200 OK`**
-```json
-{
-  "status": "ready"
-}
-```
-
-**`503 Service Unavailable`** — Firestore or a required dependency is unreachable
-```json
-{
-  "status": "not_ready",
-  "error":  "Firestore unreachable"
-}
-```
-
----
-
-## 17. Data Models
-
-### User
-
-```typescript
-interface User {
-  uid:              string;        // Firebase Auth UID (primary key)
-  email:            string;        // Unique email address
-  role:             UserRole;      // Primary role: 'super_admin' | 'admin' | 'student'
-  roles:            UserRole[];    // Full role set — promoted admins carry ['student', 'admin']
-  status:           UserStatus;    // See UserStatus enum below
-  firstName:        string;
-  lastName:         string;
-  profilePhotoUrl:  string | null; // HTTPS URL to Cloud Storage
-  createdAt:        string;        // ISO 8601 timestamp
-  updatedAt:        string;        // ISO 8601 timestamp
-}
-
-type UserRole   = 'super_admin' | 'admin' | 'student';
-type UserStatus = 'pending_approval' | 'approved' | 'rejected' | 'suspended';
-```
-
-> `role` is the primary role used for display and filtering. `roles` is the authoritative set used by the server's authorization middleware — a token with `roles: ["student", "admin"]` passes guards for both roles simultaneously.
-
----
-
-### Course
-
-```typescript
-interface Course {
-  id:             string;
-  title:          string;
-  titleSlug:      string;          // URL-friendly version of title
-  description:    string;
-  coverImageUrl:  string | null;
-  state:          CourseState;
-  createdBy:      string;          // Admin UID
-  createdByName:  string;          // Admin display name
-  semesterCount:  number;
-  publishedAt:    string | null;   // ISO 8601; null if never published
-  createdAt:      string;
-  updatedAt:      string;
-  deletedAt:      string | null;   // Set on soft-delete
-  semesters?:     Semester[];      // Included in GET /courses/:id only
-}
-
-type CourseState = 'draft' | 'published' | 'archived';
-```
-
----
-
-### Semester
-
-```typescript
-interface Semester {
-  id:           string;
-  courseId:     string;
-  name:         string;
-  sortOrder:    number;
-  subjectCount: number;
-  subjects?:    Subject[];         // Included in GET /courses/:id only
-  createdAt:    string;
-  updatedAt:    string;
-}
-```
-
----
-
-### Subject
-
-```typescript
-interface Subject {
-  id:             string;
-  semesterId:     string;
-  title:          string;
-  description:    string;
-  youtubeVideoId: string;          // 11-character YouTube video ID
-  sortOrder:      number;
-  attachments:    Attachment[];
-  createdAt:      string;
-  updatedAt:      string;
-}
-```
-
----
-
-### Attachment
-
-```typescript
-interface Attachment {
-  id:          string;
-  subjectId:   string;
-  fileName:    string;             // Original file name
-  mimeType:    string;             // 'application/pdf' | 'application/msword' | ...
-  sizeBytes:   number;
-  storagePath: string;             // Internal Cloud Storage path (not exposed to clients)
-  uploadedBy:  string;             // Admin UID
-  uploadedAt:  string;             // ISO 8601
-}
-```
-
----
-
-### Enrollment
-
-```typescript
-interface Enrollment {
-  id:           string;            // Composite: `${studentUid}_${courseId}`
-  studentUid:   string;
-  courseId:     string;
-  courseTitle:  string;
-  state:        EnrollmentState;
-  approvedAt?:  string;            // ISO 8601; present when state=approved
-  rejectedAt?:  string;            // ISO 8601; present when state=rejected
-  reason?:      string;            // Rejection reason (optional)
-  createdAt:    string;
-  updatedAt:    string;
-}
-
-type EnrollmentState = 'pending' | 'approved' | 'rejected' | 'withdrawn';
-```
-
----
-
-### SubjectProgress
-
-```typescript
-interface SubjectProgress {
-  studentUid:        string;
-  subjectId:         string;
-  courseId:          string;
-  semesterId:        string;
-  state:             ProgressState;
-  completionSource?: 'manual' | 'auto';    // How completion was triggered
-  completedAt?:      string;               // ISO 8601; immutable once set
-  lastAccessedAt?:   string;               // ISO 8601; updated on each visit
-}
-
-type ProgressState = 'not_started' | 'in_progress' | 'completed';
-```
-
----
-
-### CourseProgressAggregate
-
-```typescript
-interface CourseProgressAggregate {
-  courseId:               string;
-  studentUid:             string;
-  totalSubjects:          number;
-  completedCount:         number;
-  pendingCount:           number;
-  completionPercent:      number;  // 0.0 – 100.0, 1 decimal place
-  lastAccessedSubjectId:  string | null;
-}
-```
-
----
-
-### Notification
-
-```typescript
-interface Notification {
-  id:        string;
-  userUid:   string;
-  category:  NotificationCategory;
-  title:     string;
-  body:      string;
-  payload:   Record<string, unknown>;   // Event-specific data (e.g., courseId)
-  readAt:    string | null;             // null = unread
-  createdAt: string;
-}
-
-type NotificationCategory =
-  | 'registration_approved'
-  | 'registration_rejected'
-  | 'enrollment_pending'
-  | 'enrollment_approved'
-  | 'enrollment_rejected'
-  | 'course_published'
-  | 'system';
-```
-
----
-
-### AuditLogEntry
-
-```typescript
-interface AuditLogEntry {
-  id:         string;
-  actorUid:   string | null;        // null for system events
-  actorEmail: string | null;
-  action:     string;               // e.g., 'registration.approved'
-  targetType: string;               // 'user' | 'course' | 'enrollment' | ...
-  targetId:   string;
-  payload:    Record<string, unknown>;
-  requestId:  string;
-  createdAt:  string;               // ISO 8601 — immutable
-}
-```
-
----
-
-### PaginatedResponse
-
-```typescript
-interface PaginatedResponse<T> {
-  items:       T[];
-  nextCursor:  string | null;
-  total?:      number;
-}
-```
-
----
-
-## 18. Error Codes Reference
-
-| Code | HTTP Status | Description |
-|------|:-----------:|-------------|
-| `VALIDATION_ERROR` | 400 | One or more request fields failed validation; see `details` |
-| `INVALID_YOUTUBE_ID` | 400 | YouTube URL or video ID is invalid |
-| `FILE_TOO_LARGE` | 400 | Uploaded file exceeds 25 MB |
-| `MISSING_TOKEN` | 401 | `Authorization: Bearer` header is absent |
-| `TOKEN_EXPIRED` | 401 | Firebase ID token has expired (client should refresh) |
-| `TOKEN_REVOKED` | 401 | Firebase ID token has been revoked (force re-login) |
-| `INVALID_TOKEN` | 401 | Token signature is invalid or cannot be verified |
-| `UNAUTHENTICATED` | 401 | Request requires authentication |
-| `FORBIDDEN` | 403 | Valid token but insufficient role |
-| `ENROLLMENT_REQUIRED` | 403 | Student must have an approved enrollment to access content |
-| `COURSE_NOT_FOUND` | 404 | Course does not exist or is not visible to the caller's role |
-| `SEMESTER_NOT_FOUND` | 404 | Semester does not exist |
-| `SUBJECT_NOT_FOUND` | 404 | Subject does not exist |
-| `ATTACHMENT_NOT_FOUND` | 404 | Attachment does not exist |
-| `ENROLLMENT_NOT_FOUND` | 404 | Enrollment does not exist |
-| `USER_NOT_FOUND` | 404 | User UID does not exist |
-| `EMAIL_EXISTS` | 409 | Email address is already registered |
-| `COURSE_TITLE_EXISTS` | 409 | A course with this title already exists |
-| `ENROLLMENT_EXISTS` | 409 | Student already has a pending or approved enrollment for this course |
-| `INVALID_STATE` | 409 | Operation not permitted in the resource's current state |
-| `ALREADY_SUSPENDED` | 409 | Account is already suspended |
-| `ALREADY_ACTIVE` | 409 | Account is already active |
-| `NO_SEMESTERS` | 422 | Cannot publish a course with no semesters |
-| `EMPTY_SEMESTER` | 422 | Every semester must have at least one subject before publishing |
-| `COURSE_NOT_PUBLISHED` | 422 | Enrollment only allowed on published courses |
-| `RESUBMIT_TOO_EARLY` | 429 | Student must wait the cool-off period before resubmitting after rejection |
-| `RATE_LIMIT_EXCEEDED` | 429 | General rate limit exceeded |
-| `AUTH_RATE_LIMIT_EXCEEDED` | 429 | Auth endpoint rate limit exceeded |
-| `UNSUPPORTED_MEDIA_TYPE` | 415 | Uploaded file type is not accepted |
-| `INTERNAL_ERROR` | 500 | Unhandled server error (sanitised message; no stack trace) |
-| `GATEWAY_ERROR` | 502 | Upstream microservice is unreachable |
-
----
-
-## 19. HTTP Status Code Reference
-
-| Status | Meaning | When Used |
-|--------|---------|-----------|
-| `200 OK` | Success | GET, PATCH, POST returning data |
-| `201 Created` | Resource created | POST that creates a new resource |
-| `204 No Content` | Success, no body | DELETE |
-| `400 Bad Request` | Client validation error | Zod schema failure, bad file |
-| `401 Unauthorized` | Auth required or failed | Missing / expired / revoked token |
-| `403 Forbidden` | Access denied | Valid token, wrong role or ownership |
-| `404 Not Found` | Resource missing | Entity not found; or DRAFT course accessed by student |
-| `409 Conflict` | Duplicate / invalid state | Duplicate email, duplicate enrollment, wrong lifecycle state |
-| `415 Unsupported Media Type` | Invalid content type | Wrong file type on upload |
-| `422 Unprocessable Entity` | Business rule violation | Publish with no subjects, enroll in unpublished course |
-| `429 Too Many Requests` | Rate limited | Too many requests; too-soon resubmit |
-| `500 Internal Server Error` | Server fault | Unhandled exception (sanitised) |
-| `502 Bad Gateway` | Upstream failure | Gateway cannot reach downstream service |
-| `503 Service Unavailable` | Service not ready | Readiness probe failed |
-
----
-
-## 20. Domain Events Reference
-
-The CMP uses an event-driven architecture for side effects (notifications, audit writes). These events are published internally and are not directly accessible via the REST API. They are documented here for integration reference.
-
-### Event Schema
-
-All events follow this shape when dispatched:
-
-```typescript
-interface DomainEvent<T = Record<string, unknown>> {
-  id:         string;    // UUID v4
-  type:       string;    // Event type string
-  occurredAt: string;    // ISO 8601 timestamp
-  requestId:  string;    // Correlation ID (from X-Request-Id)
-  payload:    T;
-}
-```
-
-### Event Catalogue
-
-| Event Type | Published By | Payload Fields | Consumed By |
-|-----------|-------------|---------------|-------------|
-| `user.registered` | Auth Service | `studentUid`, `email`, `firstName`, `lastName` | User Svc, Enrollment Svc, Notification Svc, Audit Svc |
-| `registration.approved` | Enrollment Service | `studentUid`, `actorUid`, `registrationId` | User Svc, Notification Svc, Audit Svc |
-| `registration.rejected` | Enrollment Service | `studentUid`, `actorUid`, `registrationId`, `reason?` | User Svc, Notification Svc, Audit Svc |
-| `enrollment.pending` | Enrollment Service | `studentUid`, `courseId`, `enrollmentId` | Notification Svc, Audit Svc |
-| `enrollment.approved` | Enrollment Service | `studentUid`, `actorUid`, `courseId`, `enrollmentId` | Notification Svc, Audit Svc |
-| `enrollment.rejected` | Enrollment Service | `studentUid`, `actorUid`, `courseId`, `reason?` | Notification Svc, Audit Svc |
-| `course.published` | Course Service | `actorUid`, `courseId`, `courseTitle` | Notification Svc, Audit Svc |
-| `progress.subjectCompleted` | Progress Service | `studentUid`, `subjectId`, `courseId`, `source` | Progress Svc (re-aggregate), Audit Svc |
-| `admin.created` | User Service | `uid`, `email`, `firstName`, `lastName`, `actorUid`, `promoted?` | Notification Svc, Audit Svc |
-| `admin.suspended` | User Service | `uid`, `email`, `firstName`, `lastName` | Notification Svc, Audit Svc |
-| `audit.action` | Any service | `actorUid?`, `action`, `targetType`, `targetId`, `payload`, `requestId` | Audit Svc |
-
-### Notification Triggers
-
-| Event | Who is notified | Channel(s) |
-|-------|----------------|-----------|
-| `user.registered` | All admins + registering user | In-app (admins) + email (user) |
-| `registration.approved` | Student | In-app + email |
-| `registration.rejected` | Student | In-app + email |
-| `enrollment.pending` | All admins | In-app |
-| `enrollment.approved` | Student | In-app + email + push |
-| `enrollment.rejected` | Student | In-app + email |
-| `course.published` | — | — |
-| `admin.created` | New admin | Email (welcome or promotion notice) |
-| `admin.suspended` | Suspended admin | In-app + email |
-
----
-
-*© 2026 Future CX Lanka (Pvt) Ltd — Confidential*
-*API Document version: 1.1.0 | Paired with CMP Backend Blueprint v1.0.0 and SRS dated 07 May 2026*
-*Updated 11 May 2026 — v1.1.0: dual-role support for promoted admins (`roles[]` field); Section 14.7 added to TOC; User model updated.*
+| `uid` | Firebase Auth ... (25 KB left)
