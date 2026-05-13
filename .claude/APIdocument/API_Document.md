@@ -381,12 +381,7 @@ None.
 
 #### Responses
 
-**`200 OK`**
-```json
-{
-  "message": "Logged out successfully."
-}
-```
+**`204 No Content`** — Logged out successfully (empty body)
 
 **`401 Unauthorized`** — Invalid or missing token
 ```json
@@ -418,12 +413,7 @@ Send a password reset email to the given address. Always returns `200` regardles
 
 #### Responses
 
-**`200 OK`**
-```json
-{
-  "message": "If an account exists for this email, a reset link has been sent."
-}
-```
+**`204 No Content`** — Reset email sent if account exists (empty body — always 204 regardless of whether the email exists, to prevent enumeration)
 
 ---
 
@@ -539,22 +529,19 @@ Initiate a server-side password change for the authenticated user.
 
 ```json
 {
-  "newPassword": "NewSecurePass@2026"
+  "currentPassword": "OldSecurePass@2026",
+  "newPassword":     "NewSecurePass@2026"
 }
 ```
 
 | Field | Type | Required | Validation |
 |-------|------|:--------:|-----------|
+| `currentPassword` | `string` | Yes | Current password (verified server-side via Firebase Identity Toolkit) |
 | `newPassword` | `string` | Yes | Min 10 chars · uppercase · lowercase · number · special character |
 
 #### Responses
 
-**`200 OK`**
-```json
-{
-  "message": "Password updated successfully."
-}
-```
+**`204 No Content`** — Password updated successfully (empty body)
 
 ---
 
@@ -576,7 +563,6 @@ List courses. Returns only `published` courses for unauthenticated requests and 
 | `limit` | `number` | `20` | Items per page (max 100) |
 | `cursor` | `string` | — | Pagination cursor |
 | `state` | `string` | — | Filter by state: `draft`, `published`, `archived` (admin only) |
-| `q` | `string` | — | Search by title (partial match, case-insensitive) |
 
 #### Responses
 
@@ -697,7 +683,7 @@ Create a new course in `draft` state.
 | Field | Type | Required | Validation |
 |-------|------|:--------:|-----------|
 | `title` | `string` | Yes | 1–200 characters; must be unique across all courses |
-| `description` | `string` | Yes | 1–5000 characters |
+| `description` | `string` | Yes | 1–2000 characters |
 | `coverImageUrl` | `string` | No | Valid HTTPS URL |
 
 #### Responses
@@ -859,15 +845,15 @@ Add a new semester to a course.
 
 ```json
 {
-  "name":      "Semester 1 — Foundations",
-  "sortOrder": 1
+  "title":       "Semester 1 — Foundations",
+  "description": "Core foundational topics."
 }
 ```
 
 | Field | Type | Required | Validation |
 |-------|------|:--------:|-----------|
-| `name` | `string` | Yes | 1–200 characters |
-| `sortOrder` | `number` | Yes | Positive integer; controls display order |
+| `title` | `string` | Yes | 1–200 characters |
+| `description` | `string` | No | Max 1000 characters |
 
 #### Responses
 
@@ -876,9 +862,11 @@ Add a new semester to a course.
 {
   "id":           "sem-001",
   "courseId":     "course-abc",
-  "name":         "Semester 1 — Foundations",
-  "sortOrder":    1,
+  "title":        "Semester 1 — Foundations",
+  "description":  "Core foundational topics.",
   "subjectCount": 0,
+  "order":        1,
+  "deletedAt":    null,
   "createdAt":    "2026-05-01T08:00:00.000Z",
   "updatedAt":    "2026-05-01T08:00:00.000Z"
 }
@@ -903,8 +891,8 @@ Update a semester's name or sort order.
 
 ```json
 {
-  "name":      "Semester 1 — Core Foundations",
-  "sortOrder": 2
+  "title":       "Semester 1 — Core Foundations",
+  "description": "Updated description."
 }
 ```
 
@@ -912,7 +900,7 @@ All fields optional.
 
 #### Responses
 
-**`200 OK`** — Updated semester object
+**`200 OK`** — Updated semester object (same shape as `POST /courses/:id/semesters` response)
 
 ---
 
@@ -952,19 +940,19 @@ Add a subject (lesson) to a semester.
 {
   "title":          "TypeScript Basics",
   "description":    "Variables, types, interfaces, and enums.",
-  "youtubeVideoUrl":"https://www.youtube.com/watch?v=zQnBQ4tB3ZA",
-  "sortOrder":      1
+  "youtubeVideoId": "zQnBQ4tB3ZA",
+  "attachmentIds":  []
 }
 ```
 
 | Field | Type | Required | Validation |
 |-------|------|:--------:|-----------|
 | `title` | `string` | Yes | 1–200 characters |
-| `description` | `string` | Yes | 1–5000 characters |
-| `youtubeVideoUrl` | `string` | Yes | Valid YouTube URL or 11-character video ID |
-| `sortOrder` | `number` | Yes | Positive integer |
+| `description` | `string` | No | Max 2000 characters |
+| `youtubeVideoId` | `string \| null` | No | Exactly 11 characters matching `[A-Za-z0-9_-]{11}` — pass the raw video ID, **not** a full YouTube URL |
+| `attachmentIds` | `string[]` | No | Array of existing attachment document IDs |
 
-> The server extracts and stores only the 11-character YouTube video ID regardless of URL format submitted.
+> **Important:** `youtubeVideoId` accepts only the raw 11-character video ID (e.g. `zQnBQ4tB3ZA`), not a full YouTube URL. Sending a full URL will return `400 INVALID_YOUTUBE_ID`.
 
 #### Responses
 
@@ -973,11 +961,13 @@ Add a subject (lesson) to a semester.
 {
   "id":             "sub-001",
   "semesterId":     "sem-001",
+  "courseId":       "course-abc",
   "title":          "TypeScript Basics",
   "description":    "Variables, types, interfaces, and enums.",
   "youtubeVideoId": "zQnBQ4tB3ZA",
-  "sortOrder":      1,
-  "attachments":    [],
+  "attachmentIds":  [],
+  "order":          1,
+  "deletedAt":      null,
   "createdAt":      "2026-05-01T09:00:00.000Z",
   "updatedAt":      "2026-05-01T09:00:00.000Z"
 }
@@ -988,7 +978,7 @@ Add a subject (lesson) to a semester.
 {
   "error": {
     "code":    "INVALID_YOUTUBE_ID",
-    "message": "The provided YouTube URL or video ID is not valid."
+    "message": "YouTube video ID must be 11 chars."
   },
   "requestId": "..."
 }
@@ -1015,16 +1005,15 @@ Update subject content.
 {
   "title":          "TypeScript Basics — Revised",
   "description":    "Updated description.",
-  "youtubeVideoUrl":"https://www.youtube.com/watch?v=newVideoId",
-  "sortOrder":      2
+  "youtubeVideoId": "newVideoId11c"
 }
 ```
 
-All fields optional.
+All fields optional. Same validation rules as `POST /semesters/:id/subjects`.
 
 #### Responses
 
-**`200 OK`** — Updated subject object
+**`200 OK`** — Updated subject object (same shape as `POST /semesters/:id/subjects` response)
 
 ---
 
@@ -1218,13 +1207,14 @@ curl -X POST https://api.yourdomain.com/api/v1/subjects/sub-001/attachments \
 **`201 Created`**
 ```json
 {
-  "id":         "att-001",
-  "subjectId":  "sub-001",
-  "fileName":   "lesson-notes.pdf",
-  "mimeType":   "application/pdf",
-  "sizeBytes":  204800,
-  "uploadedBy": "admin-uid-xyz",
-  "uploadedAt": "2026-05-02T10:00:00.000Z"
+  "id":          "att-001",
+  "subjectId":   "sub-001",
+  "courseId":    "course-abc",
+  "filename":    "lesson-notes.pdf",
+  "mimeType":    "application/pdf",
+  "sizeBytes":   204800,
+  "storagePath": "attachments/course-abc/sub-001/att-001.pdf",
+  "createdAt":   "2026-05-02T10:00:00.000Z"
 }
 ```
 
@@ -1341,34 +1331,45 @@ None.
 }
 ```
 
-**`409 Conflict`** — Duplicate enrollment
+**`409 Conflict`** — Already enrolled (pending)
 ```json
 {
   "error": {
-    "code":    "ENROLLMENT_EXISTS",
-    "message": "You already have a pending or approved enrollment for this course."
+    "code":    "ENROLLMENT_PENDING",
+    "message": "You already have a pending enrollment for this course."
   },
   "requestId": "..."
 }
 ```
 
-**`422 Unprocessable Entity`** — Course is not published
+**`409 Conflict`** — Already enrolled (approved)
 ```json
 {
   "error": {
-    "code":    "COURSE_NOT_PUBLISHED",
-    "message": "Enrollment is only available for published courses."
+    "code":    "ALREADY_ENROLLED",
+    "message": "You are already enrolled in this course."
   },
   "requestId": "..."
 }
 ```
 
-**`429 Too Many Requests`** — Resubmitting before the cool-off period (24h after rejection)
+**`404 Not Found`** — Course is not published or does not exist
 ```json
 {
   "error": {
-    "code":    "RESUBMIT_TOO_EARLY",
-    "message": "You must wait 24 hours after a rejection before resubmitting."
+    "code":    "COURSE_NOT_FOUND",
+    "message": "Course not found or not published."
+  },
+  "requestId": "..."
+}
+```
+
+**`422 Unprocessable Entity`** — Resubmitting before the cool-off period (24h after rejection)
+```json
+{
+  "error": {
+    "code":    "COOLOFF_ACTIVE",
+    "message": "You must wait before resubmitting an enrollment request for this course."
   },
   "requestId": "..."
 }
@@ -1455,10 +1456,9 @@ List student registration requests.
 
 | Parameter | Type | Default | Description |
 |-----------|------|:-------:|-------------|
-| `status` | `string` | `pending` | Filter by status: `pending`, `approved`, `rejected` |
-| `limit` | `number` | `25` | Items per page (max 100) |
+| `status` | `string` | — | Filter by status: `pending`, `approved`, `rejected` (omit to return all) |
+| `limit` | `number` | `20` | Items per page (max 100) |
 | `cursor` | `string` | — | Pagination cursor |
-| `q` | `string` | — | Search by student name or email |
 
 #### Responses
 
@@ -1504,11 +1504,18 @@ None.
 
 #### Responses
 
-**`200 OK`**
+**`200 OK`** — Full updated Registration object
 ```json
 {
-  "message":    "Registration approved.",
-  "studentUid": "firebase-uid-abc123"
+  "id":         "firebase-uid-abc123",
+  "studentUid": "firebase-uid-abc123",
+  "email":      "viruli@example.com",
+  "firstName":  "Viruli",
+  "lastName":   "Weerasinghe",
+  "state":      "approved",
+  "reason":     null,
+  "createdAt":  "2026-05-05T08:00:00.000Z",
+  "updatedAt":  "2026-05-06T09:00:00.000Z"
 }
 ```
 
@@ -1551,11 +1558,18 @@ Reject a pending student registration. An optional reason may be provided.
 
 #### Responses
 
-**`200 OK`**
+**`200 OK`** — Full updated Registration object
 ```json
 {
-  "message":    "Registration rejected.",
-  "studentUid": "firebase-uid-abc123"
+  "id":         "firebase-uid-abc123",
+  "studentUid": "firebase-uid-abc123",
+  "email":      "viruli@example.com",
+  "firstName":  "Viruli",
+  "lastName":   "Weerasinghe",
+  "state":      "rejected",
+  "reason":     "Incomplete registration information.",
+  "createdAt":  "2026-05-05T08:00:00.000Z",
+  "updatedAt":  "2026-05-06T09:00:00.000Z"
 }
 ```
 
@@ -1572,13 +1586,13 @@ Approve multiple pending registrations in one request. Uses `Promise.allSettled`
 
 ```json
 {
-  "registrationIds": ["reg-001", "reg-002", "reg-003"]
+  "ids": ["reg-001", "reg-002", "reg-003"]
 }
 ```
 
 | Field | Type | Required | Validation |
 |-------|------|:--------:|-----------|
-| `registrationIds` | `string[]` | Yes | 1–50 registration IDs per request |
+| `ids` | `string[]` | Yes | 1–100 registration IDs per request |
 
 #### Responses
 
@@ -1886,35 +1900,25 @@ Get aggregated progress statistics for all students enrolled in a course.
 |-----------|-------------|
 | `courseId` | Course document ID |
 
-#### Query Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|:-------:|-------------|
-| `limit` | `number` | `25` | Students per page |
-| `cursor` | `string` | — | Pagination cursor |
-
 #### Responses
 
-**`200 OK`**
+**`200 OK`** — Array of raw subject progress records for all students in the course
 ```json
-{
-  "courseId":      "course-abc",
-  "courseTitle":   "Introduction to TypeScript",
-  "totalSubjects": 10,
-  "enrolledCount": 25,
-  "items": [
-    {
-      "studentUid":        "firebase-uid-abc123",
-      "studentName":       "Viruli Weerasinghe",
-      "completedCount":    4,
-      "completionPercent": 40.0,
-      "lastAccessedAt":    "2026-05-07T14:30:00.000Z"
-    }
-  ],
-  "nextCursor": null,
-  "total": 25
-}
+[
+  {
+    "studentUid":        "firebase-uid-abc123",
+    "subjectId":         "sub-001",
+    "courseId":          "course-abc",
+    "semesterId":        "sem-001",
+    "state":             "completed",
+    "completionSource":  "manual",
+    "completedAt":       "2026-05-07T14:00:00.000Z",
+    "lastAccessedAt":    "2026-05-07T14:00:00.000Z"
+  }
+]
 ```
+
+> Returns a flat array of `SubjectProgress` records (not paginated). Each record is one subject completion entry for one student.
 
 ---
 
@@ -1983,8 +1987,8 @@ None.
 **`200 OK`**
 ```json
 {
-  "id":     "notif-001",
-  "readAt": "2026-05-07T10:00:00.000Z"
+  "id":   "notif-001",
+  "read": true
 }
 ```
 
@@ -2003,12 +2007,7 @@ None.
 
 #### Responses
 
-**`200 OK`**
-```json
-{
-  "markedCount": 3
-}
-```
+**`204 No Content`** — All notifications marked as read (empty body)
 
 ---
 
@@ -2028,10 +2027,8 @@ List all users (students) in the system.
 | Parameter | Type | Default | Description |
 |-----------|------|:-------:|-------------|
 | `status` | `string` | — | Filter by: `pending_approval`, `approved`, `rejected`, `suspended` |
-| `role` | `string` | `student` | Filter by role |
-| `courseId` | `string` | — | Filter students enrolled in a specific course |
-| `q` | `string` | — | Search by name or email (partial match) |
-| `limit` | `number` | `25` | Items per page (max 100) |
+| `role` | `string` | — | Filter by role |
+| `limit` | `number` | `20` | Items per page (max 100) |
 | `cursor` | `string` | — | Pagination cursor |
 
 #### Responses
@@ -2058,9 +2055,13 @@ List all users (students) in the system.
 
 ---
 
+
+
+---
+
 ### 13.2 `GET /users/:uid`
 
-Get a specific user's full profile including enrollment history and per-course progress summary.
+Get a specific user's full profile.
 
 **Authentication:** Bearer token required
 **Roles:** `admin`, `super_admin`
@@ -2069,4 +2070,731 @@ Get a specific user's full profile including enrollment history and per-course p
 
 | Parameter | Description |
 |-----------|-------------|
-| `uid` | Firebase Auth ... (25 KB left)
+| `uid` | Firebase Auth UID |
+
+#### Responses
+
+**`200 OK`** — Full User object (same shape as `GET /me`)
+```json
+{
+  "uid":             "firebase-uid-abc123",
+  "email":           "viruli@example.com",
+  "role":            "student",
+  "roles":           ["student"],
+  "status":          "approved",
+  "firstName":       "Viruli",
+  "lastName":        "Weerasinghe",
+  "profilePhotoUrl": null,
+  "createdAt":       "2026-05-01T08:00:00.000Z",
+  "updatedAt":       "2026-05-05T10:30:00.000Z",
+  "deletedAt":       null
+}
+```
+
+**`404 Not Found`**
+```json
+{
+  "error": { "code": "USER_NOT_FOUND", "message": "User not found." },
+  "requestId": "..."
+}
+```
+
+---
+
+### 13.3 `POST /users/:uid/suspend`
+
+Suspend a user account. Disables Firebase Auth login for the user.
+
+**Authentication:** Bearer token required
+**Roles:** `admin`, `super_admin`
+
+#### Path Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `uid` | Firebase Auth UID |
+
+#### Request Body
+
+None.
+
+#### Responses
+
+**`200 OK`** — Full updated User object with `status: "suspended"`
+
+**`404 Not Found`**
+```json
+{
+  "error": { "code": "USER_NOT_FOUND", "message": "User not found." },
+  "requestId": "..."
+}
+```
+
+---
+
+### 13.4 `POST /users/:uid/reactivate`
+
+Reactivate a suspended user account. Re-enables Firebase Auth login.
+
+**Authentication:** Bearer token required
+**Roles:** `admin`, `super_admin`
+
+#### Path Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `uid` | Firebase Auth UID |
+
+#### Request Body
+
+None.
+
+#### Responses
+
+**`200 OK`** — Full updated User object with `status: "approved"`
+
+**`404 Not Found`**
+```json
+{
+  "error": { "code": "USER_NOT_FOUND", "message": "User not found." },
+  "requestId": "..."
+}
+```
+
+---
+
+## 14. Admin Management — Super Admin
+
+---
+
+### 14.1 `GET /super-admin/admins`
+
+List all admin accounts.
+
+**Authentication:** Bearer token required
+**Roles:** `super_admin`
+
+#### Query Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|:-------:|-------------|
+| `limit` | `number` | `20` | Items per page (max 100) |
+| `cursor` | `string` | — | Pagination cursor |
+
+#### Responses
+
+**`200 OK`**
+```json
+{
+  "items": [
+    {
+      "uid":             "admin-uid-xyz",
+      "email":           "admin@cmp.com",
+      "role":            "admin",
+      "roles":           ["admin"],
+      "status":          "approved",
+      "firstName":       "Sapna",
+      "lastName":        "Nethmini",
+      "profilePhotoUrl": null,
+      "createdAt":       "2026-04-01T08:00:00.000Z",
+      "updatedAt":       "2026-04-01T08:00:00.000Z",
+      "deletedAt":       null
+    }
+  ],
+  "nextCursor": null,
+  "total": 3
+}
+```
+
+---
+
+### 14.2 `POST /super-admin/admins`
+
+Create a new admin account directly (no approval needed). The admin can log in immediately.
+
+**Side effects:** An `admin.created` outbox event is published (triggers an audit log entry).
+
+**Authentication:** Bearer token required
+**Roles:** `super_admin`
+
+#### Request Body
+
+```json
+{
+  "firstName":       "Sapna",
+  "lastName":        "Nethmini",
+  "email":           "sapna@cmp.com",
+  "initialPassword": "SecureAdmin@2026"
+}
+```
+
+| Field | Type | Required | Validation |
+|-------|------|:--------:|-----------|
+| `firstName` | `string` | Yes | 1-100 characters |
+| `lastName` | `string` | Yes | 1-100 characters |
+| `email` | `string` | Yes | Valid email; must be unique |
+| `initialPassword` | `string` | Yes | Min 10 chars, uppercase, lowercase, number, special character |
+
+#### Responses
+
+**`201 Created`** — Full User object for the new admin
+```json
+{
+  "uid":             "admin-uid-xyz",
+  "email":           "sapna@cmp.com",
+  "role":            "admin",
+  "roles":           ["admin"],
+  "status":          "approved",
+  "firstName":       "Sapna",
+  "lastName":        "Nethmini",
+  "profilePhotoUrl": null,
+  "createdAt":       "2026-05-01T08:00:00.000Z",
+  "updatedAt":       "2026-05-01T08:00:00.000Z",
+  "deletedAt":       null
+}
+```
+
+**`409 Conflict`** — Email already registered
+```json
+{
+  "error": { "code": "EMAIL_EXISTS", "message": "This email address is already registered." },
+  "requestId": "..."
+}
+```
+
+---
+
+### 14.3 `GET /super-admin/admins/:uid`
+
+Get a specific admin's full profile.
+
+**Authentication:** Bearer token required
+**Roles:** `super_admin`
+
+#### Path Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `uid` | Firebase Auth UID |
+
+#### Responses
+
+**`200 OK`** — Full User object (same shape as 14.2 response)
+
+**`404 Not Found`**
+```json
+{
+  "error": { "code": "USER_NOT_FOUND", "message": "User not found." },
+  "requestId": "..."
+}
+```
+
+---
+
+### 14.4 `POST /super-admin/admins/:uid/suspend`
+
+Suspend an admin account. Publishes an `admin.suspended` outbox event (triggers notification + audit).
+
+**Authentication:** Bearer token required
+**Roles:** `super_admin`
+
+#### Path Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `uid` | Firebase Auth UID |
+
+#### Request Body
+
+None.
+
+#### Responses
+
+**`200 OK`** — Full updated User object with `status: "suspended"`
+
+**`404 Not Found`**
+```json
+{
+  "error": { "code": "USER_NOT_FOUND", "message": "User not found." },
+  "requestId": "..."
+}
+```
+
+---
+
+### 14.5 `POST /super-admin/admins/:uid/reactivate`
+
+Reactivate a suspended admin account.
+
+**Authentication:** Bearer token required
+**Roles:** `super_admin`
+
+#### Path Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `uid` | Firebase Auth UID |
+
+#### Request Body
+
+None.
+
+#### Responses
+
+**`200 OK`** — Full updated User object with `status: "approved"`
+
+**`404 Not Found`**
+```json
+{
+  "error": { "code": "USER_NOT_FOUND", "message": "User not found." },
+  "requestId": "..."
+}
+```
+
+---
+
+### 14.6 `DELETE /super-admin/admins/:uid`
+
+Soft-delete an admin account. Sets `deletedAt` and disables Firebase Auth login.
+
+> Only users with `role: "admin"` can be deleted via this endpoint. Attempting to delete a non-admin returns `404`.
+
+**Authentication:** Bearer token required
+**Roles:** `super_admin`
+
+#### Path Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `uid` | Firebase Auth UID |
+
+#### Responses
+
+**`204 No Content`** — Deleted successfully (empty body)
+
+**`404 Not Found`** — User not found or is not an admin
+```json
+{
+  "error": { "code": "USER_NOT_FOUND", "message": "User not found." },
+  "requestId": "..."
+}
+```
+
+---
+
+### 14.7 `POST /super-admin/users/:uid/make-admin`
+
+Promote an existing student to admin. The user retains their student role and gains admin capabilities simultaneously (dual-role).
+
+**Side effects:** An `admin.created` outbox event is published with `promoted: true` in the payload.
+
+**Authentication:** Bearer token required
+**Roles:** `super_admin`
+
+#### Path Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `uid` | Firebase Auth UID of the student to promote |
+
+#### Request Body
+
+None.
+
+#### Responses
+
+**`200 OK`** — Full updated User object
+```json
+{
+  "uid":             "firebase-uid-abc123",
+  "email":           "viruli@example.com",
+  "role":            "admin",
+  "roles":           ["student", "admin"],
+  "status":          "approved",
+  "firstName":       "Viruli",
+  "lastName":        "Weerasinghe",
+  "profilePhotoUrl": null,
+  "createdAt":       "2026-05-01T08:00:00.000Z",
+  "updatedAt":       "2026-05-10T11:00:00.000Z",
+  "deletedAt":       null
+}
+```
+
+**`404 Not Found`** — User not found
+```json
+{
+  "error": { "code": "USER_NOT_FOUND", "message": "User not found." },
+  "requestId": "..."
+}
+```
+
+**`409 Conflict`** — User is not a student
+```json
+{
+  "error": { "code": "INVALID_ROLE", "message": "Only students can be promoted to admin." },
+  "requestId": "..."
+}
+```
+
+---
+
+## 15. Audit Log — Admin & Super Admin
+
+---
+
+### 15.1 `GET /audit-log`
+
+Query the append-only audit log. Entries are created automatically by the outbox-worker; no direct write API exists.
+
+**Authentication:** Bearer token required
+**Roles:** `admin`, `super_admin`
+
+#### Query Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|:-------:|-------------|
+| `actorUid` | `string` | — | Filter by the UID of the user who performed the action |
+| `action` | `string` | — | Filter by action string (exact match) |
+| `category` | `string` | — | Filter by category (exact match) |
+| `targetType` | `string` | — | Filter by target entity type (exact match) |
+| `targetId` | `string` | — | Filter by target entity ID (exact match) |
+| `from` | `string` | — | ISO 8601 datetime — return entries at or after this timestamp |
+| `to` | `string` | — | ISO 8601 datetime — return entries at or before this timestamp |
+| `limit` | `number` | `20` | Items per page (max 100) |
+| `cursor` | `string` | — | Document ID cursor for pagination |
+
+#### Responses
+
+**`200 OK`**
+```json
+{
+  "items": [
+    {
+      "id":         "log-001",
+      "when":       "2026-05-07T14:00:00.000Z",
+      "actor":      { "uid": "admin-uid-xyz", "email": "admin@cmp.com" },
+      "action":     "enrollment.approved",
+      "category":   "enrollment",
+      "ip":         "203.0.113.42",
+      "targetType": "enrollment",
+      "targetId":   "enr-abc",
+      "requestId":  "7f3a1c2d-4e5b-6f7a-8b9c-0d1e2f3a4b5c"
+    }
+  ],
+  "nextCursor": null,
+  "total": 142
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `when` | Timestamp the event was recorded (mapped from internal `createdAt`) |
+| `actor` | The user who triggered the action; `uid` and `email` may be `null` for system events |
+| `action` | String identifier (e.g. `enrollment.approved`, `user.registered`) |
+| `category` | Logical grouping (e.g. `enrollment`, `auth`, `course`) |
+| `targetType` | The type of entity affected (e.g. `user`, `enrollment`, `course`) |
+| `targetId` | The ID of the affected entity |
+| `requestId` | The `X-Request-Id` from the originating HTTP request |
+
+> The raw `payload` field is intentionally excluded from the response.
+
+---
+
+## 16. Health Endpoints
+
+Health endpoints are exposed by every service. The gateway does not proxy them — use direct service URLs in Kubernetes probes.
+
+---
+
+### 16.1 `GET /healthz`
+
+Liveness probe. Returns `200` if the process is running.
+
+**Authentication:** None (public)
+
+#### Responses
+
+**`200 OK`**
+```json
+{ "status": "ok" }
+```
+
+---
+
+### 16.2 `GET /readyz`
+
+Readiness probe. Returns `200` when the service is ready to accept traffic.
+
+**Authentication:** None (public)
+
+#### Responses
+
+**`200 OK`**
+```json
+{ "status": "ok" }
+```
+
+---
+
+## 17. Data Models
+
+---
+
+### User
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `uid` | `string` | Firebase Auth UID |
+| `email` | `string` | |
+| `firstName` | `string` | |
+| `lastName` | `string` | |
+| `role` | `string` | Primary role: `student`, `admin`, or `super_admin` |
+| `roles` | `string[]` | All roles held (e.g. `["student","admin"]` for promoted users) |
+| `status` | `string` | `pending_approval`, `approved`, `rejected`, or `suspended` |
+| `profilePhotoUrl` | `string or null` | |
+| `createdAt` | `string` | ISO 8601 |
+| `updatedAt` | `string` | ISO 8601 |
+| `deletedAt` | `string or null` | Non-null means soft-deleted |
+
+---
+
+### Course
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | `string` | Auto UUID |
+| `title` | `string` | Unique |
+| `description` | `string` | Max 2000 characters |
+| `coverImageUrl` | `string or null` | |
+| `state` | `string` | `draft`, `published`, or `archived` |
+| `semesterCount` | `number` | |
+| `createdBy` | `string` | Admin UID |
+| `createdByName` | `string` | Display name at time of creation |
+| `publishedAt` | `string or null` | ISO 8601 |
+| `createdAt` | `string` | ISO 8601 |
+| `updatedAt` | `string` | ISO 8601 |
+| `deletedAt` | `string or null` | |
+
+---
+
+### Semester
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | `string` | Auto UUID |
+| `courseId` | `string` | |
+| `title` | `string` | |
+| `description` | `string` | |
+| `subjectCount` | `number` | |
+| `order` | `number` | Display order within course |
+| `deletedAt` | `string or null` | |
+| `createdAt` | `string` | ISO 8601 |
+| `updatedAt` | `string` | ISO 8601 |
+
+---
+
+### Subject
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | `string` | Auto UUID |
+| `semesterId` | `string` | |
+| `courseId` | `string` | |
+| `title` | `string` | |
+| `description` | `string` | |
+| `youtubeVideoId` | `string or null` | Raw 11-char ID only — not a full URL |
+| `attachmentIds` | `string[]` | IDs of associated Attachment documents |
+| `order` | `number` | Display order within semester |
+| `deletedAt` | `string or null` | |
+| `createdAt` | `string` | ISO 8601 |
+| `updatedAt` | `string` | ISO 8601 |
+
+---
+
+### Lesson
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | `string` | Auto UUID |
+| `subjectId` | `string` | |
+| `courseId` | `string` | |
+| `semesterId` | `string` | |
+| `title` | `string` | |
+| `description` | `string or null` | |
+| `url` | `string` | Any valid video URL |
+| `order` | `number` | Auto-assigned; sequential within subject |
+| `deletedAt` | `string or null` | |
+| `createdAt` | `string` | ISO 8601 |
+| `updatedAt` | `string` | ISO 8601 |
+
+---
+
+### Attachment
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | `string` | Auto UUID |
+| `subjectId` | `string` | |
+| `courseId` | `string` | |
+| `filename` | `string` | Original file name (lowercase n) |
+| `mimeType` | `string` | e.g. `application/pdf` |
+| `sizeBytes` | `number` | |
+| `storagePath` | `string` | Internal Cloud Storage path |
+| `createdAt` | `string` | ISO 8601 |
+
+---
+
+### Enrollment
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | `string` | `${studentUid}_${courseId}` |
+| `studentUid` | `string` | |
+| `courseId` | `string` | |
+| `courseTitle` | `string` | |
+| `state` | `string` | `pending`, `approved`, `rejected`, or `withdrawn` |
+| `approvedAt` | `string or null` | ISO 8601 |
+| `rejectedAt` | `string or null` | ISO 8601 |
+| `reason` | `string or null` | Rejection reason |
+| `createdAt` | `string` | ISO 8601 |
+| `updatedAt` | `string` | ISO 8601 |
+
+---
+
+### Registration
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | `string` | Firebase Auth UID (same as `studentUid`) |
+| `studentUid` | `string` | |
+| `email` | `string` | |
+| `firstName` | `string` | |
+| `lastName` | `string` | |
+| `state` | `string` | `pending`, `approved`, or `rejected` |
+| `reason` | `string or null` | Rejection reason |
+| `createdAt` | `string` | ISO 8601 |
+| `updatedAt` | `string` | ISO 8601 |
+
+---
+
+### SubjectProgress
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `studentUid` | `string` | |
+| `subjectId` | `string` | |
+| `courseId` | `string` | |
+| `semesterId` | `string` | |
+| `state` | `string` | `in_progress` or `completed` |
+| `completionSource` | `string or null` | `manual` or `auto` |
+| `completedAt` | `string or null` | ISO 8601; immutable once set |
+| `lastAccessedAt` | `string or null` | ISO 8601 |
+
+---
+
+### Notification
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | `string` | Auto UUID |
+| `userUid` | `string` | |
+| `category` | `string` | e.g. `enrollment_approved`, `registration_approved` |
+| `title` | `string` | |
+| `body` | `string` | |
+| `payload` | `object` | Event-specific context |
+| `readAt` | `string or null` | ISO 8601; null when unread |
+| `createdAt` | `string` | ISO 8601 |
+
+---
+
+### AuditLogEntry (response shape)
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | `string` | Auto UUID |
+| `when` | `string` | ISO 8601 (mapped from internal `createdAt`) |
+| `actor` | `object` | `{ uid: string or null, email: string or null }` |
+| `action` | `string` | |
+| `category` | `string or null` | |
+| `ip` | `string or null` | |
+| `targetType` | `string or null` | |
+| `targetId` | `string or null` | |
+| `requestId` | `string` | |
+
+> `payload` is stored internally but not included in API responses.
+
+---
+
+## 18. Error Codes Reference
+
+| Code | Status | Description |
+|------|:------:|-------------|
+| `VALIDATION_ERROR` | 400 | Zod schema validation failed; `details` contains field-level errors |
+| `INVALID_YOUTUBE_ID` | 400 | `youtubeVideoId` is not a valid 11-character ID |
+| `FILE_TOO_LARGE` | 400 | Uploaded file exceeds the 25 MB limit |
+| `MISSING_TOKEN` | 401 | `Authorization` header is absent |
+| `INVALID_TOKEN` | 401 | Token is expired, revoked, or malformed |
+| `FORBIDDEN` | 403 | Valid token, insufficient role or ownership |
+| `ENROLLMENT_REQUIRED` | 403 | Student must have an approved enrollment to access this resource |
+| `COURSE_NOT_FOUND` | 404 | Course does not exist, is soft-deleted, or not published (for student/public requests) |
+| `USER_NOT_FOUND` | 404 | User does not exist or is soft-deleted |
+| `SUBJECT_NOT_FOUND` | 404 | Subject does not exist or is soft-deleted |
+| `LESSON_NOT_FOUND` | 404 | Lesson does not exist or is soft-deleted |
+| `ATTACHMENT_NOT_FOUND` | 404 | Attachment does not exist |
+| `REGISTRATION_NOT_FOUND` | 404 | Registration record not found |
+| `ENROLLMENT_NOT_FOUND` | 404 | Enrollment record not found |
+| `EMAIL_EXISTS` | 409 | Email address is already registered |
+| `COURSE_TITLE_EXISTS` | 409 | A course with this title already exists |
+| `ENROLLMENT_PENDING` | 409 | Student already has a pending enrollment for this course |
+| `ALREADY_ENROLLED` | 409 | Student already has an approved enrollment for this course |
+| `INVALID_STATE` | 409 | Entity is not in the required state for this operation |
+| `INVALID_ROLE` | 409 | User role does not permit this operation |
+| `UNSUPPORTED_MEDIA_TYPE` | 415 | Uploaded file MIME type is not allowed (only PDF, DOC, DOCX) |
+| `COOLOFF_ACTIVE` | 422 | Student must wait before resubmitting an enrollment request |
+| `EMPTY_SEMESTER` | 422 | Cannot publish: at least one semester has no subjects |
+| `RATE_LIMIT_EXCEEDED` | 429 | Too many requests — see `Retry-After` header |
+
+---
+
+## 19. HTTP Status Code Reference
+
+| Status | Meaning | When used |
+|:------:|---------|-----------|
+| `200` | OK | Successful GET, PATCH, POST (non-creating) |
+| `201` | Created | Successful POST that creates a resource |
+| `204` | No Content | Successful DELETE; also logout, password-reset, change-password, mark-all-read |
+| `400` | Bad Request | Zod validation failure |
+| `401` | Unauthorized | Missing, expired, or revoked token |
+| `403` | Forbidden | Valid token, wrong role or ownership |
+| `404` | Not Found | Resource not found; draft/archived course accessed by student |
+| `409` | Conflict | Duplicate email, duplicate enrollment, invalid state transition, invalid role |
+| `415` | Unsupported Media Type | Invalid attachment MIME type |
+| `422` | Unprocessable Entity | Business rule violation (cooloff active, empty semester on publish) |
+| `429` | Too Many Requests | Rate limit exceeded |
+
+---
+
+## 20. Domain Events Reference
+
+Events published to the `outbox` Firestore collection and dispatched by the outbox-worker.
+
+| Event Type | Published By | Consumers | Trigger |
+|-----------|-------------|-----------|---------|
+| `user.registered` | auth-service | notify, audit | Student completes registration |
+| `registration.approved` | enrollment-service | user-service `/internal/users/approve`, notify, audit | Admin approves registration |
+| `registration.rejected` | enrollment-service | notify, audit | Admin rejects registration |
+| `enrollment.pending` | enrollment-service | notify, audit | Student submits enrollment request |
+| `enrollment.approved` | enrollment-service | notify, audit | Admin approves enrollment |
+| `enrollment.rejected` | enrollment-service | notify, audit | Admin rejects enrollment |
+| `enrollment.withdrawn` | enrollment-service | audit | Student withdraws enrollment |
+| `course.published` | course-service | notify, audit | Admin publishes a course |
+| `progress.subjectCompleted` | progress-service | audit | Student marks a subject complete |
+| `admin.created` | user-service | audit | Super admin creates or promotes an admin |
+| `admin.suspended` | user-service | notify, audit | Admin account is suspended |
+| `audit.action` | any service | audit | Direct audit event |
+
+**Delivery guarantees:**
+- At-least-once delivery; outbox-worker retries up to **5 times**
+- Events that fail all 5 attempts remain as `status: "failed"` in `outbox` for manual investigation
+- Within a single event, handlers run sequentially — a handler failure stops remaining handlers and triggers a retry on the next poll cycle
+- Across a batch, `Promise.allSettled` ensures one event failure does not block others in the same poll cycle

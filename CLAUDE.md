@@ -165,11 +165,10 @@ Controllers are thin — they call one use case and delegate errors with `next(e
 
 ### TypeScript Path Aliases
 
-`tsconfig.base.json` defines two alias groups:
-- `@shared/*` → each shared package (e.g. `@shared/errors` → `packages/shared/errors/src`)
-- `@/*` → `src/*` within the current service (intra-service imports only)
+Two alias groups are in use, but they resolve differently:
 
-Both are also mapped in `jest.config.ts` so tests resolve them without compilation.
+- `@shared/*` — resolved at compile time via **npm workspace symlinks** (each service declares `"@shared/errors": "*"` etc. in its `package.json`). `tsconfig.base.json` has no `paths` for these. At test time, `jest.config.ts` maps them via `moduleNameMapper`.
+- `@/*` → `src/*` — a TypeScript `paths` alias defined in each service's own `tsconfig.json` (not in `tsconfig.base.json`). Also mapped in `jest.config.ts` as `^@/(.*)$`.
 
 ### Dependency Injection
 
@@ -477,7 +476,7 @@ SERVICE_NAME, SERVICE_VERSION, PORT, NODE_ENV, LOG_LEVEL
 # Firebase Admin SDK (all services)
 FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY
 FIREBASE_STORAGE_BUCKET
-FIREBASE_WEB_API_KEY                    # Firebase web client key (auth-service)
+FIREBASE_WEB_API_KEY                    # Firebase web client key (auth-service password reset + user-service change-password)
 
 # Inter-service URLs (set all even if unused by a given service)
 SERVICE_AUTH_URL … SERVICE_AUDIT_URL
@@ -530,7 +529,7 @@ Two Jest configs exist in the repo. A third (`jest.e2e.config.ts`) is referenced
 | `student` | `student1@cmp.com` | `Student1@123` | pending_approval |
 | `student` | `student2@cmp.com` | `Student2@123` | approved |
 
-Use `jest.clearAllMocks()` in `beforeEach` to prevent test bleed. Integration tests connect to the real Firebase project via credentials in `.env.local`.
+Use `jest.clearAllMocks()` in `beforeEach` to prevent test bleed. Integration tests use the Firebase emulator — `tests/integration/setup.ts` automatically sets `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080` and `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099` with fake credentials, so no real Firebase project credentials are needed. Just ensure the emulators are running before `npm run test:integration`.
 
 Coverage thresholds enforced by `jest.config.ts`: branches 70%, functions/lines/statements 80%. `index.ts` and `server.ts` are excluded from coverage collection.
 
