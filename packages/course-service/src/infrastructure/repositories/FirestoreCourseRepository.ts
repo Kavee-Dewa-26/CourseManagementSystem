@@ -18,9 +18,9 @@ export class FirestoreCourseRepository implements ICourseRepository {
   }
 
   async findByCode(code: string): Promise<Course | null> {
+    // Check ALL courses including soft-deleted — code can never be reused
     const snap = await this.col
-      .where('code',      '==', code)
-      .where('deletedAt', '==', null)
+      .where('code', '==', code)
       .limit(1)
       .get();
     if (snap.empty) return null;
