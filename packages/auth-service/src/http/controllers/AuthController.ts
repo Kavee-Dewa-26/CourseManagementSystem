@@ -2,18 +2,20 @@ import { Request, Response, NextFunction } from 'express';
 import { AuthenticatedRequest }             from '@shared/auth-middleware';
 import { fromZodError }                     from '@shared/errors';
 import { sendSuccess }                      from '@shared/response';
-import { RegisterUseCase }                  from '../../application/use-cases/RegisterUseCase';
-import { LogoutUseCase }                    from '../../application/use-cases/LogoutUseCase';
-import { TrackLoginAttemptsUseCase }        from '../../application/use-cases/TrackLoginAttemptsUseCase';
-import { PasswordResetUseCase }             from '../../application/use-cases/PasswordResetUseCase';
-import { registerSchema, passwordResetSchema, trackFailureSchema } from '../validators/authValidator';
+import { RegisterUseCase }                from '../../application/use-cases/RegisterUseCase';
+import { LogoutUseCase }                  from '../../application/use-cases/LogoutUseCase';
+import { TrackLoginAttemptsUseCase }      from '../../application/use-cases/TrackLoginAttemptsUseCase';
+import { RequestPasswordResetUseCase }    from '../../application/use-cases/RequestPasswordResetUseCase';
+import { VerifyOtpAndResetUseCase }       from '../../application/use-cases/VerifyOtpAndResetUseCase';
+import { registerSchema, passwordResetSchema, verifyOtpSchema, trackFailureSchema } from '../validators/authValidator';
 
 export class AuthController {
   constructor(
     private readonly registerUseCase:      RegisterUseCase,
     private readonly logoutUseCase:        LogoutUseCase,
     private readonly trackAttemptsUseCase: TrackLoginAttemptsUseCase,
-    private readonly passwordResetUseCase: PasswordResetUseCase,
+    private readonly requestResetUseCase:  RequestPasswordResetUseCase,
+    private readonly verifyOtpUseCase:     VerifyOtpAndResetUseCase,
   ) {}
 
   register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -40,7 +42,17 @@ export class AuthController {
       const parsed = passwordResetSchema.safeParse(req.body);
       if (!parsed.success) return next(fromZodError(parsed.error));
 
-      await this.passwordResetUseCase.execute(parsed.data.email);
+      await this.requestResetUseCase.execute(parsed.data.email);
+      res.status(204).send();
+    } catch (err) { next(err); }
+  };
+
+  verifyOtpAndReset = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = verifyOtpSchema.safeParse(req.body);
+      if (!parsed.success) return next(fromZodError(parsed.error));
+
+      await this.verifyOtpUseCase.execute(parsed.data.email, parsed.data.otp);
       res.status(204).send();
     } catch (err) { next(err); }
   };
