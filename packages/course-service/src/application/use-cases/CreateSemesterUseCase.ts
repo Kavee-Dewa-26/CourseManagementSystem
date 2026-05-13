@@ -5,9 +5,8 @@ import { ISemesterRepository }   from '../../domain/repositories/ISemesterReposi
 import { Semester }              from '../../domain/entities/Semester';
 
 export interface CreateSemesterInput {
-  courseId:    string;
-  title:       string;
-  description: string;
+  courseId: string;
+  title:    string;
 }
 
 export class CreateSemesterUseCase {
@@ -26,7 +25,6 @@ export class CreateSemesterUseCase {
       id:           uuidv4(),
       courseId:     input.courseId,
       title:        input.title,
-      description:  input.description,
       subjectCount: 0,
       order:        existing.length + 1,
       deletedAt:    null,

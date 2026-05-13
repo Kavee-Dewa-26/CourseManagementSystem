@@ -3,14 +3,10 @@ import { createHttpError }       from '@shared/errors';
 import { ISemesterRepository }   from '../../domain/repositories/ISemesterRepository';
 import { ISubjectRepository }    from '../../domain/repositories/ISubjectRepository';
 import { Subject }               from '../../domain/entities/Subject';
-import { YouTubeVideoId }        from '../../domain/value-objects/YouTubeVideoId';
 
 export interface CreateSubjectInput {
-  semesterId:     string;
-  title:          string;
-  description:    string;
-  youtubeVideoId: string | null;
-  attachmentIds:  string[];
+  semesterId: string;
+  title:      string;
 }
 
 export class CreateSubjectUseCase {
@@ -23,22 +19,18 @@ export class CreateSubjectUseCase {
     const semester = await this.semesterRepo.findById(input.semesterId);
     if (!semester) throw createHttpError(404, 'SEMESTER_NOT_FOUND', 'Semester not found.');
 
-    const videoId  = YouTubeVideoId.from(input.youtubeVideoId); // throws 400 if invalid
     const existing = await this.subjectRepo.findBySemesterId(input.semesterId);
     const now      = new Date().toISOString();
 
     const subject = new Subject({
-      id:             uuidv4(),
-      semesterId:     input.semesterId,
-      courseId:       semester.courseId,
-      title:          input.title,
-      description:    input.description,
-      youtubeVideoId: videoId?.value ?? null,
-      attachmentIds:  input.attachmentIds,
-      order:          existing.length + 1,
-      deletedAt:      null,
-      createdAt:      now,
-      updatedAt:      now,
+      id:         uuidv4(),
+      semesterId: input.semesterId,
+      courseId:   semester.courseId,
+      title:      input.title,
+      order:      existing.length + 1,
+      deletedAt:  null,
+      createdAt:  now,
+      updatedAt:  now,
     });
 
     await this.subjectRepo.create(subject);

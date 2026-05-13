@@ -6,20 +6,16 @@ import { Semester }            from '../../domain/entities/Semester';
 import { Subject }             from '../../domain/entities/Subject';
 
 export interface SubjectView {
-  id:             string;
-  title:          string;
-  description:    string;
-  youtubeVideoId: string | null;
-  attachmentIds:  string[];
-  order:          number;
-  createdAt:      string;
-  updatedAt:      string;
+  id:        string;
+  title:     string;
+  order:     number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SemesterView {
   id:           string;
   title:        string;
-  description:  string;
   subjectCount: number;
   order:        number;
   createdAt:    string;
@@ -29,10 +25,7 @@ export interface SemesterView {
 
 export interface CourseDetail {
   id:            string;
-  code:          string;
   title:         string;
-  description:   string;
-  coverImageUrl: string | null;
   state:         string;
   createdBy:     string;
   semesterCount: number;
@@ -76,20 +69,16 @@ export class GetCourseUseCase {
         return {
           id:           sem.id,
           title:        sem.title,
-          description:  sem.description,
           subjectCount: sem.subjectCount,
           order:        sem.order,
           createdAt:    sem.createdAt,
           updatedAt:    sem.updatedAt,
           subjects:     activeSubjects.map((sub: Subject) => ({
-            id:             sub.id,
-            title:          sub.title,
-            description:    sub.description,
-            youtubeVideoId: sub.youtubeVideoId,
-            attachmentIds:  sub.attachmentIds,
-            order:          sub.order,
-            createdAt:      sub.createdAt,
-            updatedAt:      sub.updatedAt,
+            id:        sub.id,
+            title:     sub.title,
+            order:     sub.order,
+            createdAt: sub.createdAt,
+            updatedAt: sub.updatedAt,
           })),
         };
       }),

@@ -1,17 +1,11 @@
 import { z } from 'zod';
 
 export const createCourseSchema = z.object({
-  code:          z.string().min(2).max(20).regex(/^[A-Z0-9_-]+$/, 'Code must be uppercase letters, numbers, hyphens or underscores.'),
-  title:         z.string().min(1).max(200),
-  description:   z.string().min(1).max(2000),
-  coverImageUrl: z.string().url().nullable().optional().default(null),
+  title: z.string().min(1).max(200),
 });
 
 export const updateCourseSchema = z.object({
-  code:          z.string().min(2).max(20).regex(/^[A-Z0-9_-]+$/, 'Code must be uppercase letters, numbers, hyphens or underscores.').optional(),
-  title:         z.string().min(1).max(200).optional(),
-  description:   z.string().min(1).max(2000).optional(),
-  coverImageUrl: z.string().url().nullable().optional(),
+  title: z.string().min(1).max(200).optional(),
 });
 
 export const listCoursesSchema = z.object({

@@ -4,10 +4,7 @@ export type CourseState = 'draft' | 'published' | 'archived';
 
 export interface CourseProps {
   id:            string;
-  code:          string;
   title:         string;
-  description:   string;
-  coverImageUrl: string | null;
   state:         CourseState;
   createdBy:     string;
   semesterCount: number;
@@ -19,10 +16,7 @@ export interface CourseProps {
 
 export class Course {
   id:            string;
-  code:          string;
   title:         string;
-  description:   string;
-  coverImageUrl: string | null;
   state:         CourseState;
   readonly createdBy: string;
   semesterCount: number;
@@ -33,10 +27,7 @@ export class Course {
 
   constructor(props: CourseProps) {
     this.id            = props.id;
-    this.code          = props.code;
     this.title         = props.title;
-    this.description   = props.description;
-    this.coverImageUrl = props.coverImageUrl;
     this.state         = props.state;
     this.createdBy     = props.createdBy;
     this.semesterCount = props.semesterCount;
@@ -77,11 +68,8 @@ export class Course {
     this.updatedAt = new Date().toISOString();
   }
 
-  update(fields: { code?: string; title?: string; description?: string; coverImageUrl?: string | null }): void {
-    if (fields.code          !== undefined) this.code          = fields.code;
-    if (fields.title         !== undefined) this.title         = fields.title;
-    if (fields.description   !== undefined) this.description   = fields.description;
-    if (fields.coverImageUrl !== undefined) this.coverImageUrl = fields.coverImageUrl;
+  update(fields: { title?: string }): void {
+    if (fields.title !== undefined) this.title = fields.title;
     this.updatedAt = new Date().toISOString();
   }
 }

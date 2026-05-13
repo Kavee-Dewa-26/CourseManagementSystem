@@ -5,10 +5,11 @@ import { ILessonRepository }    from '../../domain/repositories/ILessonRepositor
 import { ISubjectRepository }   from '../../domain/repositories/ISubjectRepository';
 
 export interface CreateLessonInput {
-  subjectId:   string;
-  title:       string;
-  url:         string;
-  description: string;
+  subjectId:      string;
+  title:          string;
+  description:    string;
+  youtubeVideoId: string | null;
+  attachmentIds:  string[];
 }
 
 export class CreateLessonUseCase {
@@ -23,17 +24,18 @@ export class CreateLessonUseCase {
 
     const order  = await this.lessonRepo.nextOrder(input.subjectId);
     const lesson = new Lesson({
-      id:          uuidv4(),
-      subjectId:   subject.id,
-      courseId:    subject.courseId,
-      semesterId:  subject.semesterId,
-      title:       input.title,
-      description: input.description,
-      url:         input.url,
+      id:             uuidv4(),
+      subjectId:      subject.id,
+      courseId:       subject.courseId,
+      semesterId:     subject.semesterId,
+      title:          input.title,
+      description:    input.description,
+      youtubeVideoId: input.youtubeVideoId,
+      attachmentIds:  input.attachmentIds,
       order,
-      deletedAt:   null,
-      createdAt:   new Date().toISOString(),
-      updatedAt:   new Date().toISOString(),
+      deletedAt:      null,
+      createdAt:      new Date().toISOString(),
+      updatedAt:      new Date().toISOString(),
     });
 
     await this.lessonRepo.create(lesson);

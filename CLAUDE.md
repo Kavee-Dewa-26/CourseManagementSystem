@@ -174,44 +174,13 @@ Two alias groups are in use, but they resolve differently:
 
 Manual constructor injection via a `container.ts` file per service. No DI framework. Instantiation order is always: repositories → infrastructure clients → use cases → controllers. Export a single `container` object.
 
-```typescript
-// src/container.ts (example)
-const attemptsRepo = new FirestoreLoginAttemptsRepository();
-const userClient = new UserServiceClient();
-const enrollmentClient = new EnrollmentServiceClient();
-const outbox = new OutboxEventPublisher();
-const registerUseCase = new RegisterUseCase(userClient, enrollmentClient, outbox);
-export const container = {
-  authController: new AuthController(registerUseCase, ...),
-};
-```
-
 ### Per-Service config.ts
 
 Every service reads environment variables in `src/config.ts` and exports a single `config` object typed `as const`. Never read `process.env` directly outside this file.
 
-```typescript
-export const config = {
-  port: Number(process.env.PORT ?? 3001),
-  internalServiceKey: process.env.INTERNAL_SERVICE_KEY ?? '',
-  serviceUserUrl: process.env.SERVICE_USER_URL ?? 'http://localhost:3002',
-} as const;
-```
-
 ### Infrastructure Clients
 
-Cross-service HTTP calls are wrapped in a client class under `src/infrastructure/clients/`. The class holds a private `createInternalClient()` instance and exposes typed methods. These are instantiated in `container.ts` and injected into use cases.
-
-```typescript
-export class UserServiceClient {
-  private readonly http = createInternalClient(config.serviceUserUrl, config.internalServiceKey);
-
-  async emailExists(email: string): Promise<boolean> {
-    const res = await this.http.post<{ exists: boolean }>('/internal/users/exists', { email });
-    return res.data.exists;
-  }
-}
-```
+Cross-service HTTP calls are wrapped in a client class under `src/infrastructure/clients/`. The class holds a private `createInternalClient()` instance and exposes typed methods. Instantiated in `container.ts` and injected into use cases.
 
 ### Controller Method Pattern
 
@@ -237,13 +206,13 @@ Zod schemas live in `src/http/validators/`. Use `.safeParse()` in the controller
 Domain-layer validation that isn't trivial belongs in a value object at `src/domain/value-objects/`. Use a private constructor and a static `from()` factory that throws `createHttpError` on invalid input.
 
 ```typescript
-export class YouTubeVideoId {
+export class CourseCode {
   private constructor(readonly value: string) {}
-  static from(input: string | null | undefined): YouTubeVideoId | null {
+  static from(input: string | null | undefined): CourseCode | null {
     if (!input) return null;
-    if (!/^[A-Za-z0-9_-]{11}$/.test(input))
-      throw createHttpError(400, 'INVALID_YOUTUBE_ID', 'YouTube video ID must be 11 chars.');
-    return new YouTubeVideoId(input);
+    if (!/^[A-Z]{2,6}-\d{3,4}$/i.test(input))
+      throw createHttpError(400, 'INVALID_COURSE_CODE', 'Course code format is invalid.');
+    return new CourseCode(input.toUpperCase());
   }
 }
 ```
@@ -255,7 +224,7 @@ export class YouTubeVideoId {
 ### Authentication & Authorisation
 
 - Every authenticated route applies `authenticate()` then `authorize(...roles)` from `@shared/auth-middleware`.
-- `authenticate()` calls `verifyIdToken(token, checkRevoked=true)` and attaches `req.principal = { uid, email, role }`.
+- `authenticate()` calls `verifyIdToken(token, checkRevoked=true)` and attaches `req.principal = { uid, email, role, roles }` where `role` is the primary claim and `roles` is the full array (used by `authorize()` for effective-role checks).
 - `super_admin` inherits all `admin` permissions inside `authorize()`.
 - Ownership-sensitive routes add `mustBeOwnerOrAdmin()` after `authorize()`.
 - **`tryAuthenticate()`** — used on public routes where the response shape differs by role (e.g., `GET /courses` shows DRAFT courses to admins but not students). It attaches `req.principal` if a valid Bearer token is present but never rejects missing or invalid tokens. This is **not** in `@shared/auth-middleware` — copy it to `src/http/middleware/tryAuthenticate.ts` in any service that needs it (currently only course-service has one).
@@ -400,6 +369,17 @@ DRAFT → publish() → PUBLISHED → archive() → ARCHIVED
 
 `publish()` requires: ≥ 1 semester AND every semester has ≥ 1 subject.
 
+### Denormalized Counters & Ordering
+
+`Course` carries `semesterCount` and `Semester` carries `subjectCount`. These are **not** computed on read — they are maintained by use cases:
+- `CreateSemesterUseCase` increments `course.semesterCount` and saves the course in the same operation
+- `DeleteSemesterUseCase` decrements it
+- `CreateSubjectUseCase` increments `semester.subjectCount`; `DeleteSubjectUseCase` decrements it
+
+Any new use case that adds or removes a semester/subject must also update the corresponding parent counter or the publish-validation counts will drift.
+
+Both `Semester` and `Subject` have an `order` field assigned as `existing.length + 1` on create. Order is **not** resequenced after deletion — gaps are expected and callers should sort by `order` rather than treating it as a dense sequence.
+
 ### Progress Idempotency
 
 `MarkSubjectCompleteUseCase` is idempotent — if a subject is already `completed`, it returns the existing record unchanged. `completedAt` is immutable once set.
@@ -443,15 +423,6 @@ All list repository methods return `{ items, nextCursor, total }`. Cursor is the
 ### Internal Route Auth Pattern
 
 Every service protects its `/internal/*` routes with a local `internalAuth` middleware (`src/http/middleware/internalAuth.ts`) that validates the `X-Internal-Service-Key` header against `INTERNAL_SERVICE_KEY`. Each service has its own copy — there is no shared version. Callers use `createInternalClient()` which attaches the key automatically.
-
-```typescript
-// Protecting an internal route
-internalRouter.post('/internal/foo', internalAuth, controller.foo);
-
-// Calling another service internally
-const client = createInternalClient(config.serviceUserUrl, config.internalServiceKey);
-await client.get('/internal/users/admins');
-```
 
 ### Response Envelope Shapes
 
@@ -516,7 +487,7 @@ Two Jest configs exist in the repo. A third (`jest.e2e.config.ts`) is referenced
 | *(missing)* `jest.e2e.config.ts` | `npm run test:e2e` | `tests/e2e/**/*.test.ts` | — |
 
 - **Unit tests** — No I/O. Mock repositories and service clients. Files live under `tests/unit/application/` and `tests/unit/domain/`.
-- **Integration tests** — Jest + Firestore emulator. Test use cases + repositories end-to-end. `jest.integration.config.ts` loads `tests/integration/setup.ts` via `setupFiles` to initialise emulator environment variables before tests run.
+- **Integration tests** — Jest + Firestore emulator. Test use cases + repositories end-to-end. Run serially (`maxWorkers: 1`) because all tests share a single emulator instance. `jest.integration.config.ts` loads `tests/integration/setup.ts` via `setupFiles` to initialise emulator environment variables before tests run.
 - **E2E tests** — Supertest + all services running via Docker Compose. `jest.e2e.config.ts` must be created before `npm run test:e2e` works.
 - **Firestore Security Rules** — `@firebase/rules-unit-testing`. Verify that client-side writes to `audit_log` are denied and that each service's collections enforce expected rules.
 
@@ -575,20 +546,6 @@ When reading a spec to implement a feature:
 - **Firestore Changes** lists any new composite indexes needed in `firestore.indexes.json`
 - **Domain Events** lists what the outbox must publish and who consumes it
 - **Out of Scope** tells you what NOT to build — do not add features listed there
-
----
-
-## CI/CD
-
-`.github/workflows/ci.yml` has four jobs that run on every push/PR to `main`, and a tag-triggered production job:
-
-1. **`shared`** — type-checks and builds all shared packages; uploads `dist/` as a build artifact for downstream jobs.
-2. **`service-ci`** (matrix, 10 services in parallel) — downloads shared artifacts, then for each service: type-check → lint → unit tests → `npm audit --audit-level=high` → Docker build → **Trivy scan** (fails on HIGH or CRITICAL CVEs) → push image to registry (main push only).
-3. **`deploy-staging`** — runs after `service-ci` on main push; uses `kubectl set image` to update all 10 deployments in the `cmp-staging` namespace, waits for rollout, then runs E2E smoke tests against `STAGING_BASE_URL`.
-4. **`deploy-firebase`** — runs in parallel with deploy-staging on main push; deploys Firestore indexes, Firestore rules, and Storage rules via `firebase deploy`.
-5. **`deploy-production`** — triggered by a `v*` tag (not a push); requires `deploy-staging` to have passed; uses `kubectl set image` against `cmp-production` namespace.
-
-Images are tagged with `github.sha` and also re-tagged `latest` on main push.
 
 ---
 
