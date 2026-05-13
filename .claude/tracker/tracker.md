@@ -3,7 +3,7 @@
 **Project:** Course Management Portal (`slp-backend`)  
 **Organisation:** Future CX Lanka (Pvt) Ltd  
 **Version:** 1.0.0  
-**Last Updated:** 2026-05-13 (API_Document.md fully re-audited and synced with code — 24 discrepancies fixed, sections 13.2-20 completed; CLAUDE.md factual errors corrected)
+**Last Updated:** 2026-05-13 (API_Document.md fully re-audited and synced with code — 24 discrepancies fixed, sections 13.2-20 completed; CLAUDE.md factual errors corrected; unit tests 177/177 passing ✅; smoke test 53/53 passing ✅)
 
 > Update this file as implementation progresses. Change `[ ]` to `[x]` when a task is done.
 
