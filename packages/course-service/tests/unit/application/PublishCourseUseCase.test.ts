@@ -6,13 +6,13 @@ import { Course }                 from '../../../src/domain/entities/Course';
 import { Semester }               from '../../../src/domain/entities/Semester';
 
 const makeCourse = (state: 'draft' | 'published' | 'archived' = 'draft'): Course =>
-  new Course({ id: 'c1', title: 'T', description: 'D', coverImageUrl: null, state, createdBy: 'u1', semesterCount: 0, publishedAt: null, deletedAt: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' });
+  new Course({ id: 'c1', code: 'TEST-001', title: 'T', description: 'D', coverImageUrl: null, state, createdBy: 'u1', semesterCount: 0, publishedAt: null, deletedAt: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' });
 
 const makeSemester = (subjectCount = 1): Semester =>
   new Semester({ id: 's1', courseId: 'c1', title: 'S1', description: '', subjectCount, order: 1, deletedAt: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' });
 
 const makeCourseRepo = (): jest.Mocked<ICourseRepository> =>
-  ({ findById: jest.fn(), findPublished: jest.fn(), findAll: jest.fn(), create: jest.fn(), update: jest.fn(), softDelete: jest.fn() });
+  ({ findById: jest.fn(), findByCode: jest.fn(), findPublished: jest.fn(), findAll: jest.fn(), create: jest.fn(), update: jest.fn(), softDelete: jest.fn() });
 
 const makeSemesterRepo = (): jest.Mocked<ISemesterRepository> =>
   ({ findById: jest.fn(), findByCourseId: jest.fn(), create: jest.fn(), update: jest.fn(), softDelete: jest.fn() });

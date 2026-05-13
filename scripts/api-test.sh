@@ -55,7 +55,7 @@ c 9 "GET /courses/:id" GET "$BASE/courses/$CID" 200
 
 NC=$(curl -s -X POST "$BASE/courses" \
   -H "Authorization: Bearer $AT" -H "Content-Type: application/json" \
-  -d "{\"title\":\"IC_$TS\",\"description\":\"t\",\"coverImageUrl\":\"https://x.com/c.jpg\"}")
+  -d "{\"code\":\"IC${TS}\",\"title\":\"IC_$TS\",\"description\":\"t\",\"coverImageUrl\":\"https://x.com/c.jpg\"}")
 NCID=$(echo "$NC" | python -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null)
 if [ -n "$NCID" ]; then echo "PASS #10 [201] POST /courses"; P=$((P+1))
 else echo "FAIL #10 POST /courses"; F=$((F+1)); fi
@@ -132,7 +132,7 @@ echo "=== SECTION 10: ENROLLMENT QUEUE ==="
 c 30 "GET /admin/enrollments (no filter)" GET "$BASE/admin/enrollments?limit=5" 200 -H "Authorization: Bearer $AT"
 
 # Create a fresh course, publish it, enroll student, then approve via admin queue
-EC=$(curl -s -X POST "$BASE/courses" -H "Authorization: Bearer $AT" -H "Content-Type: application/json" -d "{\"title\":\"EnrQ_$TS\",\"description\":\"Enroll test.\",\"coverImageUrl\":\"https://x.com/e.jpg\"}")
+EC=$(curl -s -X POST "$BASE/courses" -H "Authorization: Bearer $AT" -H "Content-Type: application/json" -d "{\"code\":\"EQ${TS}\",\"title\":\"EnrQ_$TS\",\"description\":\"Enroll test.\",\"coverImageUrl\":\"https://x.com/e.jpg\"}")
 ECID=$(echo "$EC" | python -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null)
 ES=$(curl -s -X POST "$BASE/courses/$ECID/semesters" -H "Authorization: Bearer $AT" -H "Content-Type: application/json" -d "{\"title\":\"S\",\"description\":\"d\"}")
 ESID=$(echo "$ES" | python -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null)
