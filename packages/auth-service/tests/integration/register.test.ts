@@ -3,10 +3,16 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { app }         from '../../src/app';
 import { clearCollection, clearAuth } from '../../../../tests/integration/helpers';
 
-// Mock user-service HTTP call — auth-service calls this to check email uniqueness
+// Mock inter-service HTTP calls so registration doesn't depend on running services
 jest.mock('../../src/infrastructure/clients/UserServiceClient', () => ({
   UserServiceClient: jest.fn().mockImplementation(() => ({
     emailExists: jest.fn().mockResolvedValue(false),
+  })),
+}));
+
+jest.mock('../../src/infrastructure/clients/EnrollmentServiceClient', () => ({
+  EnrollmentServiceClient: jest.fn().mockImplementation(() => ({
+    createRegistration: jest.fn().mockResolvedValue(undefined),
   })),
 }));
 
@@ -65,22 +71,16 @@ describe('POST /auth/register', () => {
   });
 
   it('409 — EMAIL_EXISTS when user-service reports email taken', async () => {
-    // Override mock to return true for this test
-    const { UserServiceClient } = await import('../../src/infrastructure/clients/UserServiceClient');
-    (UserServiceClient as jest.Mock).mockImplementationOnce(() => ({
-      emailExists: jest.fn().mockResolvedValue(true),
-    }));
+    const { UserServiceClient } = require('../../src/infrastructure/clients/UserServiceClient');
+    const instance = (UserServiceClient as jest.Mock).mock.results[0]?.value;
+    if (instance) instance.emailExists.mockResolvedValueOnce(true);
 
-    // Re-import container to pick up new mock
-    jest.resetModules();
-    const { app: freshApp } = await import('../../src/app');
-
-    const res = await request(freshApp)
+    const res = await request(app)
       .post('/auth/register')
-      .send(VALID_BODY);
+      .send({ ...VALID_BODY, email: `dup-${Date.now()}@test.com` })
+      .expect(409);
 
-    // Either 409 (email exists) or 201 (mock timing) — just verify no 500
-    expect(res.status).not.toBe(500);
+    expect(res.body.error.code).toBe('EMAIL_EXISTS');
   });
 
 });

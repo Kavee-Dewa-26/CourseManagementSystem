@@ -5,6 +5,10 @@ const config: Config = {
   testEnvironment: 'node',
   testMatch:       ['**/tests/integration/**/*.test.ts'],
   testTimeout:     30000,
+  // Serial execution required: all tests share the same Auth+Firestore emulator.
+  // Parallel workers call clearAuth() concurrently, deleting users mid-test and
+  // invalidating tokens in sibling workers.
+  maxWorkers:      1,
   // Runs before each test file module is loaded — sets emulator env vars + initialises Firebase Admin
   setupFiles:      ['<rootDir>/tests/integration/setup.ts'],
   moduleNameMapper: {
