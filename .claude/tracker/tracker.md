@@ -3,7 +3,7 @@
 **Project:** Course Management Portal (`slp-backend`)  
 **Organisation:** Future CX Lanka (Pvt) Ltd  
 **Version:** 1.0.0  
-**Last Updated:** 2026-05-10 (all 53 endpoints smoke-tested ✅; SUMMARY.md added; dev scripts added; unused files cleaned)
+**Last Updated:** 2026-05-13 (API_Document.md fully re-audited and synced with code — 24 discrepancies fixed, sections 13.2-20 completed; CLAUDE.md factual errors corrected)
 
 > Update this file as implementation progresses. Change `[ ]` to `[x]` when a task is done.
 
@@ -553,6 +553,7 @@
 
 - [x] `CLAUDE.md` — codebase guidance for Claude Code (architecture, patterns, commands)
 - [x] `SUMMARY.md` — full project summary (all services, API, data model, setup guide)
+- [x] `.claude/APIdocument/API_Document.md` — full REST API reference; audited and synced against actual code (24 discrepancies fixed; sections 13.2–20 completed: user mgmt, admin mgmt, audit log, health, data models, error codes, HTTP status codes, domain events)
 
 ---
 
