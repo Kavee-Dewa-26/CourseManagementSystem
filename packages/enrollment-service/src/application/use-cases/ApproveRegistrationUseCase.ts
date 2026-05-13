@@ -16,7 +16,17 @@ export class ApproveRegistrationUseCase {
     if (!reg) throw createHttpError(404, 'ENROLLMENT_NOT_FOUND', 'Registration not found.');
 
     reg.approve();
-    await this.userClient.approveUser(reg.studentUid);
+
+    try {
+      await this.userClient.approveUser(reg.studentUid);
+    } catch (err) {
+      const status = (err as { response?: { status?: number } }).response?.status;
+      if (status === 404) {
+        throw createHttpError(422, 'USER_NOT_FOUND', 'The student account no longer exists and cannot be approved.');
+      }
+      throw err;
+    }
+
     await this.regRepo.update(reg);
 
     await this.outbox.publishWithBatch({
