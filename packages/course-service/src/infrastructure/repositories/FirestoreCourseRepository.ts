@@ -17,6 +17,17 @@ export class FirestoreCourseRepository implements ICourseRepository {
     return toEntity(snap.id, snap.data() as CourseDoc);
   }
 
+  async findByCode(code: string): Promise<Course | null> {
+    const snap = await this.col
+      .where('code',      '==', code)
+      .where('deletedAt', '==', null)
+      .limit(1)
+      .get();
+    if (snap.empty) return null;
+    const doc = snap.docs[0];
+    return toEntity(doc.id, doc.data() as CourseDoc);
+  }
+
   async findPublished(opts: CourseFindPublishedOptions): Promise<CourseListResult> {
     let q: FirebaseFirestore.Query = this.col
       .where('state',     '==', 'published')
