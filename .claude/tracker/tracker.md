@@ -547,7 +547,7 @@
 ## E2E Smoke Tests
 
 - [x] `tests/e2e/smoke.test.ts` — 6 smoke tests: healthz, readyz, courses public, register validation, unauthenticated 401, rate limiter 429
-- [x] `scripts/smoke-test.js` — full 53-endpoint smoke test (all services, all roles) — **53/53 passing** ✅
+- [x] `scripts/smoke-test.js` — full 53-endpoint smoke test (all services, all roles) — **53/53 passing** ✅ *(re-verified 2026-05-13 against online Firebase)*
 
 ## Documentation
 
