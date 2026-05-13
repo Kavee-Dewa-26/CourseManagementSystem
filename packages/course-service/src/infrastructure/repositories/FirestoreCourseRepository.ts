@@ -28,6 +28,17 @@ export class FirestoreCourseRepository implements ICourseRepository {
     return toEntity(doc.id, doc.data() as CourseDoc);
   }
 
+  async findByTitle(title: string): Promise<Course | null> {
+    // Check ALL courses including soft-deleted — title can never be reused
+    const snap = await this.col
+      .where('title', '==', title)
+      .limit(1)
+      .get();
+    if (snap.empty) return null;
+    const doc = snap.docs[0];
+    return toEntity(doc.id, doc.data() as CourseDoc);
+  }
+
   async findPublished(opts: CourseFindPublishedOptions): Promise<CourseListResult> {
     let q: FirebaseFirestore.Query = this.col
       .where('state',     '==', 'published')

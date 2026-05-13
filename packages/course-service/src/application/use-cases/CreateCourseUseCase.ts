@@ -15,8 +15,11 @@ export class CreateCourseUseCase {
   constructor(private readonly courseRepo: ICourseRepository) {}
 
   async execute(input: CreateCourseInput): Promise<Course> {
-    const existing = await this.courseRepo.findByCode(input.code);
-    if (existing) throw createHttpError(409, 'COURSE_CODE_EXISTS', 'A course with this code already exists.');
+    const existingCode = await this.courseRepo.findByCode(input.code);
+    if (existingCode) throw createHttpError(409, 'COURSE_CODE_EXISTS', 'A course with this code already exists.');
+
+    const existingTitle = await this.courseRepo.findByTitle(input.title);
+    if (existingTitle) throw createHttpError(409, 'COURSE_TITLE_EXISTS', 'A course with this title already exists.');
 
     const now    = new Date().toISOString();
     const course = new Course({

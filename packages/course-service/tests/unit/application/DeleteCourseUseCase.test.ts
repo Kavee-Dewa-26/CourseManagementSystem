@@ -6,7 +6,7 @@ const makeCourse = (): Course =>
   new Course({ id: 'c1', code: 'TEST-001', title: 'T', description: 'D', coverImageUrl: null, state: 'draft', createdBy: 'u1', semesterCount: 0, publishedAt: null, deletedAt: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' });
 
 const makeRepo = (): jest.Mocked<ICourseRepository> =>
-  ({ findById: jest.fn(), findByCode: jest.fn(), findPublished: jest.fn(), findAll: jest.fn(), create: jest.fn(), update: jest.fn(), softDelete: jest.fn() });
+  ({ findById: jest.fn(), findByCode: jest.fn(), findByTitle: jest.fn(), findPublished: jest.fn(), findAll: jest.fn(), create: jest.fn(), update: jest.fn(), softDelete: jest.fn() });
 
 describe('DeleteCourseUseCase', () => {
   let repo:    jest.Mocked<ICourseRepository>;

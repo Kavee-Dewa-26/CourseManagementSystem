@@ -12,7 +12,7 @@ const makeSemester = (subjectCount = 1): Semester =>
   new Semester({ id: 's1', courseId: 'c1', title: 'S1', description: '', subjectCount, order: 1, deletedAt: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' });
 
 const makeCourseRepo = (): jest.Mocked<ICourseRepository> =>
-  ({ findById: jest.fn(), findByCode: jest.fn(), findPublished: jest.fn(), findAll: jest.fn(), create: jest.fn(), update: jest.fn(), softDelete: jest.fn() });
+  ({ findById: jest.fn(), findByCode: jest.fn(), findByTitle: jest.fn(), findPublished: jest.fn(), findAll: jest.fn(), create: jest.fn(), update: jest.fn(), softDelete: jest.fn() });
 
 const makeSemesterRepo = (): jest.Mocked<ISemesterRepository> =>
   ({ findById: jest.fn(), findByCourseId: jest.fn(), create: jest.fn(), update: jest.fn(), softDelete: jest.fn() });

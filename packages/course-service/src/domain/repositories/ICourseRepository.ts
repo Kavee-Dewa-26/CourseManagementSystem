@@ -20,6 +20,7 @@ export interface CourseListResult {
 export interface ICourseRepository {
   findById(id: string): Promise<Course | null>;
   findByCode(code: string): Promise<Course | null>;
+  findByTitle(title: string): Promise<Course | null>;
   findPublished(opts: CourseFindPublishedOptions): Promise<CourseListResult>;
   findAll(opts: CourseFindAllOptions): Promise<CourseListResult>;
   create(course: Course): Promise<void>;

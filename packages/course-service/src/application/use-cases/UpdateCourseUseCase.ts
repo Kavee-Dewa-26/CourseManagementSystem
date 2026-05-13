@@ -22,6 +22,11 @@ export class UpdateCourseUseCase {
       if (existing) throw createHttpError(409, 'COURSE_CODE_EXISTS', 'A course with this code already exists.');
     }
 
+    if (input.title !== undefined && input.title !== course.title) {
+      const existing = await this.courseRepo.findByTitle(input.title);
+      if (existing) throw createHttpError(409, 'COURSE_TITLE_EXISTS', 'A course with this title already exists.');
+    }
+
     course.update({ code: input.code, title: input.title, description: input.description, coverImageUrl: input.coverImageUrl });
     await this.courseRepo.update(course);
     return course;
