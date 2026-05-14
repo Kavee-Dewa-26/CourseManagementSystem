@@ -11,18 +11,101 @@ export interface AuditEventPayload {
   [key: string]: unknown;
 }
 
+type P = Record<string, unknown>;
+const str = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);
+
+interface EventMeta {
+  category:      string;
+  targetType:    string;
+  getActorUid:   (p: P) => string | null;
+  getActorEmail: (p: P) => string | null;
+  getTargetId:   (p: P) => string | null;
+}
+
+const EVENT_META: Record<string, EventMeta> = {
+  'user.registered': {
+    category: 'auth',     targetType: 'user',
+    getActorUid:   p => str(p.uid),
+    getActorEmail: p => str(p.email),
+    getTargetId:   p => str(p.uid),
+  },
+  'admin.created': {
+    category: 'admin',    targetType: 'user',
+    getActorUid:   p => str(p.uid),
+    getActorEmail: p => str(p.email),
+    getTargetId:   p => str(p.uid),
+  },
+  'admin.suspended': {
+    category: 'admin',    targetType: 'user',
+    getActorUid:   p => str(p.uid),
+    getActorEmail: p => str(p.email),
+    getTargetId:   p => str(p.uid),
+  },
+  'registration.approved': {
+    category: 'registration', targetType: 'registration',
+    getActorUid:   p => str(p.studentUid),
+    getActorEmail: p => str(p.email),
+    getTargetId:   p => str(p.studentUid),
+  },
+  'registration.rejected': {
+    category: 'registration', targetType: 'registration',
+    getActorUid:   p => str(p.studentUid),
+    getActorEmail: p => str(p.email),
+    getTargetId:   p => str(p.studentUid),
+  },
+  'enrollment.pending': {
+    category: 'enrollment', targetType: 'enrollment',
+    getActorUid:   p => str(p.studentUid),
+    getActorEmail: _p => null,
+    getTargetId:   p => { const u = str(p.studentUid); const c = str(p.courseId); return u && c ? `${u}_${c}` : u; },
+  },
+  'enrollment.approved': {
+    category: 'enrollment', targetType: 'enrollment',
+    getActorUid:   p => str(p.studentUid),
+    getActorEmail: _p => null,
+    getTargetId:   p => { const u = str(p.studentUid); const c = str(p.courseId); return u && c ? `${u}_${c}` : u; },
+  },
+  'enrollment.rejected': {
+    category: 'enrollment', targetType: 'enrollment',
+    getActorUid:   p => str(p.studentUid),
+    getActorEmail: _p => null,
+    getTargetId:   p => { const u = str(p.studentUid); const c = str(p.courseId); return u && c ? `${u}_${c}` : u; },
+  },
+  'enrollment.withdrawn': {
+    category: 'enrollment', targetType: 'enrollment',
+    getActorUid:   p => str(p.studentUid),
+    getActorEmail: _p => null,
+    getTargetId:   p => { const u = str(p.studentUid); const c = str(p.courseId); return u && c ? `${u}_${c}` : u; },
+  },
+  'course.published': {
+    category: 'course',   targetType: 'course',
+    getActorUid:   _p => null,
+    getActorEmail: _p => null,
+    getTargetId:   p => str(p.courseId),
+  },
+  'progress.subjectCompleted': {
+    category: 'progress', targetType: 'subject',
+    getActorUid:   p => str(p.studentUid),
+    getActorEmail: _p => null,
+    getTargetId:   p => str(p.subjectId),
+  },
+};
+
 export class AuditEventHandler {
   constructor(private readonly auditRepo: IAuditRepository) {}
 
   async handle(payload: AuditEventPayload, requestId: string): Promise<void> {
+    const p = payload as P;
+    const meta = EVENT_META[payload.action];
+
     await this.auditRepo.append({
-      actorUid:   payload.actorUid   ?? null,
-      actorEmail: payload.actorEmail ?? null,
+      actorUid:   payload.actorUid   ?? meta?.getActorUid(p)   ?? null,
+      actorEmail: payload.actorEmail ?? meta?.getActorEmail(p)  ?? null,
       action:     payload.action,
-      category:   payload.category   ?? null,
+      category:   payload.category   ?? meta?.category          ?? null,
       ip:         payload.ip         ?? null,
-      targetType: payload.targetType ?? null,
-      targetId:   payload.targetId   ?? null,
+      targetType: payload.targetType ?? meta?.targetType        ?? null,
+      targetId:   payload.targetId   ?? meta?.getTargetId(p)   ?? null,
       payload,
       requestId,
       createdAt:  new Date().toISOString(),

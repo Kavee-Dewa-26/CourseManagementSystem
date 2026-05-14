@@ -202,6 +202,19 @@ Two alias groups are in use, but they resolve differently:
 - `@shared/*` — resolved at compile time via **npm workspace symlinks** (each service declares `"@shared/errors": "*"` etc. in its `package.json`). `tsconfig.base.json` has no `paths` for these. At test time, `jest.config.ts` maps them via `moduleNameMapper`.
 - `@/*` → `src/*` — a TypeScript `paths` alias defined in each service's own `tsconfig.json` (not in `tsconfig.base.json`). Also mapped in `jest.config.ts` as `^@/(.*)$`.
 
+### Service Entry Point Pattern
+
+Every service follows the same two-file startup split:
+
+- `src/index.ts` — calls `initFirebaseAdmin()`, `initTracing(serviceName)`, then starts the server. Excluded from coverage.
+- `src/server.ts` — creates the Express app, binds to the port, attaches graceful shutdown on `SIGTERM`/`SIGINT`. Excluded from coverage.
+
+`app.ts` is the testable unit — it wires middleware and routes without starting a server.
+
+### Docker Compose Networking
+
+When services communicate inside Docker Compose they use the service hostname, not `localhost`. The `SERVICE_*_URL` env vars in `docker-compose.yml` are set to service names (e.g., `http://course-service:3003`). In local dev (outside Docker) they resolve to `http://localhost:300X`.
+
 ### Dependency Injection
 
 Manual constructor injection via a `container.ts` file per service. No DI framework. Instantiation order is always: repositories → infrastructure clients → use cases → controllers. Export a single `container` object.
@@ -535,8 +548,8 @@ Two Jest configs exist in the repo. A third (`jest.e2e.config.ts`) is referenced
 | `jest.integration.config.ts` | `npm run test:integration` | `tests/integration/**/*.test.ts` | 30 s |
 | *(missing)* `jest.e2e.config.ts` | `npm run test:e2e` | `tests/e2e/**/*.test.ts` | — |
 
-- **Unit tests** — No I/O. Mock repositories and service clients. Files live under `tests/unit/application/` and `tests/unit/domain/`.
-- **Integration tests** — Jest + Firestore emulator. Test use cases + repositories end-to-end. Run serially (`maxWorkers: 1`) because all tests share a single emulator instance. `jest.integration.config.ts` loads `tests/integration/setup.ts` via `setupFiles` to initialise emulator environment variables before tests run.
+- **Unit tests** — No I/O. Mock repositories and service clients. Files live at `packages/<service>/tests/unit/application/` and `packages/<service>/tests/unit/domain/`.
+- **Integration tests** — Jest + Firestore emulator. Test use cases + repositories end-to-end. Files live at `packages/<service>/tests/integration/`. Run serially (`maxWorkers: 1`) because all tests share a single emulator instance. `jest.integration.config.ts` loads `tests/integration/setup.ts` via `setupFiles` to initialise emulator environment variables before tests run.
 - **E2E tests** — Supertest + all services running via Docker Compose. `jest.e2e.config.ts` must be created before `npm run test:e2e` works.
 - **Firestore Security Rules** — `@firebase/rules-unit-testing`. Verify that client-side writes to `audit_log` are denied and that each service's collections enforce expected rules.
 

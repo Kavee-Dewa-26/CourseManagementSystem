@@ -32,7 +32,14 @@ export class FirestoreAuditRepository implements IAuditRepository {
     }
 
     const snap  = await q.get();
-    const items = snap.docs.map(d => ({ id: d.id, ...(d.data() as AuditLogEntry) }));
+    const items = snap.docs.map(d => {
+      const data = d.data();
+      const raw  = data.createdAt as FirebaseFirestore.Timestamp | string | null;
+      const createdAt = raw && typeof (raw as FirebaseFirestore.Timestamp).toDate === 'function'
+        ? (raw as FirebaseFirestore.Timestamp).toDate().toISOString()
+        : String(raw ?? '');
+      return { id: d.id, ...(data as Omit<AuditLogEntry, 'createdAt'>), createdAt };
+    });
     const last  = snap.docs[snap.docs.length - 1];
     return { items, nextCursor: snap.docs.length === opts.limit && last ? last.id : null, total };
   }

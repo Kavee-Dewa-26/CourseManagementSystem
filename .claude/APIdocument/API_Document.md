@@ -1186,7 +1186,7 @@ Add a new lesson to a subject. The `order` is auto-assigned sequentially within 
 {
   "title":          "Introduction to TypeScript",
   "description":    "Overview of TypeScript features.",
-  "youtubeVideoId": "dQw4w9WgXcQ",
+  "youtubeVideoId": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
   "attachmentIds":  []
 }
 ```
@@ -1195,7 +1195,7 @@ Add a new lesson to a subject. The `order` is auto-assigned sequentially within 
 |-------|------|:--------:|------------|
 | `title` | `string` | Yes | 1–200 characters |
 | `description` | `string` | No | Max 2000 characters (defaults to `""`) |
-| `youtubeVideoId` | `string or null` | No | Raw YouTube video ID string, or `null` (no URL or format validation; defaults to `null`) |
+| `youtubeVideoId` | `string or null` | No | Must be a valid YouTube URL — `https://www.youtube.com/watch?v=...`, `https://youtu.be/...`, or `https://www.youtube.com/embed/...`. The video ID is extracted and stored; bare IDs are rejected. Pass `null` to clear (defaults to `null`). |
 | `attachmentIds` | `string[]` | No | Array of existing Attachment document IDs (defaults to `[]`) |
 
 #### Responses
@@ -1241,7 +1241,7 @@ Update a lesson's fields. Only provided fields are changed.
 {
   "title":          "Introduction to TypeScript — Revised",
   "description":    "Updated lesson description.",
-  "youtubeVideoId": "newVideoIdHere",
+  "youtubeVideoId": "https://youtu.be/newVideoIdHere",
   "attachmentIds":  ["att-001", "att-002"]
 }
 ```
@@ -1250,7 +1250,7 @@ Update a lesson's fields. Only provided fields are changed.
 |-------|------|:--------:|------------|
 | `title` | `string` | No | 1–200 characters |
 | `description` | `string` | No | 1–2000 characters |
-| `youtubeVideoId` | `string or null` | No | Raw YouTube video ID string, or `null` |
+| `youtubeVideoId` | `string or null` | No | Must be a valid YouTube URL (same formats as POST). Pass `null` to remove the video. |
 | `attachmentIds` | `string[]` | No | Array of Attachment document IDs |
 
 #### Responses
