@@ -404,7 +404,7 @@ DRAFT → publish() → PUBLISHED → archive() → ARCHIVED
 
 `publish()` requires: ≥ 1 semester AND every semester has ≥ 1 subject.
 
-**Schema note:** `Course`, `Semester`, and `Subject` entities have only `title` as a user-defined field (no code, description, coverImageUrl, etc.). All richer content lives on `Lesson` (`title`, `description`, `youtubeVideoId`, `attachmentIds`). There are no value objects in course-service at this time.
+**Schema note:** `Course` has three user-defined fields: `title`, `description` (max 500 chars, default `""`), and `coverImageUrl` (URL or `null`, default `null`). `Semester` and `Subject` have only `title`. Richer per-lesson content (`description`, `youtubeVideoId`, `attachmentIds`) lives on `Lesson`. There are no value objects in course-service at this time.
 
 ### Denormalized Counters & Ordering
 

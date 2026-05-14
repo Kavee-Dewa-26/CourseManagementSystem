@@ -8,6 +8,14 @@ RUN npm install --workspace=packages/shared/firebase --workspace=packages/shared
     --workspace=packages/shared/errors --workspace=packages/shared/auth-middleware \
     --workspace=packages/shared/events --workspace=packages/shared/response \
     --workspace=packages/shared/health --workspace=packages/course-service
+RUN npm run build --workspace=packages/shared/logger \
+ && npm run build --workspace=packages/shared/firebase \
+ && npm run build --workspace=packages/shared/errors \
+ && npm run build --workspace=packages/shared/events \
+ && npm run build --workspace=packages/shared/auth-middleware \
+ && npm run build --workspace=packages/shared/response \
+ && npm run build --workspace=packages/shared/health
+
 COPY packages/course-service/src ./packages/course-service/src
 RUN npm run build --workspace=packages/course-service
 

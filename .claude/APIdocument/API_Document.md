@@ -635,15 +635,17 @@ List courses. Returns only `published` courses for unauthenticated requests and 
 {
   "items": [
     {
-      "id":           "course-abc",
-      "title":        "Introduction to TypeScript",
-      "state":        "published",
+      "id":            "course-abc",
+      "title":         "Introduction to TypeScript",
+      "description":   "Learn TypeScript from scratch.",
+      "coverImageUrl": null,
+      "state":         "published",
       "semesterCount": 3,
-      "createdBy":    "admin-uid-xyz",
-      "publishedAt":  "2026-05-03T09:00:00.000Z",
-      "deletedAt":    null,
-      "createdAt":    "2026-05-01T08:00:00.000Z",
-      "updatedAt":    "2026-05-03T09:00:00.000Z"
+      "createdBy":     "admin-uid-xyz",
+      "publishedAt":   "2026-05-03T09:00:00.000Z",
+      "deletedAt":     null,
+      "createdAt":     "2026-05-01T08:00:00.000Z",
+      "updatedAt":     "2026-05-03T09:00:00.000Z"
     }
   ],
   "nextCursor": null,
@@ -676,15 +678,17 @@ Get a single course by ID, including the full semester and subject tree (active 
 **`200 OK`**
 ```json
 {
-  "id":           "course-abc",
-  "title":        "Introduction to TypeScript",
-  "state":        "published",
+  "id":            "course-abc",
+  "title":         "Introduction to TypeScript",
+  "description":   "Learn TypeScript from scratch.",
+  "coverImageUrl": null,
+  "state":         "published",
   "semesterCount": 2,
-  "createdBy":    "admin-uid-xyz",
-  "publishedAt":  "2026-05-03T09:00:00.000Z",
-  "deletedAt":    null,
-  "createdAt":    "2026-05-01T08:00:00.000Z",
-  "updatedAt":    "2026-05-03T09:00:00.000Z",
+  "createdBy":     "admin-uid-xyz",
+  "publishedAt":   "2026-05-03T09:00:00.000Z",
+  "deletedAt":     null,
+  "createdAt":     "2026-05-01T08:00:00.000Z",
+  "updatedAt":     "2026-05-03T09:00:00.000Z",
   "semesters": [
     {
       "id":           "sem-001",
@@ -707,7 +711,7 @@ Get a single course by ID, including the full semester and subject tree (active 
 }
 ```
 
-> The `semesters` array contains only non-deleted semesters, sorted by `order` ascending. Each `subjects` array contains only non-deleted subjects within that semester, also sorted by `order` ascending. Soft-deleted semesters and subjects are excluded. The semester object does **not** include `courseId` or `deletedAt`. The subject objects within `semesters[].subjects` include only `id`, `title`, `order`, `createdAt`, and `updatedAt` — they do **not** include `semesterId`, `courseId`, or `deletedAt`.
+> The `semesters` array is **always present** — returns `[]` when the course has no non-deleted semesters. The array contains only non-deleted semesters, sorted by `order` ascending. Each `subjects` array contains only non-deleted subjects within that semester, also sorted by `order` ascending. Soft-deleted semesters and subjects are excluded. The semester object does **not** include `courseId` or `deletedAt`. The subject objects within `semesters[].subjects` include only `id`, `title`, `order`, `createdAt`, and `updatedAt` — they do **not** include `semesterId`, `courseId`, or `deletedAt`.
 
 **`404 Not Found`**
 ```json
@@ -730,28 +734,34 @@ Create a new course in `draft` state. The `title` must be unique across all cour
 
 ```json
 {
-  "title": "Introduction to TypeScript"
+  "title":         "Introduction to TypeScript",
+  "description":   "Learn TypeScript from scratch.",
+  "coverImageUrl": null
 }
 ```
 
 | Field | Type | Required | Validation |
 |-------|------|:--------:|-----------|
 | `title` | `string` | Yes | 1–200 characters; must be unique across all courses (including soft-deleted) |
+| `description` | `string` | No | Max 500 characters (defaults to `""`) |
+| `coverImageUrl` | `string or null` | No | Valid URL or `null` (defaults to `null`) |
 
 #### Responses
 
 **`201 Created`** — Full Course object
 ```json
 {
-  "id":           "course-abc",
-  "title":        "Introduction to TypeScript",
-  "state":        "draft",
+  "id":            "course-abc",
+  "title":         "Introduction to TypeScript",
+  "description":   "Learn TypeScript from scratch.",
+  "coverImageUrl": null,
+  "state":         "draft",
   "semesterCount": 0,
-  "createdBy":    "admin-uid-xyz",
-  "publishedAt":  null,
-  "deletedAt":    null,
-  "createdAt":    "2026-05-01T08:00:00.000Z",
-  "updatedAt":    "2026-05-01T08:00:00.000Z"
+  "createdBy":     "admin-uid-xyz",
+  "publishedAt":   null,
+  "deletedAt":     null,
+  "createdAt":     "2026-05-01T08:00:00.000Z",
+  "updatedAt":     "2026-05-01T08:00:00.000Z"
 }
 ```
 
@@ -784,13 +794,17 @@ Update course metadata. Only `title` may be updated.
 
 ```json
 {
-  "title": "Introduction to TypeScript — Updated"
+  "title":         "Introduction to TypeScript — Updated",
+  "description":   "Updated description.",
+  "coverImageUrl": "https://example.com/cover.jpg"
 }
 ```
 
 | Field | Type | Required | Validation |
 |-------|------|:--------:|-----------|
 | `title` | `string` | No | 1–200 characters; must be unique across all courses |
+| `description` | `string` | No | Max 500 characters |
+| `coverImageUrl` | `string or null` | No | Valid URL or `null` to clear |
 
 > Send only the fields to change (partial update).
 
@@ -2775,6 +2789,8 @@ Readiness probe. Returns `200` when the service is ready to accept traffic.
 |-------|------|-------|
 | `id` | `string` | Auto UUID |
 | `title` | `string` | Unique across all courses (including soft-deleted) |
+| `description` | `string` | Max 500 chars; defaults to `""` |
+| `coverImageUrl` | `string or null` | Valid URL or `null`; defaults to `null` |
 | `state` | `string` | `draft`, `published`, or `archived` |
 | `semesterCount` | `number` | |
 | `createdBy` | `string` | Admin UID |
