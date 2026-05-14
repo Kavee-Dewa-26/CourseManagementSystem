@@ -3,6 +3,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 
 const AUTH_EMULATOR = 'http://127.0.0.1:9099';
 const API_KEY       = 'fake-key';
+const PROJECT_ID    = process.env.FIREBASE_PROJECT_ID ?? 'e-learning-f4209';
 
 // ── Token helpers ─────────────────────────────────────────────────────────────
 
@@ -20,7 +21,7 @@ export async function createTestUser(
 
 async function exchangeToken(customToken: string): Promise<string> {
   const res  = await fetch(
-    `${AUTH_EMULATOR}/identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${API_KEY}`,
+    `${AUTH_EMULATOR}/identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=${API_KEY}&project=${PROJECT_ID}`,
     {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -42,7 +43,9 @@ export async function clearCollection(name: string): Promise<void> {
 
 export async function clearAuth(): Promise<void> {
   const { users } = await getAuth().listUsers(100);
-  await Promise.all(users.map(u => getAuth().deleteUser(u.uid)));
+  await Promise.all(
+    users.map(u => getAuth().deleteUser(u.uid).catch(() => { /* already deleted */ })),
+  );
 }
 
 // ── Firestore seed helpers ────────────────────────────────────────────────────

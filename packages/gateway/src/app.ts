@@ -1,8 +1,8 @@
 import express    from 'express';
 import helmet     from 'helmet';
 import cors       from 'cors';
+import { Router } from 'express';
 import { httpLogger }   from '@shared/logger';
-import { healthRouter } from '@shared/health';
 import { requestId }    from './middleware/requestId';
 import { generalLimiter, authLimiter } from './middleware/rateLimiter';
 import {
@@ -23,8 +23,15 @@ app.use(requestId);
 app.use(httpLogger);
 app.use(generalLimiter);
 
-// Health probes (gateway-level, no proxy)
-app.use(healthRouter);
+// Health probes — gateway is a pure proxy, no Firestore connection
+const gatewayHealthRouter = Router();
+gatewayHealthRouter.get('/healthz', (_req, res) => {
+  res.json({ status: 'ok', service: process.env.SERVICE_NAME ?? 'gateway' });
+});
+gatewayHealthRouter.get('/readyz', (_req, res) => {
+  res.json({ status: 'ready' });
+});
+app.use(gatewayHealthRouter);
 
 // Block internal routes — never expose to clients
 app.use('/api/v1/internal', (_req, res) => {

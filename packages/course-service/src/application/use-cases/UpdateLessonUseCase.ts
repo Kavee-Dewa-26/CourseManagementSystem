@@ -3,10 +3,11 @@ import { Lesson }             from '../../domain/entities/Lesson';
 import { ILessonRepository }  from '../../domain/repositories/ILessonRepository';
 
 export interface UpdateLessonInput {
-  id:           string;
-  title?:       string;
-  description?: string;
-  url?:         string;
+  id:              string;
+  title?:          string;
+  description?:    string;
+  youtubeVideoId?: string | null;
+  attachmentIds?:  string[];
 }
 
 export class UpdateLessonUseCase {
@@ -16,7 +17,7 @@ export class UpdateLessonUseCase {
     const lesson = await this.lessonRepo.findById(input.id);
     if (!lesson || lesson.deletedAt) throw createHttpError(404, 'LESSON_NOT_FOUND', 'Lesson not found.');
 
-    lesson.update({ title: input.title, description: input.description, url: input.url });
+    lesson.update({ title: input.title, description: input.description, youtubeVideoId: input.youtubeVideoId, attachmentIds: input.attachmentIds });
     await this.lessonRepo.update(lesson);
     return lesson;
   }

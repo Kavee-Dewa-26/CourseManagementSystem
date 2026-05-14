@@ -30,25 +30,27 @@ export class FirestoreLessonRepository implements ILessonRepository {
   async create(lesson: Lesson): Promise<void> {
     const id = lesson.id || uuidv4();
     await this.col.doc(id).set({
-      subjectId:   lesson.subjectId,
-      courseId:    lesson.courseId,
-      semesterId:  lesson.semesterId,
-      title:       lesson.title,
-      description: lesson.description,
-      url:         lesson.url,
-      order:       lesson.order,
-      deletedAt:   null,
-      createdAt:   FieldValue.serverTimestamp(),
-      updatedAt:   FieldValue.serverTimestamp(),
+      subjectId:      lesson.subjectId,
+      courseId:       lesson.courseId,
+      semesterId:     lesson.semesterId,
+      title:          lesson.title,
+      description:    lesson.description,
+      youtubeVideoId: lesson.youtubeVideoId,
+      attachmentIds:  lesson.attachmentIds,
+      order:          lesson.order,
+      deletedAt:      null,
+      createdAt:      FieldValue.serverTimestamp(),
+      updatedAt:      FieldValue.serverTimestamp(),
     });
   }
 
   async update(lesson: Lesson): Promise<void> {
     await this.col.doc(lesson.id).update({
-      title:       lesson.title,
-      description: lesson.description,
-      url:         lesson.url,
-      updatedAt:   FieldValue.serverTimestamp(),
+      title:          lesson.title,
+      description:    lesson.description,
+      youtubeVideoId: lesson.youtubeVideoId,
+      attachmentIds:  lesson.attachmentIds,
+      updatedAt:      FieldValue.serverTimestamp(),
     });
   }
 

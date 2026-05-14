@@ -238,7 +238,7 @@ async function main() {
 
   // 19. POST /courses — Course A (used for enrollment + progress tests)
   r = await api('POST', '/courses',
-    { title: 'Smoke Course A', description: 'Main smoke test course' }, ADM.token);
+    { title: `Smoke Course A ${RUN}`, description: 'Main smoke test course' }, ADM.token);
   check('POST', '/courses', r, 201);
   const courseA = r.data?.id;
 
@@ -247,7 +247,7 @@ async function main() {
   check('GET', '/courses/:id', r, 200);
 
   // 21. PATCH /courses/:id
-  r = await api('PATCH', `/courses/${courseA}`, { title: 'Smoke Course A (updated)' }, ADM.token);
+  r = await api('PATCH', `/courses/${courseA}`, { title: `Smoke Course A ${RUN} (updated)` }, ADM.token);
   check('PATCH', '/courses/:id', r, 200);
 
   // 22. POST /courses/:id/semesters
@@ -271,7 +271,7 @@ async function main() {
 
   // ─ Course B: used for archive + delete + subject/semester delete tests ─────
   r = await api('POST', '/courses',
-    { title: 'Smoke Course B (to archive/delete)', description: 'Will be archived and deleted' }, ADM.token);
+    { title: `Smoke Course B ${RUN}`, description: 'Will be archived and deleted' }, ADM.token);
   const courseB = r.data?.id;
 
   r = await api('POST', `/courses/${courseB}/semesters`, { title: 'Sem B1' }, ADM.token);

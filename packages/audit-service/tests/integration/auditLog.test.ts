@@ -53,7 +53,7 @@ describe('GET /audit-log', () => {
       .set('Authorization', `Bearer ${superAdminToken}`)
       .expect(200);
 
-    expect(res.body.items.every((e: { actorUid: string }) => e.actorUid === 'actor-a')).toBe(true);
+    expect(res.body.items.every((e: { actor: { uid: string } }) => e.actor.uid === 'actor-a')).toBe(true);
   });
 
   it('200 — cursor pagination works', async () => {

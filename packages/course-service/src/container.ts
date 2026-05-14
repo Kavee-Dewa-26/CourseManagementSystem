@@ -36,7 +36,7 @@ const outbox       = new OutboxEventPublisher();
 // Use cases
 const createCourse    = new CreateCourseUseCase(courseRepo);
 const updateCourse    = new UpdateCourseUseCase(courseRepo);
-const getCourse       = new GetCourseUseCase(courseRepo);
+const getCourse       = new GetCourseUseCase(courseRepo, semesterRepo, subjectRepo);
 const publishCourse   = new PublishCourseUseCase(courseRepo, semesterRepo, outbox);
 const unpublishCourse = new UnpublishCourseUseCase(courseRepo);
 const archiveCourse   = new ArchiveCourseUseCase(courseRepo);

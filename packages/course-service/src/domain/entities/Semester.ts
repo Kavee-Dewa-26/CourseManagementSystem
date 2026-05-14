@@ -2,7 +2,6 @@ export interface SemesterProps {
   id:           string;
   courseId:     string;
   title:        string;
-  description:  string;
   subjectCount: number;
   order:        number;
   deletedAt:    string | null;
@@ -14,7 +13,6 @@ export class Semester {
   id:           string;
   courseId:     string;
   title:        string;
-  description:  string;
   subjectCount: number;
   order:        number;
   deletedAt:    string | null;
@@ -25,7 +23,6 @@ export class Semester {
     this.id           = props.id;
     this.courseId     = props.courseId;
     this.title        = props.title;
-    this.description  = props.description;
     this.subjectCount = props.subjectCount;
     this.order        = props.order;
     this.deletedAt    = props.deletedAt;
@@ -33,9 +30,8 @@ export class Semester {
     this.updatedAt    = props.updatedAt;
   }
 
-  update(fields: { title?: string; description?: string }): void {
-    if (fields.title       !== undefined) this.title       = fields.title;
-    if (fields.description !== undefined) this.description = fields.description;
+  update(fields: { title?: string }): void {
+    if (fields.title !== undefined) this.title = fields.title;
     this.updatedAt = new Date().toISOString();
   }
 

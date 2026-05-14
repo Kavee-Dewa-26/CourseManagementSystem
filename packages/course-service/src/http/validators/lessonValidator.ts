@@ -1,13 +1,15 @@
 import { z } from 'zod';
 
 export const createLessonSchema = z.object({
-  title:       z.string().min(1).max(200),
-  url:         z.string().url('Lesson URL must be a valid URL.'),
-  description: z.string().max(2000).default(''),
+  title:          z.string().min(1).max(200),
+  description:    z.string().max(2000).default(''),
+  youtubeVideoId: z.string().nullable().optional().default(null),
+  attachmentIds:  z.array(z.string()).optional().default([]),
 });
 
 export const updateLessonSchema = z.object({
-  title:       z.string().min(1).max(200).optional(),
-  url:         z.string().url('Lesson URL must be a valid URL.').optional(),
-  description: z.string().min(1).max(2000).optional(),
+  title:          z.string().min(1).max(200).optional(),
+  description:    z.string().min(1).max(2000).optional(),
+  youtubeVideoId: z.string().nullable().optional(),
+  attachmentIds:  z.array(z.string()).optional(),
 });
