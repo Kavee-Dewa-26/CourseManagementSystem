@@ -11,8 +11,8 @@ export class EmailClient {
   });
 
   async sendOtp(to: string, otp: string): Promise<void> {
-    if (config.nodeEnv === 'development') {
-      logger.info({ to, otp }, '[EMAIL:dev] password reset OTP');
+    if (!config.smtpUser || !config.smtpPass) {
+      logger.info({ to, otp }, '[EMAIL:no-smtp] OTP (SMTP not configured — set SMTP_USER and SMTP_PASS)');
       return;
     }
     await this.transport.sendMail({
