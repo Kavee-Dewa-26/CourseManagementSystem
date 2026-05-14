@@ -4,8 +4,10 @@ import { ICourseRepository }  from '../../domain/repositories/ICourseRepository'
 import { Course }             from '../../domain/entities/Course';
 
 export interface CreateCourseInput {
-  title:     string;
-  createdBy: string;
+  title:         string;
+  description?:  string;
+  coverImageUrl?: string | null;
+  createdBy:     string;
 }
 
 export class CreateCourseUseCase {
@@ -19,6 +21,8 @@ export class CreateCourseUseCase {
     const course = new Course({
       id:            uuidv4(),
       title:         input.title,
+      description:   input.description   ?? '',
+      coverImageUrl: input.coverImageUrl ?? null,
       state:         'draft',
       createdBy:     input.createdBy,
       semesterCount: 0,

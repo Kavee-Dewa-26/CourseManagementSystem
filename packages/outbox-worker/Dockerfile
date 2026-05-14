@@ -7,6 +7,9 @@ COPY packages/outbox-worker/tsconfig.json ./packages/outbox-worker/tsconfig.json
 RUN npm install --workspace=packages/shared/firebase --workspace=packages/shared/logger \
     --workspace=packages/shared/internal-http-client \
     --workspace=packages/outbox-worker
+RUN npm run build --workspace=packages/shared/logger \
+ && npm run build --workspace=packages/shared/firebase \
+ && npm run build --workspace=packages/shared/internal-http-client
 COPY packages/outbox-worker/src ./packages/outbox-worker/src
 RUN npm run build --workspace=packages/outbox-worker
 

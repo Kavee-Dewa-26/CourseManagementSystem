@@ -1,11 +1,34 @@
 import { getFirestore }                                                          from 'firebase-admin/firestore';
-import { Course, CourseProps }                                                    from '../../domain/entities/Course';
+import { Course, CourseProps, CourseState }                                       from '../../domain/entities/Course';
 import { ICourseRepository, CourseFindAllOptions, CourseFindPublishedOptions, CourseListResult } from '../../domain/repositories/ICourseRepository';
 
-type CourseDoc = Omit<CourseProps, 'id'>;
+interface CourseDoc {
+  title:          string;
+  description?:   string;
+  coverImageUrl?: string | null;
+  state:          CourseState;
+  createdBy:      string;
+  semesterCount:  number;
+  publishedAt:    string | null;
+  deletedAt:      string | null;
+  createdAt:      string;
+  updatedAt:      string;
+}
 
 function toEntity(id: string, data: CourseDoc): Course {
-  return new Course({ ...data, id });
+  return new Course({
+    id,
+    title:         data.title,
+    description:   data.description   ?? '',
+    coverImageUrl: data.coverImageUrl ?? null,
+    state:         data.state,
+    createdBy:     data.createdBy,
+    semesterCount: data.semesterCount,
+    publishedAt:   data.publishedAt   ?? null,
+    deletedAt:     data.deletedAt     ?? null,
+    createdAt:     data.createdAt,
+    updatedAt:     data.updatedAt,
+  });
 }
 
 export class FirestoreCourseRepository implements ICourseRepository {

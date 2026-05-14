@@ -3,8 +3,10 @@ import { ICourseRepository } from '../../domain/repositories/ICourseRepository';
 import { Course }            from '../../domain/entities/Course';
 
 export interface UpdateCourseInput {
-  id:    string;
-  title?: string;
+  id:             string;
+  title?:         string;
+  description?:   string;
+  coverImageUrl?: string | null;
 }
 
 export class UpdateCourseUseCase {
@@ -19,7 +21,7 @@ export class UpdateCourseUseCase {
       if (existing) throw createHttpError(409, 'COURSE_TITLE_EXISTS', 'A course with this title already exists.');
     }
 
-    course.update({ title: input.title });
+    course.update({ title: input.title, description: input.description, coverImageUrl: input.coverImageUrl });
     await this.courseRepo.update(course);
     return course;
   }

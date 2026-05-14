@@ -8,6 +8,13 @@ RUN npm install --workspace=packages/shared/firebase --workspace=packages/shared
     --workspace=packages/shared/errors --workspace=packages/shared/auth-middleware \
     --workspace=packages/shared/internal-http-client --workspace=packages/shared/response \
     --workspace=packages/shared/health --workspace=packages/notification-service
+RUN npm run build --workspace=packages/shared/logger \
+ && npm run build --workspace=packages/shared/firebase \
+ && npm run build --workspace=packages/shared/errors \
+ && npm run build --workspace=packages/shared/internal-http-client \
+ && npm run build --workspace=packages/shared/auth-middleware \
+ && npm run build --workspace=packages/shared/response \
+ && npm run build --workspace=packages/shared/health
 COPY packages/notification-service/src ./packages/notification-service/src
 RUN npm run build --workspace=packages/notification-service
 

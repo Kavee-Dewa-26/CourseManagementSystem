@@ -1,11 +1,15 @@
 import { z } from 'zod';
 
 export const createCourseSchema = z.object({
-  title: z.string().min(1).max(200),
+  title:         z.string().min(1).max(200),
+  description:   z.string().max(500).optional().default(''),
+  coverImageUrl: z.string().url().nullable().optional().default(null),
 });
 
 export const updateCourseSchema = z.object({
-  title: z.string().min(1).max(200).optional(),
+  title:         z.string().min(1).max(200).optional(),
+  description:   z.string().max(500).optional(),
+  coverImageUrl: z.string().url().nullable().optional(),
 });
 
 export const listCoursesSchema = z.object({

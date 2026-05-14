@@ -12,6 +12,9 @@ RUN npm install --workspace=packages/shared/health \
                 --workspace=packages/shared/logger \
                 --workspace=packages/gateway
 
+RUN npm run build --workspace=packages/shared/logger \
+ && npm run build --workspace=packages/shared/health
+
 COPY packages/gateway/src ./packages/gateway/src
 
 RUN npm run build --workspace=packages/gateway

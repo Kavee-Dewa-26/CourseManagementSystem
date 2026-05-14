@@ -19,6 +19,16 @@ RUN npm install --workspace=packages/shared/firebase \
                 --workspace=packages/shared/tracing \
                 --workspace=packages/auth-service
 
+RUN npm run build --workspace=packages/shared/logger \
+ && npm run build --workspace=packages/shared/firebase \
+ && npm run build --workspace=packages/shared/errors \
+ && npm run build --workspace=packages/shared/events \
+ && npm run build --workspace=packages/shared/internal-http-client \
+ && npm run build --workspace=packages/shared/auth-middleware \
+ && npm run build --workspace=packages/shared/response \
+ && npm run build --workspace=packages/shared/health \
+ && npm run build --workspace=packages/shared/tracing
+
 COPY packages/auth-service/src ./packages/auth-service/src
 
 RUN npm run build --workspace=packages/auth-service
