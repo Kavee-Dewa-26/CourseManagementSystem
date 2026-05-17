@@ -319,3 +319,84 @@ describe('POST /enrollments/:id/withdraw', () => {
   });
 
 });
+
+// ─── GET /admin/registrations ─────────────────────────────────────────────────
+
+describe('GET /admin/registrations', () => {
+
+  it('200 — admin lists registrations', async () => {
+    await seedRegistration('reg-list-001', 'pending');
+    await seedRegistration('reg-list-002', 'approved');
+
+    const res = await request(app)
+      .get('/admin/registrations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(res.body.items.length).toBeGreaterThanOrEqual(2);
+    expect(res.body.total).toBeGreaterThanOrEqual(2);
+  });
+
+  it('200 — supports ?status=pending filter', async () => {
+    await seedRegistration('reg-filter-001', 'pending');
+    await seedRegistration('reg-filter-002', 'approved');
+
+    const res = await request(app)
+      .get('/admin/registrations?status=pending')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const states = res.body.items.map((r: { state: string }) => r.state);
+    expect(states.every((s: string) => s === 'pending')).toBe(true);
+  });
+
+  it('403 — student cannot list registrations', async () => {
+    await request(app)
+      .get('/admin/registrations')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .expect(403);
+  });
+
+  it('401 — unauthenticated request rejected', async () => {
+    await request(app).get('/admin/registrations').expect(401);
+  });
+
+});
+
+// ─── GET /enrollments/mine (V2 alias) ─────────────────────────────────────────
+
+describe('GET /enrollments/mine', () => {
+
+  it('200 — V2 alias returns student own enrollments', async () => {
+    await createEnrollment();
+
+    const res = await request(app)
+      .get('/enrollments/mine')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .expect(200);
+
+    expect(res.body.items.length).toBeGreaterThanOrEqual(1);
+    expect(res.body.items[0].studentUid).toBe(studentUid);
+  });
+
+  it('200 — returns empty list when no enrollments', async () => {
+    const res = await request(app)
+      .get('/enrollments/mine')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .expect(200);
+
+    expect(res.body.items).toBeDefined();
+  });
+
+  it('403 — admin cannot use student enrollment alias', async () => {
+    await request(app)
+      .get('/enrollments/mine')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(403);
+  });
+
+  it('401 — unauthenticated request rejected', async () => {
+    await request(app).get('/enrollments/mine').expect(401);
+  });
+
+});

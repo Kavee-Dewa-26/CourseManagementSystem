@@ -298,3 +298,51 @@ describe('POST /role-requests/:id/reject', () => {
   });
 
 });
+
+// ─── GET /role-requests/:id ───────────────────────────────────────────────────
+
+describe('GET /role-requests/:id', () => {
+
+  it('200 — admin fetches a specific role request by ID', async () => {
+    const createRes = await request(app)
+      .post('/role-requests')
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ requestedRole: 'student' });
+
+    const reqId = createRes.body.id as string;
+
+    const res = await request(app)
+      .get(`/role-requests/${reqId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(res.body.id).toBe(reqId);
+    expect(res.body.requesterUid).toBe(memberUid);
+    expect(res.body.status).toBe('pending');
+    expect(res.body.requestedRole).toBe('student');
+  });
+
+  it('404 — non-existent role request', async () => {
+    await request(app)
+      .get('/role-requests/does-not-exist')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(404);
+  });
+
+  it('403 — member cannot fetch a specific role request by ID', async () => {
+    const createRes = await request(app)
+      .post('/role-requests')
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ requestedRole: 'student' });
+
+    await request(app)
+      .get(`/role-requests/${createRes.body.id}`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .expect(403);
+  });
+
+  it('401 — unauthenticated request rejected', async () => {
+    await request(app).get('/role-requests/any-id').expect(401);
+  });
+
+});

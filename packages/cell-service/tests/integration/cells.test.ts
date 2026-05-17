@@ -548,3 +548,117 @@ describe('POST /cells/:id/reports/:rid/void', () => {
   });
 
 });
+
+// ─── GET /cells/:id/join-requests ────────────────────────────────────────────
+
+describe('GET /cells/:id/join-requests', () => {
+
+  it('200 -- leader lists pending join requests for own cell', async () => {
+    const cellId = await createCell();
+    await request(app)
+      .post('/cells/' + cellId + '/join-requests')
+      .set('Authorization', 'Bearer ' + memberToken)
+      .send({});
+
+    const res = await request(app)
+      .get('/cells/' + cellId + '/join-requests')
+      .set('Authorization', 'Bearer ' + leaderToken)
+      .expect(200);
+
+    expect(res.body.items.length).toBeGreaterThanOrEqual(1);
+    expect(res.body.items[0].cellId).toBe(cellId);
+    expect(res.body.items[0].status).toBe('pending');
+  });
+
+  it('200 -- admin lists join requests', async () => {
+    const cellId = await createCell();
+    await request(app)
+      .post('/cells/' + cellId + '/join-requests')
+      .set('Authorization', 'Bearer ' + memberToken)
+      .send({});
+
+    const res = await request(app)
+      .get('/cells/' + cellId + '/join-requests')
+      .set('Authorization', 'Bearer ' + adminToken)
+      .expect(200);
+
+    expect(res.body.items.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('200 -- returns empty list when no join requests', async () => {
+    const cellId = await createCell();
+
+    const res = await request(app)
+      .get('/cells/' + cellId + '/join-requests')
+      .set('Authorization', 'Bearer ' + adminToken)
+      .expect(200);
+
+    expect(res.body.items).toHaveLength(0);
+  });
+
+  it('403 -- member cannot list join requests', async () => {
+    const cellId = await createCell();
+    await request(app)
+      .get('/cells/' + cellId + '/join-requests')
+      .set('Authorization', 'Bearer ' + memberToken)
+      .expect(403);
+  });
+
+  it('401 -- unauthenticated request rejected', async () => {
+    await request(app).get('/cells/any-id/join-requests').expect(401);
+  });
+
+});
+
+// ─── GET /cells/:id/reports/:rid ─────────────────────────────────────────────
+
+describe('GET /cells/:id/reports/:rid', () => {
+
+  it('200 -- leader fetches a specific report by ID', async () => {
+    const cellId   = await createCell();
+    const reportId = await fileReport(cellId, leaderToken);
+
+    const res = await request(app)
+      .get('/cells/' + cellId + '/reports/' + reportId)
+      .set('Authorization', 'Bearer ' + leaderToken)
+      .expect(200);
+
+    expect(res.body.id).toBe(reportId);
+    expect(res.body.cellId).toBe(cellId);
+    expect(res.body.voided).toBe(false);
+  });
+
+  it('200 -- admin fetches a specific report by ID', async () => {
+    const cellId   = await createCell();
+    const reportId = await fileReport(cellId, leaderToken);
+
+    const res = await request(app)
+      .get('/cells/' + cellId + '/reports/' + reportId)
+      .set('Authorization', 'Bearer ' + adminToken)
+      .expect(200);
+
+    expect(res.body.id).toBe(reportId);
+  });
+
+  it('404 -- report not found', async () => {
+    const cellId = await createCell();
+    await request(app)
+      .get('/cells/' + cellId + '/reports/no-such-report')
+      .set('Authorization', 'Bearer ' + adminToken)
+      .expect(404);
+  });
+
+  it('403 -- non-member cannot fetch report', async () => {
+    const cellId   = await createCell();
+    const reportId = await fileReport(cellId, leaderToken);
+    await request(app)
+      .get('/cells/' + cellId + '/reports/' + reportId)
+      .set('Authorization', 'Bearer ' + memberToken)
+      .expect(403);
+  });
+
+  it('401 -- unauthenticated request rejected', async () => {
+    await request(app).get('/cells/any-id/reports/any-rid').expect(401);
+  });
+
+});

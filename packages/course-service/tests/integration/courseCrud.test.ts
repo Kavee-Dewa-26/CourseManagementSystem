@@ -461,3 +461,101 @@ describe('DELETE /subjects/:id', () => {
   });
 
 });
+
+// ─── GET /courses/:id/semesters ──────────────────────────────────────────────
+
+describe('GET /courses/:id/semesters', () => {
+
+  it('200 — returns semester list for a course', async () => {
+    const courseId = await createCourse();
+    await addSemester(courseId);
+    await addSemester(courseId);
+
+    const res = await request(app)
+      .get(`/courses/${courseId}/semesters`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(res.body.items.length).toBeGreaterThanOrEqual(2);
+    expect(res.body.items[0].courseId).toBe(courseId);
+  });
+
+  it('200 — returns empty list for course with no semesters', async () => {
+    const courseId = await createCourse();
+
+    const res = await request(app)
+      .get(`/courses/${courseId}/semesters`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(res.body.items).toHaveLength(0);
+  });
+
+  it('200 — student can list semesters', async () => {
+    const courseId = await createCourse();
+    await addSemester(courseId);
+
+    const res = await request(app)
+      .get(`/courses/${courseId}/semesters`)
+      .set('Authorization', `Bearer ${studentToken}`)
+      .expect(200);
+
+    expect(res.body.items.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('401 — unauthenticated request rejected', async () => {
+    const courseId = await createCourse();
+    await request(app).get(`/courses/${courseId}/semesters`).expect(401);
+  });
+
+});
+
+// ─── GET /semesters/:id/subjects ─────────────────────────────────────────────
+
+describe('GET /semesters/:id/subjects', () => {
+
+  it('200 — returns subject list for a semester', async () => {
+    const courseId   = await createCourse();
+    const semesterId = await addSemester(courseId);
+    await addSubject(semesterId);
+    await addSubject(semesterId);
+
+    const res = await request(app)
+      .get(`/semesters/${semesterId}/subjects`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(res.body.items.length).toBeGreaterThanOrEqual(2);
+    expect(res.body.items[0].semesterId).toBe(semesterId);
+  });
+
+  it('200 — returns empty list for semester with no subjects', async () => {
+    const courseId   = await createCourse();
+    const semesterId = await addSemester(courseId);
+
+    const res = await request(app)
+      .get(`/semesters/${semesterId}/subjects`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(res.body.items).toHaveLength(0);
+  });
+
+  it('200 — student can list subjects', async () => {
+    const courseId   = await createCourse();
+    const semesterId = await addSemester(courseId);
+    await addSubject(semesterId);
+
+    const res = await request(app)
+      .get(`/semesters/${semesterId}/subjects`)
+      .set('Authorization', `Bearer ${studentToken}`)
+      .expect(200);
+
+    expect(res.body.items.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('401 — unauthenticated request rejected', async () => {
+    await request(app).get('/semesters/any-id/subjects').expect(401);
+  });
+
+});
