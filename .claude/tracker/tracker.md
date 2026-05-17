@@ -575,10 +575,13 @@
 
 ## Kubernetes Manifests
 
-- [x] `k8s/<service>/deployment.yaml` — all 10 services, liveness + readiness probes, preStop
-- [x] `k8s/<service>/service.yaml` — ClusterIP for all HTTP services
-- [x] `k8s/<service>/hpa.yaml` — min 2 / max 10 replicas, CPU 70% target
+- [x] `k8s/<service>/deployment.yaml` — all 10 V1 services, liveness + readiness probes, preStop
+- [x] `k8s/<service>/service.yaml` — ClusterIP for all HTTP services (V1)
+- [x] `k8s/<service>/hpa.yaml` — min 2 / max 10 replicas, CPU 70% target (V1)
 - [x] `k8s/gateway/ingress.yaml` — TLS termination, routes `/api/v1/*` to gateway
+- [x] `k8s/cell-service/` — deployment + service + hpa (port 3010, 2→10 replicas)
+- [x] `k8s/analytics-service/` — deployment + service + hpa (port 3011, 2→10 replicas)
+- [x] `k8s/scheduled-jobs/` — deployment only; replicas=1 singleton; terminationGracePeriodSeconds=60
 
 ## Firestore Security Rules
 
