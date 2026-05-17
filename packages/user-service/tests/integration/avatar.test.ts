@@ -1,11 +1,26 @@
 /**
  * Integration tests for POST /me/avatar
+ * Firebase Storage is mocked (same pattern as storage-service integration tests)
+ * so this suite only needs the Firestore + Auth emulators.
  */
 import request from 'supertest';
+import { getFirestore } from 'firebase-admin/firestore';
 import { app } from '../../src/app';
-import { createTestUser, clearAuth } from '../../../../tests/integration/helpers';
+import { createTestUser, clearAuth, clearCollection, now } from '../../../../tests/integration/helpers';
 
-// Minimal 1×1 white PNG (67 bytes — valid PNG, passes MIME check)
+// Mock Firebase Storage — avoids needing a real Storage bucket or emulator
+jest.mock('firebase-admin/storage', () => ({
+  getStorage: jest.fn(() => ({
+    bucket: jest.fn(() => ({
+      file: jest.fn(() => ({
+        save:       jest.fn().mockResolvedValue(undefined),
+        makePublic: jest.fn().mockResolvedValue(undefined),
+      })),
+    })),
+  })),
+}));
+
+// Minimal 1×1 white PNG (67 bytes — valid PNG header, passes MIME check)
 const TINY_PNG = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
   0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
@@ -18,36 +33,48 @@ const TINY_PNG = Buffer.from([
   0x44, 0xae, 0x42, 0x60, 0x82,
 ]);
 
-// Minimal 1×1 white JPEG
+// Minimal 1×1 JPEG
 const TINY_JPEG = Buffer.from([
-  0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
-  0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xff, 0xdb, 0x00, 0x43,
-  0x00, 0x08, 0x06, 0x06, 0x07, 0x06, 0x05, 0x08, 0x07, 0x07, 0x07, 0x09,
-  0x09, 0x08, 0x0a, 0x0c, 0x14, 0x0d, 0x0c, 0x0b, 0x0b, 0x0c, 0x19, 0x12,
-  0x13, 0x0f, 0x14, 0x1d, 0x1a, 0x1f, 0x1e, 0x1d, 0x1a, 0x1c, 0x1c, 0x20,
-  0x24, 0x2e, 0x27, 0x20, 0x22, 0x2c, 0x23, 0x1c, 0x1c, 0x28, 0x37, 0x29,
-  0x2c, 0x30, 0x31, 0x34, 0x34, 0x34, 0x1f, 0x27, 0x39, 0x3d, 0x38, 0x32,
-  0x3c, 0x2e, 0x33, 0x34, 0x32, 0xff, 0xc0, 0x00, 0x0b, 0x08, 0x00, 0x01,
-  0x00, 0x01, 0x01, 0x01, 0x11, 0x00, 0xff, 0xc4, 0x00, 0x1f, 0x00, 0x00,
-  0x01, 0x05, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00,
-  0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-  0x09, 0x0a, 0x0b, 0xff, 0xda, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3f,
-  0x00, 0xfb, 0xd8, 0xff, 0xd9,
+  0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46,
+  0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01,
+  0x00, 0x01, 0x00, 0x00, 0xff, 0xd9,
 ]);
 
 let memberToken: string;
+let memberUid:   string;
 let adminToken:  string;
+let adminUid:    string;
+
+async function seedUserDoc(uid: string, email: string, role: string, roles: string[]) {
+  await getFirestore().collection('users').doc(uid).set({
+    email, firstName: 'Test', lastName: 'User',
+    role, roles, status: 'approved',
+    profilePhotoUrl: null, preferredLanguage: 'en',
+    providers: ['password'], fcmTokens: [],
+    notificationPreferences: { email: true, push: true },
+    createdAt: now(), updatedAt: now(), deletedAt: null,
+  });
+}
 
 beforeAll(async () => {
   await clearAuth();
+  await clearCollection('users');
+
   const member = await createTestUser('member@avatar.test', 'Test@12345', 'member', ['member']);
   const admin  = await createTestUser('admin@avatar.test',  'Test@12345', 'admin',  ['admin']);
   memberToken = member.idToken;
+  memberUid   = member.uid;
   adminToken  = admin.idToken;
+  adminUid    = admin.uid;
+
+  // UploadAvatarUseCase calls userRepo.findById — Firestore user doc must exist
+  await seedUserDoc(memberUid, 'member@avatar.test', 'member', ['member']);
+  await seedUserDoc(adminUid,  'admin@avatar.test',  'admin',  ['admin']);
 });
 
 afterAll(async () => {
   await clearAuth();
+  await clearCollection('users');
 });
 
 // ─── POST /me/avatar ──────────────────────────────────────────────────────────
@@ -86,13 +113,13 @@ describe('POST /me/avatar', () => {
     expect(res.body.profilePhotoUrl).toBeDefined();
   });
 
-  it('400 — rejects a non-image file (PDF)', async () => {
+  it('415 — rejects a non-image file (PDF)', async () => {
     const pdfBuffer = Buffer.from('%PDF-1.4 fake pdf content');
     await request(app)
       .post('/me/avatar')
       .set('Authorization', `Bearer ${memberToken}`)
       .attach('photo', pdfBuffer, { filename: 'file.pdf', contentType: 'application/pdf' })
-      .expect(400);
+      .expect(415);
   });
 
   it('400 — rejects request with no file attached', async () => {

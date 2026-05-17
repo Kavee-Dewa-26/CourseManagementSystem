@@ -476,11 +476,12 @@ describe('GET /courses/:id/semesters', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
 
-    expect(res.body.items.length).toBeGreaterThanOrEqual(2);
-    expect(res.body.items[0].courseId).toBe(courseId);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThanOrEqual(2);
+    expect(res.body[0].courseId).toBe(courseId);
   });
 
-  it('200 — returns empty list for course with no semesters', async () => {
+  it('200 — returns empty array for course with no semesters', async () => {
     const courseId = await createCourse();
 
     const res = await request(app)
@@ -488,7 +489,8 @@ describe('GET /courses/:id/semesters', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
 
-    expect(res.body.items).toHaveLength(0);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body).toHaveLength(0);
   });
 
   it('200 — student can list semesters', async () => {
@@ -500,7 +502,8 @@ describe('GET /courses/:id/semesters', () => {
       .set('Authorization', `Bearer ${studentToken}`)
       .expect(200);
 
-    expect(res.body.items.length).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThanOrEqual(1);
   });
 
   it('401 — unauthenticated request rejected', async () => {
@@ -525,11 +528,12 @@ describe('GET /semesters/:id/subjects', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
 
-    expect(res.body.items.length).toBeGreaterThanOrEqual(2);
-    expect(res.body.items[0].semesterId).toBe(semesterId);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThanOrEqual(2);
+    expect(res.body[0].semesterId).toBe(semesterId);
   });
 
-  it('200 — returns empty list for semester with no subjects', async () => {
+  it('200 — returns empty array for semester with no subjects', async () => {
     const courseId   = await createCourse();
     const semesterId = await addSemester(courseId);
 
@@ -538,7 +542,8 @@ describe('GET /semesters/:id/subjects', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
 
-    expect(res.body.items).toHaveLength(0);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body).toHaveLength(0);
   });
 
   it('200 — student can list subjects', async () => {
@@ -551,7 +556,8 @@ describe('GET /semesters/:id/subjects', () => {
       .set('Authorization', `Bearer ${studentToken}`)
       .expect(200);
 
-    expect(res.body.items.length).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThanOrEqual(1);
   });
 
   it('401 — unauthenticated request rejected', async () => {
