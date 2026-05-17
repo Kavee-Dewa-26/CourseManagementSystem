@@ -22,7 +22,13 @@
       "PowerShell($content = Get-Content \"C:\\\\Users\\\\Asus\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Asus-Desktop-CMS\\\\42e11333-c75e-4245-8211-cf7c8dfdcf8d\\\\tasks\\\\brmrgojc5.output\" -ErrorAction SilentlyContinue; Write-Host \"Total lines: $\\($content.Count\\)\"; $content | Select-Object -Last 10)",
       "PowerShell(Stop-Process *)",
       "PowerShell(docker info *)",
-      "PowerShell($ports = @\\(3000,3001,3002,3003,3004,3005,3006,3007,3008,3010,3011\\); foreach \\($p in $ports\\) { try { $r = Invoke-RestMethod \"http://localhost:$p/healthz\" -TimeoutSec 5; Write-Host \":$p $\\($r.service\\) -> $\\($r.status\\)\" } catch { Write-Host \":$p -> FAIL\" } }; Write-Host \"\"; docker ps --format \"table {{.Names}}`t{{.Status}}\" | Select-String \"cms-\")"
+      "PowerShell($ports = @\\(3000,3001,3002,3003,3004,3005,3006,3007,3008,3010,3011\\); foreach \\($p in $ports\\) { try { $r = Invoke-RestMethod \"http://localhost:$p/healthz\" -TimeoutSec 5; Write-Host \":$p $\\($r.service\\) -> $\\($r.status\\)\" } catch { Write-Host \":$p -> FAIL\" } }; Write-Host \"\"; docker ps --format \"table {{.Names}}`t{{.Status}}\" | Select-String \"cms-\")",
+      "PowerShell(New-Item *)",
+      "PowerShell($git = \"C:\\\\Users\\\\Asus\\\\AppData\\\\Local\\\\GitHubDesktop\\\\app-3.5.8\\\\resources\\\\app\\\\git\\\\cmd\\\\git.exe\"; cd \"C:\\\\Users\\\\Asus\\\\Desktop\\\\CMS\"; & $git status --short)",
+      "PowerShell($git = \"C:\\\\Users\\\\Asus\\\\AppData\\\\Local\\\\GitHubDesktop\\\\app-3.5.8\\\\resources\\\\app\\\\git\\\\cmd\\\\git.exe\"; cd \"C:\\\\Users\\\\Asus\\\\Desktop\\\\CMS\"; & $git log --oneline -5)",
+      "PowerShell($git = \"C:\\\\Users\\\\Asus\\\\AppData\\\\Local\\\\GitHubDesktop\\\\app-3.5.8\\\\resources\\\\app\\\\git\\\\cmd\\\\git.exe\"; cd \"C:\\\\Users\\\\Asus\\\\Desktop\\\\CMS\"; & $git status)",
+      "PowerShell($git = \"C:\\\\Users\\\\Asus\\\\AppData\\\\Local\\\\GitHubDesktop\\\\app-3.5.8\\\\resources\\\\app\\\\git\\\\cmd\\\\git.exe\"; cd \"C:\\\\Users\\\\Asus\\\\Desktop\\\\CMS\"; & $git diff .claude/settings.local.json)",
+      "PowerShell($git = \"C:\\\\Users\\\\Asus\\\\AppData\\\\Local\\\\GitHubDesktop\\\\app-3.5.8\\\\resources\\\\app\\\\git\\\\cmd\\\\git.exe\"; cd \"C:\\\\Users\\\\Asus\\\\Desktop\\\\CMS\"; & $git add .claude/settings.local.json; & $git commit -m \"chore: update auto-approved command patterns in settings.local.json\"; & $git push origin develop)"
     ]
   }
 }
