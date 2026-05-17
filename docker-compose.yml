@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
 
   gateway:
@@ -17,6 +15,8 @@ services:
       SERVICE_STORAGE_URL:      http://storage-service:3006
       SERVICE_NOTIFICATION_URL: http://notification-service:3007
       SERVICE_AUDIT_URL:        http://audit-service:3008
+      SERVICE_CELL_URL:         http://cell-service:3010
+      SERVICE_ANALYTICS_URL:    http://analytics-service:3011
     depends_on:
       - auth-service
       - user-service
@@ -26,6 +26,8 @@ services:
       - storage-service
       - notification-service
       - audit-service
+      - cell-service
+      - analytics-service
 
   auth-service:
     build: { context: ., dockerfile: packages/auth-service/Dockerfile }
@@ -44,8 +46,9 @@ services:
     ports: ['3002:3002']
     env_file: .env
     environment:
-      SERVICE_NAME: user-service
-      PORT:         3002
+      SERVICE_NAME:       user-service
+      PORT:               3002
+      SERVICE_AUTH_URL:   http://auth-service:3001
 
   course-service:
     build: { context: ., dockerfile: packages/course-service/Dockerfile }
@@ -107,6 +110,31 @@ services:
     environment:
       SERVICE_NAME: audit-service
       PORT:         3008
+
+  cell-service:
+    build: { context: ., dockerfile: packages/cell-service/Dockerfile }
+    ports: ['3010:3010']
+    env_file: .env
+    environment:
+      SERVICE_NAME: cell-service
+      PORT:         3010
+
+  analytics-service:
+    build: { context: ., dockerfile: packages/analytics-service/Dockerfile }
+    ports: ['3011:3011']
+    env_file: .env
+    environment:
+      SERVICE_NAME: analytics-service
+      PORT:         3011
+
+  scheduled-jobs:
+    build: { context: ., dockerfile: packages/scheduled-jobs/Dockerfile }
+    env_file: .env
+    environment:
+      SERVICE_NAME:             scheduled-jobs
+      BATCH_SWEEP_INTERVAL_MS:  900000
+      SEMESTER_SWEEP_INTERVAL_MS: 3600000
+      SNAPSHOT_CHECK_INTERVAL_MS: 3600000
 
   outbox-worker:
     build: { context: ., dockerfile: packages/outbox-worker/Dockerfile }

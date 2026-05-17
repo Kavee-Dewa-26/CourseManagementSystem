@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(python *)",
+      "Bash(docker system df *)",
+      "PowerShell(npm run *)",
+      "Bash(Start-Sleep -Seconds 15)",
+      "Bash(Write-Host \"Done waiting\")",
+      "Bash(node *)",
+      "PowerShell($env:PATH += \";C:\\\\Program Files\\\\Git\\\\bin;C:\\\\Program Files\\\\Git\\\\cmd\"; Set-Location \"C:\\\\Users\\\\Asus\\\\Desktop\\\\CMS\"; git log --format=\"%ad %s\" --date=short | Select-Object -First 80)",
+      "PowerShell(Get-Command *)",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:4000\" -TimeoutSec 3 -UseBasicParsing -ErrorAction Stop; \"Emulator UI running: $\\($r.StatusCode\\)\" } catch { \"Emulator NOT running\" })",
+      "PowerShell(Start-Sleep -Seconds 10; try { $r = Invoke-WebRequest -Uri \"http://localhost:8080\" -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop; \"Firestore ready: $\\($r.StatusCode\\)\" } catch { \"Still not ready\" }; try { $r2 = Invoke-WebRequest -Uri \"http://localhost:9099\" -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop; \"Auth ready: $\\($r2.StatusCode\\)\" } catch { \"Auth not ready\" })",
+      "PowerShell(Out-Null *)",
+      "PowerShell(Set-Content *)",
+      "PowerShell(docker-compose *)",
+      "PowerShell(Test-Path *)",
+      "PowerShell(Start-Sleep -Seconds 90; $content = Get-Content \"C:\\\\Users\\\\Asus\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Asus-Desktop-CMS\\\\42e11333-c75e-4245-8211-cf7c8dfdcf8d\\\\tasks\\\\brmrgojc5.output\" -ErrorAction SilentlyContinue; $content | Select-Object -Last 5; Write-Host \"---\"; Write-Host \"Total lines: $\\($content.Count\\)\")",
+      "PowerShell(Start-Sleep -Seconds 90; $content = Get-Content \"C:\\\\Users\\\\Asus\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Asus-Desktop-CMS\\\\42e11333-c75e-4245-8211-cf7c8dfdcf8d\\\\tasks\\\\brmrgojc5.output\" -ErrorAction SilentlyContinue; Write-Host \"Lines: $\\($content.Count\\)\"; $content | Select-Object -Last 8)",
+      "PowerShell(Get-Process *)",
+      "PowerShell($content = Get-Content \"C:\\\\Users\\\\Asus\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Asus-Desktop-CMS\\\\42e11333-c75e-4245-8211-cf7c8dfdcf8d\\\\tasks\\\\brmrgojc5.output\" -ErrorAction SilentlyContinue; Write-Host \"Total lines: $\\($content.Count\\)\"; $content | Select-Object -Last 10)",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(docker info *)",
+      "PowerShell($ports = @\\(3000,3001,3002,3003,3004,3005,3006,3007,3008,3010,3011\\); foreach \\($p in $ports\\) { try { $r = Invoke-RestMethod \"http://localhost:$p/healthz\" -TimeoutSec 5; Write-Host \":$p $\\($r.service\\) -> $\\($r.status\\)\" } catch { Write-Host \":$p -> FAIL\" } }; Write-Host \"\"; docker ps --format \"table {{.Names}}`t{{.Status}}\" | Select-String \"cms-\")"
+    ]
+  }
+}

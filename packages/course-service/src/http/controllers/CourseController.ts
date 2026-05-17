@@ -8,7 +8,10 @@ import { GetCourseUseCase }                 from '../../application/use-cases/Ge
 import { PublishCourseUseCase }             from '../../application/use-cases/PublishCourseUseCase';
 import { UnpublishCourseUseCase }           from '../../application/use-cases/UnpublishCourseUseCase';
 import { ArchiveCourseUseCase }             from '../../application/use-cases/ArchiveCourseUseCase';
+import { RestoreCourseUseCase }             from '../../application/use-cases/RestoreCourseUseCase';
 import { DeleteCourseUseCase }              from '../../application/use-cases/DeleteCourseUseCase';
+import { TtlCache }                         from '../../infrastructure/cache/TtlCache';
+import { CourseListResult }                 from '../../domain/repositories/ICourseRepository';
 import { ICourseRepository }               from '../../domain/repositories/ICourseRepository';
 import { createCourseSchema, updateCourseSchema, listCoursesSchema } from '../validators/courseValidator';
 
@@ -21,8 +24,11 @@ export class CourseController {
     private readonly publishUseCase:   PublishCourseUseCase,
     private readonly unpublishUseCase: UnpublishCourseUseCase,
     private readonly archiveUseCase:   ArchiveCourseUseCase,
+    private readonly restoreUseCase:   RestoreCourseUseCase,
     private readonly deleteUseCase:    DeleteCourseUseCase,
   ) {}
+
+  private static readonly listCache = new TtlCache<CourseListResult>(30_000);
 
   list = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -32,13 +38,24 @@ export class CourseController {
       const principal = (req as AuthenticatedRequest).principal;
       const isAdmin   = principal?.roles?.some(r => r === 'admin' || r === 'super_admin') ?? false;
 
-      let result;
+      const cacheKey = JSON.stringify({ isAdmin, ...parsed.data });
+      const cached   = CourseController.listCache.get(cacheKey);
+      if (cached) return sendPaginated(res, cached.items, cached.nextCursor, cached.total);
+
+      let result: CourseListResult;
       if (isAdmin) {
-        result = await this.courseRepo.findAll({ limit: parsed.data.limit, cursor: parsed.data.cursor, state: parsed.data.state });
+        result = await this.courseRepo.findAll({
+          limit: parsed.data.limit, cursor: parsed.data.cursor,
+          state: parsed.data.state, title: parsed.data.title,
+        });
       } else {
-        result = await this.courseRepo.findPublished({ limit: parsed.data.limit, cursor: parsed.data.cursor });
+        result = await this.courseRepo.findPublished({
+          limit: parsed.data.limit, cursor: parsed.data.cursor,
+          title: parsed.data.title,
+        });
       }
 
+      CourseController.listCache.set(cacheKey, result);
       sendPaginated(res, result.items, result.nextCursor, result.total);
     } catch (err) { next(err); }
   };
@@ -59,6 +76,7 @@ export class CourseController {
 
       const { uid } = (req as AuthenticatedRequest).principal;
       const course  = await this.createUseCase.execute({ ...parsed.data, createdBy: uid });
+      CourseController.listCache.clear();
       sendSuccess(res, course, 201);
     } catch (err) { next(err); }
   };
@@ -69,6 +87,7 @@ export class CourseController {
       if (!parsed.success) return next(fromZodError(parsed.error));
 
       const course = await this.updateUseCase.execute({ id: req.params.id, ...parsed.data });
+      CourseController.listCache.clear();
       sendSuccess(res, course);
     } catch (err) { next(err); }
   };
@@ -77,6 +96,7 @@ export class CourseController {
     try {
       const requestId = (req.headers['x-request-id'] as string) ?? '';
       const course    = await this.publishUseCase.execute(req.params.id, requestId);
+      CourseController.listCache.clear();
       sendSuccess(res, course);
     } catch (err) { next(err); }
   };
@@ -84,6 +104,7 @@ export class CourseController {
   unpublish = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const course = await this.unpublishUseCase.execute(req.params.id);
+      CourseController.listCache.clear();
       sendSuccess(res, course);
     } catch (err) { next(err); }
   };
@@ -91,6 +112,15 @@ export class CourseController {
   archive = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const course = await this.archiveUseCase.execute(req.params.id);
+      CourseController.listCache.clear();
+      sendSuccess(res, course);
+    } catch (err) { next(err); }
+  };
+
+  restore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const course = await this.restoreUseCase.execute(req.params.id);
+      CourseController.listCache.clear();
       sendSuccess(res, course);
     } catch (err) { next(err); }
   };
@@ -98,6 +128,7 @@ export class CourseController {
   remove = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       await this.deleteUseCase.execute(req.params.id);
+      CourseController.listCache.clear();
       res.status(204).send();
     } catch (err) { next(err); }
   };

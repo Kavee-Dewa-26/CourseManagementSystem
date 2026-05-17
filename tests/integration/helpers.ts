@@ -10,10 +10,12 @@ const PROJECT_ID    = process.env.FIREBASE_PROJECT_ID ?? 'e-learning-f4209';
 export async function createTestUser(
   email:    string,
   password: string,
-  role:     'student' | 'admin' | 'super_admin',
+  role:     'member' | 'student' | 'admin' | 'super_admin',
+  roles?:   string[],
 ): Promise<{ uid: string; idToken: string }> {
   const record = await getAuth().createUser({ email, password });
-  await getAuth().setCustomUserClaims(record.uid, { role });
+  const effectiveRoles = roles ?? [role];
+  await getAuth().setCustomUserClaims(record.uid, { role, roles: effectiveRoles });
   const customToken = await getAuth().createCustomToken(record.uid);
   const idToken     = await exchangeToken(customToken);
   return { uid: record.uid, idToken };

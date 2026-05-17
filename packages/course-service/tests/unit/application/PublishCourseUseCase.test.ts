@@ -6,7 +6,7 @@ import { Course }                 from '../../../src/domain/entities/Course';
 import { Semester }               from '../../../src/domain/entities/Semester';
 
 const makeCourse = (state: 'draft' | 'published' | 'archived' = 'draft'): Course =>
-  new Course({ id: 'c1', title: 'T', state, createdBy: 'u1', semesterCount: 0, publishedAt: null, deletedAt: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' });
+  new Course({ id: 'c1', title: 'T', description: '', coverImageUrl: null, state, createdBy: 'u1', semesterCount: 0, publishedAt: null, deletedAt: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' });
 
 const makeSemester = (subjectCount = 1): Semester =>
   new Semester({ id: 's1', courseId: 'c1', title: 'S1', subjectCount, order: 1, deletedAt: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' });

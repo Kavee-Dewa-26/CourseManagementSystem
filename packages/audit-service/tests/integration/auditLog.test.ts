@@ -75,11 +75,15 @@ describe('GET /audit-log', () => {
     }
   });
 
-  it('403 — admin cannot access audit log', async () => {
-    await request(app)
+  it('200 — admin can also access audit log (V2: both admin and super_admin allowed)', async () => {
+    await seedAuditEntry('actor', 'enrollment.approved');
+
+    const res = await request(app)
       .get('/audit-log')
       .set('Authorization', `Bearer ${adminToken}`)
-      .expect(403);
+      .expect(200);
+
+    expect(res.body.items).toBeInstanceOf(Array);
   });
 
   it('401 — unauthenticated request rejected', async () => {

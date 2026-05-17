@@ -53,4 +53,19 @@ export class FirebaseAuthClient {
       throw createHttpError(401, 'WRONG_PASSWORD', 'Current password is incorrect.');
     }
   }
+
+  async addRoleToUser(uid: string, role: string): Promise<void> {
+    const record  = await getAuth().getUser(uid);
+    const claims  = record.customClaims ?? {};
+    const current: string[] = Array.isArray(claims.roles) ? (claims.roles as string[]) : [];
+    if (current.includes(role)) return;
+    await getAuth().setCustomUserClaims(uid, { ...claims, roles: [...current, role] });
+  }
+
+  async removeRoleFromUser(uid: string, role: string): Promise<void> {
+    const record  = await getAuth().getUser(uid);
+    const claims  = record.customClaims ?? {};
+    const current: string[] = Array.isArray(claims.roles) ? (claims.roles as string[]) : [];
+    await getAuth().setCustomUserClaims(uid, { ...claims, roles: current.filter(r => r !== role) });
+  }
 }

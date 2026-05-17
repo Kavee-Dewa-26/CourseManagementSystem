@@ -1,9 +1,10 @@
 import { z } from 'zod';
 
 export const updateProfileSchema = z.object({
-  firstName:       z.string().min(1).max(100).optional(),
-  lastName:        z.string().min(1).max(100).optional(),
-  profilePhotoUrl: z.string().url().nullable().optional(),
+  firstName:         z.string().min(1).max(100).optional(),
+  lastName:          z.string().min(1).max(100).optional(),
+  profilePhotoUrl:   z.string().url().nullable().optional(),
+  preferredLanguage: z.enum(['en', 'si', 'ta']).optional(),
 });
 
 const passwordRule = z
@@ -17,4 +18,20 @@ const passwordRule = z
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required.'),
   newPassword:     passwordRule,
+});
+
+export const fcmTokenSchema = z.object({
+  token: z.string().min(1),
+});
+
+export const linkProviderSchema = z.object({
+  provider: z.enum(['google', 'apple']),
+  idToken:  z.string().min(1),
+});
+
+export const notificationPreferencesSchema = z.object({
+  email: z.boolean().optional(),
+  push:  z.boolean().optional(),
+}).refine(d => d.email !== undefined || d.push !== undefined, {
+  message: 'At least one of email or push must be provided.',
 });

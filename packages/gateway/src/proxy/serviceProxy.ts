@@ -18,3 +18,5 @@ export const progressProxy = makeProxy(config.serviceProgressUrl);
 export const storageProxy  = makeProxy(config.serviceStorageUrl);
 export const notifyProxy   = makeProxy(config.serviceNotifyUrl);
 export const auditProxy    = makeProxy(config.serviceAuditUrl);
+export const cellProxy      = makeProxy(config.serviceCellUrl);
+export const analyticsProxy = makeProxy(config.serviceAnalyticsUrl);

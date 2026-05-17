@@ -2,13 +2,13 @@ import { Request, Response, NextFunction } from 'express';
 import { getAuth }                         from 'firebase-admin/auth';
 import { createHttpError }                 from '@shared/errors';
 
-export type Role = 'student' | 'admin' | 'super_admin';
+export type Role = 'member' | 'student' | 'leader' | 'g12' | 'admin' | 'super_admin';
 
 export interface Principal {
   uid:   string;
   email: string;
-  role:  Role;
-  roles: Role[];
+  role:  Role;   // primary role (for backward compat — use roles[] for authorization)
+  roles: Role[]; // full additive roles array e.g. ["member","student","leader"]
 }
 
 export interface AuthenticatedRequest extends Request {

@@ -1,6 +1,6 @@
-import request        from 'supertest';
+import request          from 'supertest';
 import { getFirestore } from 'firebase-admin/firestore';
-import { app }         from '../../src/app';
+import { app }          from '../../src/app';
 import { clearCollection, clearAuth } from '../../../../tests/integration/helpers';
 
 // Mock inter-service HTTP calls so registration doesn't depend on running services
@@ -37,21 +37,23 @@ afterAll(async () => {
 
 describe('POST /auth/register', () => {
 
-  it('201 — creates Firebase Auth user and Firestore users doc', async () => {
+  it('201 — V2: creates active Member immediately (no approval queue)', async () => {
     const res = await request(app)
       .post('/auth/register')
       .send(VALID_BODY)
       .expect(201);
 
-    expect(res.body.message).toContain('pending approval');
+    // V2 response message
+    expect(res.body.message).toBeDefined();
 
-    // Verify Firestore document was created
+    // Verify Firestore document: V2 creates member with status=approved
     const docs = await getFirestore().collection('users')
       .where('email', '==', VALID_BODY.email)
       .get();
     expect(docs.empty).toBe(false);
-    expect(docs.docs[0].data().status).toBe('pending_approval');
-    expect(docs.docs[0].data().role).toBe('student');
+    expect(docs.docs[0].data().status).toBe('approved');
+    expect(docs.docs[0].data().role).toBe('member');
+    expect(docs.docs[0].data().roles).toContain('member');
   });
 
   it('400 — returns VALIDATION_ERROR for weak password', async () => {

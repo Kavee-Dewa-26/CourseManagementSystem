@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { fromZodError }                     from '@shared/errors';
 import { sendSuccess }                      from '@shared/response';
+import { ISemesterRepository }              from '../../domain/repositories/ISemesterRepository';
 import { CreateSemesterUseCase }            from '../../application/use-cases/CreateSemesterUseCase';
 import { UpdateSemesterUseCase }            from '../../application/use-cases/UpdateSemesterUseCase';
 import { DeleteSemesterUseCase }            from '../../application/use-cases/DeleteSemesterUseCase';
@@ -8,10 +9,18 @@ import { createSemesterSchema, updateSemesterSchema } from '../validators/semest
 
 export class SemesterController {
   constructor(
-    private readonly createUseCase: CreateSemesterUseCase,
-    private readonly updateUseCase: UpdateSemesterUseCase,
-    private readonly deleteUseCase: DeleteSemesterUseCase,
+    private readonly createUseCase:  CreateSemesterUseCase,
+    private readonly updateUseCase:  UpdateSemesterUseCase,
+    private readonly deleteUseCase:  DeleteSemesterUseCase,
+    private readonly semesterRepo:   ISemesterRepository,
   ) {}
+
+  listByCourse = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const semesters = await this.semesterRepo.findByCourseId(req.params.id);
+      sendSuccess(res, semesters);
+    } catch (err) { next(err); }
+  };
 
   create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {

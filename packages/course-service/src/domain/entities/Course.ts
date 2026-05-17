@@ -69,6 +69,14 @@ export class Course {
     this.updatedAt = new Date().toISOString();
   }
 
+  restore(): void {
+    if (this.state !== 'archived') {
+      throw createHttpError(409, 'INVALID_STATE', 'Only an ARCHIVED course can be restored.');
+    }
+    this.state     = 'draft';
+    this.updatedAt = new Date().toISOString();
+  }
+
   softDelete(): void {
     this.deletedAt = new Date().toISOString();
     this.updatedAt = new Date().toISOString();

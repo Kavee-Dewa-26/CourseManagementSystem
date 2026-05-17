@@ -57,6 +57,23 @@
       "collectionGroup": "courses",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "deletedAt", "order": "ASCENDING" },
+        { "fieldPath": "title",     "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "courses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "deletedAt", "order": "ASCENDING" },
+        { "fieldPath": "state",     "order": "ASCENDING" },
+        { "fieldPath": "title",     "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "courses",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "deletedAt",  "order": "ASCENDING" },
         { "fieldPath": "state",      "order": "ASCENDING" },
         { "fieldPath": "createdAt",  "order": "DESCENDING" }

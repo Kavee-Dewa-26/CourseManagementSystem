@@ -13,4 +13,6 @@ export const config = {
   serviceStorageUrl:    process.env.SERVICE_STORAGE_URL     ?? 'http://localhost:3006',
   serviceNotifyUrl:     process.env.SERVICE_NOTIFICATION_URL ?? 'http://localhost:3007',
   serviceAuditUrl:      process.env.SERVICE_AUDIT_URL       ?? 'http://localhost:3008',
+  serviceCellUrl:       process.env.SERVICE_CELL_URL        ?? 'http://localhost:3010',
+  serviceAnalyticsUrl:  process.env.SERVICE_ANALYTICS_URL   ?? 'http://localhost:3011',
 } as const;

@@ -6,3 +6,8 @@ export const listUsersSchema = z.object({
   role:   z.enum(['student', 'admin', 'super_admin']).optional(),
   status: z.enum(['pending_approval', 'approved', 'rejected', 'suspended']).optional(),
 });
+
+export const assignRoleSchema = z.object({
+  role:   z.enum(['member', 'student', 'leader', 'g12', 'admin', 'super_admin']),
+  action: z.enum(['add', 'remove']),
+});

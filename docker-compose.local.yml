@@ -1,5 +1,3 @@
-version: '3.9'
-
 # Compose override for local emulator testing.
 # Usage: docker-compose -f docker-compose.yml -f docker-compose.local.yml up --build
 #
@@ -60,6 +58,21 @@ services:
     extra_hosts: *extra-hosts
 
   audit-service:
+    environment:
+      <<: *emulator-env
+    extra_hosts: *extra-hosts
+
+  cell-service:
+    environment:
+      <<: *emulator-env
+    extra_hosts: *extra-hosts
+
+  analytics-service:
+    environment:
+      <<: *emulator-env
+    extra_hosts: *extra-hosts
+
+  scheduled-jobs:
     environment:
       <<: *emulator-env
     extra_hosts: *extra-hosts

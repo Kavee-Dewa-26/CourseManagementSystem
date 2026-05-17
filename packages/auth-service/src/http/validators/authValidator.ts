@@ -27,3 +27,13 @@ export const verifyOtpSchema = z.object({
 export const trackFailureSchema = z.object({
   email: z.string().email(),
 });
+
+export const federatedSignInSchema = z.object({
+  idToken:           z.string().min(1),
+  preferredLanguage: z.enum(['en', 'si', 'ta']).default('en'),
+});
+
+export const verifyTokenInternalSchema = z.object({
+  provider: z.enum(['google', 'apple']),
+  idToken:  z.string().min(1),
+});

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { fromZodError }                     from '@shared/errors';
 import { sendSuccess }                      from '@shared/response';
+import { ISubjectRepository }              from '../../domain/repositories/ISubjectRepository';
 import { CreateSubjectUseCase }             from '../../application/use-cases/CreateSubjectUseCase';
 import { UpdateSubjectUseCase }             from '../../application/use-cases/UpdateSubjectUseCase';
 import { DeleteSubjectUseCase }             from '../../application/use-cases/DeleteSubjectUseCase';
@@ -8,10 +9,18 @@ import { createSubjectSchema, updateSubjectSchema } from '../validators/subjectV
 
 export class SubjectController {
   constructor(
-    private readonly createUseCase: CreateSubjectUseCase,
-    private readonly updateUseCase: UpdateSubjectUseCase,
-    private readonly deleteUseCase: DeleteSubjectUseCase,
+    private readonly createUseCase:  CreateSubjectUseCase,
+    private readonly updateUseCase:  UpdateSubjectUseCase,
+    private readonly deleteUseCase:  DeleteSubjectUseCase,
+    private readonly subjectRepo:    ISubjectRepository,
   ) {}
+
+  listBySemester = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const subjects = await this.subjectRepo.findBySemesterId(req.params.id);
+      sendSuccess(res, subjects);
+    } catch (err) { next(err); }
+  };
 
   create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {

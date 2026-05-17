@@ -11,6 +11,13 @@ import { CreateEnrollmentUseCase }          from './application/use-cases/Create
 import { ApproveEnrollmentUseCase }         from './application/use-cases/ApproveEnrollmentUseCase';
 import { RejectEnrollmentUseCase }          from './application/use-cases/RejectEnrollmentUseCase';
 import { WithdrawEnrollmentUseCase }        from './application/use-cases/WithdrawEnrollmentUseCase';
+import { FirestoreRoleRequestRepository }  from './infrastructure/repositories/FirestoreRoleRequestRepository';
+import { CreateRoleRequestUseCase }        from './application/use-cases/CreateRoleRequestUseCase';
+import { ApproveRoleRequestUseCase }       from './application/use-cases/ApproveRoleRequestUseCase';
+import { RejectRoleRequestUseCase }        from './application/use-cases/RejectRoleRequestUseCase';
+import { GetRoleRequestsUseCase }          from './application/use-cases/GetRoleRequestsUseCase';
+import { GetMyRoleRequestsUseCase }        from './application/use-cases/GetMyRoleRequestsUseCase';
+import { RoleRequestController }           from './http/controllers/RoleRequestController';
 import { RegistrationController }           from './http/controllers/RegistrationController';
 import { EnrollmentController }             from './http/controllers/EnrollmentController';
 import { InternalEnrollmentController }     from './http/controllers/InternalEnrollmentController';
@@ -31,8 +38,16 @@ const approveEnroll = new ApproveEnrollmentUseCase(enrollRepo, outbox);
 const rejectEnroll  = new RejectEnrollmentUseCase(enrollRepo, outbox);
 const withdraw      = new WithdrawEnrollmentUseCase(enrollRepo, outbox);
 
+const roleRequestRepo  = new FirestoreRoleRequestRepository();
+const createRoleReq    = new CreateRoleRequestUseCase(roleRequestRepo, outbox);
+const approveRoleReq   = new ApproveRoleRequestUseCase(roleRequestRepo, userClient, outbox);
+const rejectRoleReq    = new RejectRoleRequestUseCase(roleRequestRepo, outbox);
+const listRoleReqs     = new GetRoleRequestsUseCase(roleRequestRepo);
+const myRoleReqs       = new GetMyRoleRequestsUseCase(roleRequestRepo);
+
 export const container = {
   registrationController:       new RegistrationController(regRepo, approveReg, rejectReg, bulkApprove),
   enrollmentController:         new EnrollmentController(enrollRepo, createEnroll, approveEnroll, rejectEnroll, withdraw),
   internalEnrollmentController: new InternalEnrollmentController(createReg, enrollRepo),
+  roleRequestController:        new RoleRequestController(createRoleReq, approveRoleReq, rejectRoleReq, listRoleReqs, myRoleReqs, roleRequestRepo),
 };

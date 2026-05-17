@@ -18,8 +18,23 @@ const config: Config = {
   },
   collectCoverageFrom: [
     'packages/**/src/**/*.ts',
+    // Startup files excluded from all coverage
     '!packages/**/src/index.ts',
     '!packages/**/src/server.ts',
+    // Infrastructure layer — requires Firestore emulator (integration tests only)
+    '!packages/**/src/infrastructure/repositories/**',
+    '!packages/**/src/infrastructure/clients/**',
+    '!packages/**/src/infrastructure/cache/**',
+    // HTTP layer — requires running Express server (integration tests only)
+    '!packages/**/src/http/routes/**',
+    '!packages/**/src/http/controllers/**',
+    '!packages/**/src/http/middleware/**',
+    '!packages/**/src/http/validators/**',
+    // Wiring / config files — no testable logic
+    '!packages/**/src/app.ts',
+    '!packages/**/src/container.ts',
+    '!packages/**/src/config.ts',
+    '!packages/**/src/worker.ts',
   ],
   coverageThreshold: {
     global: {

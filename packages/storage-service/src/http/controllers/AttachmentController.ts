@@ -34,6 +34,20 @@ export class AttachmentController {
     } catch (err) { next(err); }
   };
 
+  uploadImage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const file  = req.file!;
+      const image = await this.uploadUC.execute({
+        subjectId: req.params.id,
+        buffer:    file.buffer,
+        filename:  file.originalname,
+        mimeType:  file.mimetype,
+        sizeBytes: file.size,
+      });
+      sendSuccess(res, image, 201);
+    } catch (err) { next(err); }
+  };
+
   remove = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       await this.deleteUC.execute(req.params.id);

@@ -1,7 +1,6 @@
-import { RegisterUseCase }          from '../../../src/application/use-cases/RegisterUseCase';
-import { UserServiceClient }        from '../../../src/infrastructure/clients/UserServiceClient';
-import { EnrollmentServiceClient }  from '../../../src/infrastructure/clients/EnrollmentServiceClient';
-import { OutboxEventPublisher }     from '@shared/events';
+import { RegisterUseCase }      from '../../../src/application/use-cases/RegisterUseCase';
+import { UserServiceClient }   from '../../../src/infrastructure/clients/UserServiceClient';
+import { OutboxEventPublisher } from '@shared/events';
 
 const authMock = {
   createUser:          jest.fn().mockResolvedValue({ uid: 'new-uid' }),
@@ -23,9 +22,6 @@ jest.mock('firebase-admin/firestore', () => {
 const makeClient = (): jest.Mocked<UserServiceClient> =>
   ({ emailExists: jest.fn() } as unknown as jest.Mocked<UserServiceClient>);
 
-const makeEnrollClient = (): jest.Mocked<EnrollmentServiceClient> =>
-  ({ createRegistration: jest.fn().mockResolvedValue(undefined) } as unknown as jest.Mocked<EnrollmentServiceClient>);
-
 const makeOutbox = (): jest.Mocked<OutboxEventPublisher> =>
   ({ publishWithBatch: jest.fn() } as unknown as jest.Mocked<OutboxEventPublisher>);
 
@@ -35,26 +31,28 @@ const INPUT = {
 };
 
 describe('RegisterUseCase', () => {
-  let client:        jest.Mocked<UserServiceClient>;
-  let enrollClient:  jest.Mocked<EnrollmentServiceClient>;
-  let outbox:        jest.Mocked<OutboxEventPublisher>;
-  let useCase:       RegisterUseCase;
+  let client:  jest.Mocked<UserServiceClient>;
+  let outbox:  jest.Mocked<OutboxEventPublisher>;
+  let useCase: RegisterUseCase;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    client       = makeClient();
-    enrollClient = makeEnrollClient();
-    outbox       = makeOutbox();
-    useCase      = new RegisterUseCase(client, enrollClient, outbox);
+    client  = makeClient();
+    outbox  = makeOutbox();
+    useCase = new RegisterUseCase(client, outbox);
   });
 
-  it('creates user and publishes user.registered event on success', async () => {
+  it('creates active member and publishes user.registered event', async () => {
     client.emailExists.mockResolvedValue(false);
     outbox.publishWithBatch.mockResolvedValue(undefined);
 
     await useCase.execute(INPUT, 'req-1');
 
     expect(client.emailExists).toHaveBeenCalledWith(INPUT.email);
+    expect(authMock.setCustomUserClaims).toHaveBeenCalledWith(
+      'new-uid',
+      { role: 'member', roles: ['member'] },
+    );
     expect(outbox.publishWithBatch).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'user.registered' }),
       expect.anything(),

@@ -4,11 +4,13 @@ export interface CourseFindAllOptions {
   limit:   number;
   cursor?: string;
   state?:  CourseState;
+  title?:  string;
 }
 
 export interface CourseFindPublishedOptions {
   limit:   number;
   cursor?: string;
+  title?:  string;
 }
 
 export interface CourseListResult {

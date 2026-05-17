@@ -7,4 +7,8 @@ export class UserServiceClient {
   async approveUser(uid: string): Promise<void> {
     await this.http.post('/internal/users/approve', { uid });
   }
+
+  async addRole(uid: string, role: string): Promise<void> {
+    await this.http.post('/internal/users/add-role', { uid, role });
+  }
 }

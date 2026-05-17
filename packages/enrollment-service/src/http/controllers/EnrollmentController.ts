@@ -7,7 +7,7 @@ import { ApproveEnrollmentUseCase }         from '../../application/use-cases/Ap
 import { RejectEnrollmentUseCase }          from '../../application/use-cases/RejectEnrollmentUseCase';
 import { WithdrawEnrollmentUseCase }        from '../../application/use-cases/WithdrawEnrollmentUseCase';
 import { IEnrollmentRepository }           from '../../domain/repositories/IEnrollmentRepository';
-import { rejectSchema, listSchema }         from '../validators/enrollmentValidator';
+import { rejectSchema, listSchema, enrollV2Schema } from '../validators/enrollmentValidator';
 
 export class EnrollmentController {
   constructor(
@@ -18,11 +18,24 @@ export class EnrollmentController {
     private readonly withdrawUC:  WithdrawEnrollmentUseCase,
   ) {}
 
+  // V1: POST /courses/:id/enroll  (courseId from URL param)
   enroll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { uid }   = (req as AuthenticatedRequest).principal;
       const requestId = (req.headers['x-request-id'] as string) ?? '';
       const enrollment = await this.createUC.execute(uid, req.params.id, requestId);
+      sendSuccess(res, enrollment, 201);
+    } catch (err) { next(err); }
+  };
+
+  // V2: POST /enrollments  {courseId, batchId}  (courseId from body)
+  enrollV2 = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = enrollV2Schema.safeParse(req.body);
+      if (!parsed.success) return next(fromZodError(parsed.error));
+      const { uid }   = (req as AuthenticatedRequest).principal;
+      const requestId = (req.headers['x-request-id'] as string) ?? '';
+      const enrollment = await this.createUC.execute(uid, parsed.data.courseId, requestId);
       sendSuccess(res, enrollment, 201);
     } catch (err) { next(err); }
   };

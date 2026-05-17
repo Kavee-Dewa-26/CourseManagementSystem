@@ -1,9 +1,8 @@
-import { getAuth }                 from 'firebase-admin/auth';
-import { getFirestore }            from 'firebase-admin/firestore';
-import { createHttpError }         from '@shared/errors';
-import { OutboxEventPublisher }    from '@shared/events';
-import { UserServiceClient }       from '../../infrastructure/clients/UserServiceClient';
-import { EnrollmentServiceClient } from '../../infrastructure/clients/EnrollmentServiceClient';
+import { getAuth }              from 'firebase-admin/auth';
+import { getFirestore }        from 'firebase-admin/firestore';
+import { createHttpError }     from '@shared/errors';
+import { OutboxEventPublisher } from '@shared/events';
+import { UserServiceClient }   from '../../infrastructure/clients/UserServiceClient';
 
 export interface RegisterInput {
   firstName: string;
@@ -14,9 +13,8 @@ export interface RegisterInput {
 
 export class RegisterUseCase {
   constructor(
-    private readonly userClient:       UserServiceClient,
-    private readonly enrollmentClient: EnrollmentServiceClient,
-    private readonly outbox:           OutboxEventPublisher,
+    private readonly userClient: UserServiceClient,
+    private readonly outbox:     OutboxEventPublisher,
   ) {}
 
   async execute(input: RegisterInput, requestId: string): Promise<void> {
@@ -30,39 +28,34 @@ export class RegisterUseCase {
     });
 
     try {
-      await getAuth().setCustomUserClaims(record.uid, { role: 'student', roles: ['student'] });
+      // V2: new users are active Members immediately — no approval queue
+      await getAuth().setCustomUserClaims(record.uid, { role: 'member', roles: ['member'] });
 
-      const now  = new Date().toISOString();
-      const db   = getFirestore();
+      const now   = new Date().toISOString();
+      const db    = getFirestore();
       const batch = db.batch();
 
       batch.set(db.collection('users').doc(record.uid), {
-        email:           input.email,
-        firstName:       input.firstName,
-        lastName:        input.lastName,
-        role:            'student',
-        roles:           ['student'],
-        status:          'pending_approval',
-        profilePhotoUrl: null,
-        createdAt:       now,
-        updatedAt:       now,
-        deletedAt:       null,
+        email:             input.email,
+        firstName:         input.firstName,
+        lastName:          input.lastName,
+        role:              'member',
+        roles:             ['member'],
+        status:            'approved',
+        profilePhotoUrl:   null,
+        preferredLanguage: 'en',
+        createdAt:         now,
+        updatedAt:         now,
+        deletedAt:         null,
       });
 
       await this.outbox.publishWithBatch({
-        type:      'user.registered',
-        payload:   { uid: record.uid, email: input.email, firstName: input.firstName, lastName: input.lastName },
+        type:    'user.registered',
+        payload: { uid: record.uid, email: input.email, firstName: input.firstName, lastName: input.lastName },
         requestId,
       }, batch);
 
       await batch.commit();
-
-      await this.enrollmentClient.createRegistration({
-        studentUid: record.uid,
-        email:      input.email,
-        firstName:  input.firstName,
-        lastName:   input.lastName,
-      });
     } catch (err) {
       await getAuth().deleteUser(record.uid).catch(() => undefined);
       throw err;

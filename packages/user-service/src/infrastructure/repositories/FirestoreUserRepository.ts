@@ -1,21 +1,25 @@
 import { getFirestore }                                   from 'firebase-admin/firestore';
-import { User, UserRole, UserProps }                      from '../../domain/entities/User';
+import { User, UserRole, UserProps, NotificationPreferences } from '../../domain/entities/User';
 import { IUserRepository, FindAllOptions, FindAllResult } from '../../domain/repositories/IUserRepository';
 
 function toUser(id: string, data: FirebaseFirestore.DocumentData): User {
   const role = data.role as UserRole;
   return new User({
-    uid:             id,
-    email:           data.email as string,
-    firstName:       data.firstName as string,
-    lastName:        data.lastName as string,
+    uid:               id,
+    email:             data.email as string,
+    firstName:         data.firstName as string,
+    lastName:          data.lastName as string,
     role,
-    roles:           (data.roles as UserRole[] | undefined) ?? [role],
-    status:          data.status as UserProps['status'],
-    profilePhotoUrl: (data.profilePhotoUrl as string | null) ?? null,
-    createdAt:       data.createdAt as string,
-    updatedAt:       data.updatedAt as string,
-    deletedAt:       (data.deletedAt as string | null) ?? null,
+    roles:             (data.roles as UserRole[] | undefined) ?? [role],
+    status:            data.status as UserProps['status'],
+    profilePhotoUrl:   (data.profilePhotoUrl as string | null) ?? null,
+    preferredLanguage: (data.preferredLanguage as string | undefined) ?? 'en',
+    fcmTokens:                (data.fcmTokens as string[] | undefined) ?? [],
+    notificationPreferences:  (data.notificationPreferences as NotificationPreferences | undefined) ?? { email: true, push: true },
+    providers:                (data.providers as string[] | undefined) ?? ['password'],
+    createdAt:                data.createdAt as string,
+    updatedAt:         data.updatedAt as string,
+    deletedAt:         (data.deletedAt as string | null) ?? null,
   });
 }
 

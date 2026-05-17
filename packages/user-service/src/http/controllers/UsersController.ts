@@ -3,9 +3,13 @@ import { fromZodError }                    from '@shared/errors';
 import { sendSuccess, sendPaginated }      from '@shared/response';
 import { GetUsersUseCase }                 from '../../application/use-cases/GetUsersUseCase';
 import { GetUserByIdUseCase }              from '../../application/use-cases/GetUserByIdUseCase';
-import { SuspendUserUseCase }              from '../../application/use-cases/SuspendUserUseCase';
-import { ReactivateUserUseCase }           from '../../application/use-cases/ReactivateUserUseCase';
-import { listUsersSchema }                 from '../validators/userValidator';
+import { SuspendUserUseCase }             from '../../application/use-cases/SuspendUserUseCase';
+import { ReactivateUserUseCase }          from '../../application/use-cases/ReactivateUserUseCase';
+import { AddRoleUseCase }                 from '../../application/use-cases/AddRoleUseCase';
+import { RemoveRoleUseCase }              from '../../application/use-cases/RemoveRoleUseCase';
+import { listUsersSchema, assignRoleSchema } from '../validators/userValidator';
+import { TtlCache }                       from '../../infrastructure/cache/TtlCache';
+import { FindAllResult }                  from '../../domain/repositories/IUserRepository';
 
 export class UsersController {
   constructor(
@@ -13,14 +17,23 @@ export class UsersController {
     private readonly getUserByIdUseCase:  GetUserByIdUseCase,
     private readonly suspendUserUseCase:  SuspendUserUseCase,
     private readonly reactivateUseCase:   ReactivateUserUseCase,
+    private readonly addRoleUseCase:      AddRoleUseCase,
+    private readonly removeRoleUseCase:   RemoveRoleUseCase,
   ) {}
+
+  private static readonly listCache = new TtlCache<FindAllResult>(30_000);
 
   list = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const parsed = listUsersSchema.safeParse(req.query);
       if (!parsed.success) return next(fromZodError(parsed.error));
 
+      const cacheKey = JSON.stringify(parsed.data);
+      const cached   = UsersController.listCache.get(cacheKey);
+      if (cached) return sendPaginated(res, cached.items, cached.nextCursor, cached.total);
+
       const result = await this.getUsersUseCase.execute(parsed.data);
+      UsersController.listCache.set(cacheKey, result);
       sendPaginated(res, result.items, result.nextCursor, result.total);
     } catch (err) { next(err); }
   };
@@ -44,6 +57,20 @@ export class UsersController {
     try {
       const user = await this.reactivateUseCase.execute(req.params.uid);
       sendSuccess(res, user);
+    } catch (err) { next(err); }
+  };
+
+  assignRole = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = assignRoleSchema.safeParse(req.body);
+      if (!parsed.success) return next(fromZodError(parsed.error));
+
+      if (parsed.data.action === 'add') {
+        await this.addRoleUseCase.execute(req.params.uid, parsed.data.role);
+      } else {
+        await this.removeRoleUseCase.execute(req.params.uid, parsed.data.role);
+      }
+      res.status(204).send();
     } catch (err) { next(err); }
   };
 }

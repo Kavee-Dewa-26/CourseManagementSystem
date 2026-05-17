@@ -1,11 +1,24 @@
-import { getFirestore }        from 'firebase-admin/firestore';
+import { getFirestore }            from 'firebase-admin/firestore';
 import { Semester, SemesterProps } from '../../domain/entities/Semester';
-import { ISemesterRepository } from '../../domain/repositories/ISemesterRepository';
+import { ISemesterRepository }     from '../../domain/repositories/ISemesterRepository';
 
 type SemesterDoc = Omit<SemesterProps, 'id'>;
 
-function toEntity(id: string, data: SemesterDoc): Semester {
-  return new Semester({ ...data, id });
+function toEntity(id: string, raw: FirebaseFirestore.DocumentData): Semester {
+  const data = raw as Record<string, unknown>;
+  return new Semester({
+    id,
+    courseId:     data.courseId     as string,
+    title:        data.title        as string,
+    subjectCount: data.subjectCount as number,
+    order:        data.order        as number,
+    openDate:     (data.openDate  as string | null | undefined) ?? null,
+    endDate:      (data.endDate   as string | null | undefined) ?? null,
+    status:       (data.status    as 'active' | 'disabled' | undefined) ?? 'active',
+    deletedAt:    (data.deletedAt as string | null | undefined) ?? null,
+    createdAt:    data.createdAt  as string,
+    updatedAt:    data.updatedAt  as string,
+  });
 }
 
 export class FirestoreSemesterRepository implements ISemesterRepository {
@@ -25,7 +38,7 @@ export class FirestoreSemesterRepository implements ISemesterRepository {
       .where('deletedAt', '==', null)
       .orderBy('order', 'asc')
       .get();
-    return snap.docs.map(d => toEntity(d.id, d.data() as SemesterDoc));
+    return snap.docs.map(d => toEntity(d.id, d.data()));
   }
 
   async create(semester: Semester): Promise<void> {

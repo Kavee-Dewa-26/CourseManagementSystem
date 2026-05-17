@@ -3,10 +3,11 @@ import { IUserRepository } from '../../domain/repositories/IUserRepository';
 import { User }            from '../../domain/entities/User';
 
 export interface UpdateProfileInput {
-  uid:             string;
-  firstName?:      string;
-  lastName?:       string;
-  profilePhotoUrl?: string | null;
+  uid:               string;
+  firstName?:        string;
+  lastName?:         string;
+  profilePhotoUrl?:  string | null;
+  preferredLanguage?: string;
 }
 
 export class UpdateProfileUseCase {
@@ -17,9 +18,10 @@ export class UpdateProfileUseCase {
     if (!user) throw createHttpError(404, 'USER_NOT_FOUND', 'User not found.');
 
     user.updateProfile({
-      firstName:       input.firstName,
-      lastName:        input.lastName,
-      profilePhotoUrl: input.profilePhotoUrl,
+      firstName:         input.firstName,
+      lastName:          input.lastName,
+      profilePhotoUrl:   input.profilePhotoUrl,
+      preferredLanguage: input.preferredLanguage,
     });
 
     await this.userRepo.update(user);

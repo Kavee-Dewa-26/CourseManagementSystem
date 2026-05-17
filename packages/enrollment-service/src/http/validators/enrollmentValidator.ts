@@ -15,6 +15,12 @@ export const listSchema = z.object({
   courseId: z.string().optional(),
 });
 
+// V2: POST /enrollments {courseId, batchId}
+export const enrollV2Schema = z.object({
+  courseId: z.string().min(1),
+  batchId:  z.string().optional(), // optional until batch-keyed enrollment is fully wired
+});
+
 export const internalCreateRegistrationSchema = z.object({
   studentUid: z.string().min(1),
   email:      z.string().email(),

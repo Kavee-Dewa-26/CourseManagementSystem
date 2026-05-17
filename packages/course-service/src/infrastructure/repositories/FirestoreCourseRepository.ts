@@ -56,15 +56,27 @@ export class FirestoreCourseRepository implements ICourseRepository {
       .where('state',     '==', 'published')
       .where('deletedAt', '==', null);
 
-    const total = (await q.count().get()).data().count;
-
-    q = q.orderBy('publishedAt', 'desc').limit(opts.limit);
-    if (opts.cursor) {
-      const cursorSnap = await this.col.doc(opts.cursor).get();
-      if (cursorSnap.exists) q = q.startAfter(cursorSnap);
+    if (opts.title) {
+      q = q.where('title', '>=', opts.title).where('title', '<=', opts.title + '');
+      const total = (await q.count().get()).data().count;
+      let paged   = q.orderBy('title').limit(opts.limit);
+      if (opts.cursor) {
+        const cs = await this.col.doc(opts.cursor).get();
+        if (cs.exists) paged = paged.startAfter(cs);
+      }
+      const snap  = await paged.get();
+      const items = snap.docs.map(d => toEntity(d.id, d.data() as CourseDoc));
+      const last  = snap.docs[snap.docs.length - 1];
+      return { items, nextCursor: snap.docs.length === opts.limit && last ? last.id : null, total };
     }
 
-    const snap  = await q.get();
+    const total = (await q.count().get()).data().count;
+    let paged   = q.orderBy('publishedAt', 'desc').limit(opts.limit);
+    if (opts.cursor) {
+      const cs = await this.col.doc(opts.cursor).get();
+      if (cs.exists) paged = paged.startAfter(cs);
+    }
+    const snap  = await paged.get();
     const items = snap.docs.map(d => toEntity(d.id, d.data() as CourseDoc));
     const last  = snap.docs[snap.docs.length - 1];
     return { items, nextCursor: snap.docs.length === opts.limit && last ? last.id : null, total };
@@ -74,15 +86,27 @@ export class FirestoreCourseRepository implements ICourseRepository {
     let q: FirebaseFirestore.Query = this.col.where('deletedAt', '==', null);
     if (opts.state) q = q.where('state', '==', opts.state);
 
-    const total = (await q.count().get()).data().count;
-
-    q = q.orderBy('createdAt', 'desc').limit(opts.limit);
-    if (opts.cursor) {
-      const cursorSnap = await this.col.doc(opts.cursor).get();
-      if (cursorSnap.exists) q = q.startAfter(cursorSnap);
+    if (opts.title) {
+      q = q.where('title', '>=', opts.title).where('title', '<=', opts.title + '');
+      const total = (await q.count().get()).data().count;
+      let paged   = q.orderBy('title').limit(opts.limit);
+      if (opts.cursor) {
+        const cs = await this.col.doc(opts.cursor).get();
+        if (cs.exists) paged = paged.startAfter(cs);
+      }
+      const snap  = await paged.get();
+      const items = snap.docs.map(d => toEntity(d.id, d.data() as CourseDoc));
+      const last  = snap.docs[snap.docs.length - 1];
+      return { items, nextCursor: snap.docs.length === opts.limit && last ? last.id : null, total };
     }
 
-    const snap  = await q.get();
+    const total = (await q.count().get()).data().count;
+    let paged   = q.orderBy('createdAt', 'desc').limit(opts.limit);
+    if (opts.cursor) {
+      const cs = await this.col.doc(opts.cursor).get();
+      if (cs.exists) paged = paged.startAfter(cs);
+    }
+    const snap  = await paged.get();
     const items = snap.docs.map(d => toEntity(d.id, d.data() as CourseDoc));
     const last  = snap.docs[snap.docs.length - 1];
     return { items, nextCursor: snap.docs.length === opts.limit && last ? last.id : null, total };

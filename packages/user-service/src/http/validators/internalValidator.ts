@@ -7,3 +7,8 @@ export const checkEmailSchema = z.object({
 export const approveUserSchema = z.object({
   uid: z.string().min(1),
 });
+
+export const addRoleSchema = z.object({
+  uid:  z.string().min(1),
+  role: z.enum(['member', 'student', 'leader', 'g12', 'admin', 'super_admin']),
+});

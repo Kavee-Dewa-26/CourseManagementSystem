@@ -5,8 +5,10 @@ import { ISemesterRepository }   from '../../domain/repositories/ISemesterReposi
 import { Semester }              from '../../domain/entities/Semester';
 
 export interface CreateSemesterInput {
-  courseId: string;
-  title:    string;
+  courseId:  string;
+  title:     string;
+  openDate?: string | null;
+  endDate?:  string | null;
 }
 
 export class CreateSemesterUseCase {
@@ -27,6 +29,9 @@ export class CreateSemesterUseCase {
       title:        input.title,
       subjectCount: 0,
       order:        existing.length + 1,
+      openDate:     input.openDate  ?? null,
+      endDate:      input.endDate   ?? null,
+      status:       'active',
       deletedAt:    null,
       createdAt:    now,
       updatedAt:    now,

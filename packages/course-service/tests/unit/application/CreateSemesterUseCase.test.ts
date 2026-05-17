@@ -4,7 +4,7 @@ import { ISemesterRepository }  from '../../../src/domain/repositories/ISemester
 import { Course }               from '../../../src/domain/entities/Course';
 
 const makeCourse = (): Course =>
-  new Course({ id: 'c1', title: 'T', state: 'draft', createdBy: 'u1', semesterCount: 0, publishedAt: null, deletedAt: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' });
+  new Course({ id: 'c1', title: 'T', description: '', coverImageUrl: null, state: 'draft', createdBy: 'u1', semesterCount: 0, publishedAt: null, deletedAt: null, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' });
 
 const makeCourseRepo = (): jest.Mocked<ICourseRepository> =>
   ({ findById: jest.fn(), findByTitle: jest.fn(), findPublished: jest.fn(), findAll: jest.fn(), create: jest.fn(), update: jest.fn(), softDelete: jest.fn() });

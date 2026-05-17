@@ -2,15 +2,17 @@ import { Request, Response, NextFunction } from 'express';
 import { fromZodError }                    from '@shared/errors';
 import { sendSuccess }                     from '@shared/response';
 import { CheckEmailExistsUseCase }         from '../../application/use-cases/CheckEmailExistsUseCase';
+import { AddRoleUseCase }                  from '../../application/use-cases/AddRoleUseCase';
 import { ApproveUserUseCase }              from '../../application/use-cases/ApproveUserUseCase';
 import { GetUsersUseCase }                 from '../../application/use-cases/GetUsersUseCase';
-import { checkEmailSchema, approveUserSchema } from '../validators/internalValidator';
+import { checkEmailSchema, approveUserSchema, addRoleSchema } from '../validators/internalValidator';
 
 export class InternalController {
   constructor(
     private readonly checkEmail:  CheckEmailExistsUseCase,
     private readonly approveUser: ApproveUserUseCase,
     private readonly getUsers:    GetUsersUseCase,
+    private readonly addRoleUseCase: AddRoleUseCase,
   ) {}
 
   exists = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -37,6 +39,16 @@ export class InternalController {
     try {
       const result = await this.getUsers.execute({ limit: 100, role: 'admin' });
       sendSuccess(res, { uids: result.items.map(u => u.uid) });
+    } catch (err) { next(err); }
+  };
+
+  addRole = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = addRoleSchema.safeParse(req.body);
+      if (!parsed.success) return next(fromZodError(parsed.error));
+
+      await this.addRoleUseCase.execute(parsed.data.uid, parsed.data.role);
+      res.status(204).send();
     } catch (err) { next(err); }
   };
 }

@@ -10,4 +10,7 @@ export const config = {
   smtpPort:           Number(process.env.SMTP_PORT ?? 587),
   smtpUser:           process.env.SMTP_USER  ?? '',
   smtpPass:           process.env.SMTP_PASS  ?? '',
+  // Federated OAuth — set these in .env for production
+  googleClientId:     process.env.GOOGLE_CLIENT_ID ?? '',
+  appleClientId:      process.env.APPLE_CLIENT_ID  ?? '',
 } as const;

@@ -1,9 +1,9 @@
 # CMP — API Reference Document
 ## Course Management Portal · `slp-backend`
-### REST API · Version 1.2.0 · Base URL: `https://api.yourdomain.com/api/v1`
+### REST API · Version 1.3.0 · Base URL: `https://api.yourdomain.com/api/v1`
 
-**Version:** 1.2.0
-**Date:** 2026-05-13
+**Version:** 1.3.0
+**Date:** 2026-05-16
 **Organisation:** Future CX Lanka (Pvt) Ltd
 **Status:** Release Baseline
 
@@ -30,6 +30,7 @@
    - 3.1 [Get Own Profile](#31-get-me)
    - 3.2 [Update Own Profile](#32-patch-me)
    - 3.3 [Change Password](#33-post-mechange-password)
+   - 3.4 [Upload Profile Photo](#34-post-meavatar)
 4. [Course Endpoints](#4-course-endpoints)
    - 4.1 [List Courses](#41-get-courses)
    - 4.2 [Get Course by ID](#42-get-coursesid)
@@ -39,6 +40,7 @@
    - 4.6 [Unpublish Course (Admin)](#46-post-coursesidunpublish)
    - 4.7 [Archive Course (Admin)](#47-post-coursesidarchive)
    - 4.8 [Delete Course (Admin)](#48-delete-coursesid)
+   - 4.9 [Restore Course (Admin)](#49-post-coursesidrestore)
 5. [Semester Endpoints](#5-semester-endpoints)
    - 5.1 [Create Semester](#51-post-coursesidsemesters)
    - 5.2 [Update Semester](#52-patch-semestersid)
@@ -609,6 +611,53 @@ Initiate a server-side password change for the authenticated user. The current p
 
 ---
 
+### 3.4 `POST /me/avatar`
+
+Upload or replace the authenticated user's profile photo. The file replaces any previously uploaded photo at the same storage path.
+
+**Authentication:** Bearer token required
+**Roles:** `student`, `admin`, `super_admin`
+**Content-Type:** `multipart/form-data`
+
+#### Request
+
+| Field | Type | Required | Validation |
+|-------|------|:--------:|-----------|
+| `photo` | `file` | Yes | `image/jpeg` or `image/png` only · max **2 MB** |
+
+```
+POST /me/avatar
+Content-Type: multipart/form-data; boundary=----FormBoundary
+
+------FormBoundary
+Content-Disposition: form-data; name="photo"; filename="avatar.png"
+Content-Type: image/png
+
+<binary file data>
+------FormBoundary--
+```
+
+#### Responses
+
+**`200 OK`** — Updated user object with the new `profilePhotoUrl` (same shape as `GET /me`)
+
+**`400 Bad Request`** — No file provided
+```json
+{ "error": { "code": "VALIDATION_ERROR", "message": "No photo provided." }, "requestId": "..." }
+```
+
+**`413 Payload Too Large`** — File exceeds 2 MB
+```json
+{ "error": { "code": "FILE_TOO_LARGE", "message": "Profile photo must be under 2 MB." }, "requestId": "..." }
+```
+
+**`415 Unsupported Media Type`** — File is not JPEG or PNG
+```json
+{ "error": { "code": "UNSUPPORTED_MEDIA_TYPE", "message": "Only JPEG and PNG images are allowed." }, "requestId": "..." }
+```
+
+---
+
 ## 4. Course Endpoints
 
 ---
@@ -627,6 +676,7 @@ List courses. Returns only `published` courses for unauthenticated requests and 
 | `limit` | `number` | `20` | Items per page (max 100) |
 | `cursor` | `string` | — | Pagination cursor |
 | `state` | `string` | — | Filter by state: `draft`, `published`, `archived` — **admin/super_admin only**; ignored for public/student requests |
+| `title` | `string` | — | Prefix search on course title (case-sensitive, max 200 chars). When present, results are ordered alphabetically by `title` instead of `createdAt`. |
 
 #### Responses
 
@@ -933,6 +983,37 @@ Soft-delete a course. Sets `deletedAt` timestamp; the document is recoverable fo
 **`204 No Content`** — Deleted successfully (empty body)
 
 **`404 Not Found`** — Course does not exist
+
+---
+
+### 4.9 `POST /courses/:id/restore`
+
+Restore an `archived` course back to `draft` state. The course must be reviewed and re-published by an admin before it becomes visible to students again.
+
+**Authentication:** Bearer token required
+**Roles:** `admin`, `super_admin`
+
+#### Path Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `id` | Course document ID |
+
+#### Responses
+
+**`200 OK`** — Updated Course object with `state: "draft"` (plain Course object, no `semesters` array)
+
+**`404 Not Found`** — Course does not exist
+
+**`409 Conflict`** — Course is not in `archived` state
+```json
+{
+  "error": { "code": "INVALID_STATE", "message": "Only an ARCHIVED course can be restored." },
+  "requestId": "..."
+}
+```
+
+> After restoring, the course is in `draft` and its full semester/subject tree is intact. Use `POST /courses/:id/publish` when ready to make it public again.
 
 ---
 

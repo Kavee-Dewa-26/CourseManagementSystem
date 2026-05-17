@@ -108,4 +108,110 @@ describe('User entity', () => {
       expect(user.isDeleted()).toBe(true);
     });
   });
+
+  // ── V2 Phase 1 tests ───────────────────────────────────────────────────────
+
+  describe('preferredLanguage', () => {
+    it('defaults to "en" when not provided', () => {
+      const user = makeUser();
+      expect(user.preferredLanguage).toBe('en');
+    });
+
+    it('stores provided preferredLanguage', () => {
+      const user = makeUser({ preferredLanguage: 'si' });
+      expect(user.preferredLanguage).toBe('si');
+    });
+
+    it('updateProfile() can change preferredLanguage', () => {
+      const user = makeUser({ preferredLanguage: 'en' });
+      user.updateProfile({ preferredLanguage: 'ta' });
+      expect(user.preferredLanguage).toBe('ta');
+    });
+
+    it('updateProfile() leaves preferredLanguage unchanged when not provided', () => {
+      const user = makeUser({ preferredLanguage: 'si' });
+      user.updateProfile({ firstName: 'New' });
+      expect(user.preferredLanguage).toBe('si');
+    });
+  });
+
+  describe('addRole() — V2 additive roles', () => {
+    it('adds a new role to the roles array', () => {
+      const user = makeUser({ role: 'member', roles: ['member'] });
+      user.addRole('student');
+      expect(user.roles).toEqual(['member', 'student']);
+    });
+
+    it('does not add duplicate role', () => {
+      const user = makeUser({ role: 'member', roles: ['member', 'student'] });
+      user.addRole('student');
+      expect(user.roles).toEqual(['member', 'student']);
+    });
+
+    it('updates updatedAt when role is added', () => {
+      const user  = makeUser({ role: 'member', roles: ['member'] });
+      const before = user.updatedAt;
+      user.addRole('student');
+      expect(user.updatedAt).not.toBe(before);
+    });
+
+    it('does not update updatedAt when role already exists', () => {
+      const user   = makeUser({ role: 'member', roles: ['member'] });
+      const before = user.updatedAt;
+      user.addRole('member'); // already present
+      expect(user.updatedAt).toBe(before);
+    });
+
+    it('can hold multiple roles simultaneously', () => {
+      const user = makeUser({ role: 'member', roles: ['member'] });
+      user.addRole('student');
+      user.addRole('leader');
+      expect(user.roles).toContain('member');
+      expect(user.roles).toContain('student');
+      expect(user.roles).toContain('leader');
+    });
+  });
+
+  describe('removeRole() — V2 role removal', () => {
+    it('removes a role from the roles array', () => {
+      const user = makeUser({ role: 'member', roles: ['member', 'student'] });
+      user.removeRole('student');
+      expect(user.roles).toEqual(['member']);
+    });
+
+    it('NEVER removes the member role', () => {
+      const user = makeUser({ role: 'member', roles: ['member', 'student'] });
+      user.removeRole('member');
+      expect(user.roles).toContain('member');
+    });
+
+    it('updates updatedAt when role is removed', () => {
+      const user   = makeUser({ role: 'member', roles: ['member', 'student'] });
+      const before = user.updatedAt;
+      user.removeRole('student');
+      expect(user.updatedAt).not.toBe(before);
+    });
+
+    it('removes leader role safely', () => {
+      const user = makeUser({ role: 'member', roles: ['member', 'student', 'leader'] });
+      user.removeRole('leader');
+      expect(user.roles).toEqual(['member', 'student']);
+    });
+  });
+
+  describe('V2 registration — member defaults', () => {
+    it('new member has roles:["member"] and status:approved', () => {
+      const user = makeUser({ role: 'member', roles: ['member'], status: 'approved' });
+      expect(user.roles).toEqual(['member']);
+      expect(user.status).toBe('approved');
+    });
+
+    it('member can be promoted by adding student role', () => {
+      const user = makeUser({ role: 'member', roles: ['member'], status: 'approved' });
+      user.addRole('student');
+      expect(user.roles).toContain('member');
+      expect(user.roles).toContain('student');
+      expect(user.roles).toHaveLength(2);
+    });
+  });
 });
