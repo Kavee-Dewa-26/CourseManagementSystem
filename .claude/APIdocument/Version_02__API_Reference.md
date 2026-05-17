@@ -1,9 +1,9 @@
 # TCCR — API Reference Document
 ## The Christian Center Rathmalana · `tccr-backend`
-### REST API · Version 2.2.0 · Base URL: `https://api.tccr.lk/api/v1`
+### REST API · Version 2.3.0 · Base URL: `https://api.tccr.lk/api/v1`
 
-**Version:** 2.2.0
-**Date:** 16 May 2026
+**Version:** 2.3.0
+**Date:** 17 May 2026
 **Organisation:** Future CX Lanka (Pvt) Ltd
 **Status:** Release Baseline
 **Supersedes:** CMP API Reference v1.2.0 (13 May 2026)
@@ -15,9 +15,14 @@
 1. [Getting Started](#1-getting-started)
 2. [Auth Endpoints](#2-auth-endpoints)
 3. [Profile Endpoints (Me)](#3-profile-endpoints-me)
+   - 3.1 [Get Profile](#31-get-me) · 3.2 [Update Profile](#32-patch-me) · 3.3 [Change Password](#33-post-mechange-password)
+   - 3.4 [Upload Avatar](#34-post-meavatar) · 3.5 [Link Provider](#35-post-meproviders-link) · 3.6 [Unlink Provider](#36-delete-meproviders-provider)
+   - 3.7 [Register FCM Token](#37-post-mefcm-token) · 3.8 [Deregister FCM Token](#38-delete-mefcm-token) · 3.9 [Notification Preferences](#39-patch-menotificationspreferences)
 4. [User Management — Admin](#4-user-management--admin)
 5. [Role Requests — NEW V2](#5-role-requests--new-v2)
 6. [Course Endpoints](#6-course-endpoints)
+   - 6.1–6.7 [List/Get/Create/Update/Publish/Unpublish/Archive](#61-get-courses)
+   - 6.8 [Restore Course](#68-post-coursesidrestore) · 6.9 [Delete Course](#69-delete-coursesid)
 7. [Batch Endpoints — NEW V2](#7-batch-endpoints--new-v2)
    - 7.1 [List Batches](#71-get-coursesidbatches)
    - 7.2 [Create Batch](#72-post-coursesidbatches)
@@ -384,7 +389,27 @@ Change password. Verified via Firebase Identity Toolkit.
 
 ---
 
-### 3.4 `POST /me/providers/link` — NEW V2
+### 3.4 `POST /me/avatar`
+
+Upload or replace the authenticated user's profile photo. Stored under `avatars/{uid}.{ext}` in Firebase Storage; the resulting public URL is saved as `profilePhotoUrl` on the user document.
+
+**Authentication:** Bearer required | **Roles:** Any
+**Content-Type:** `multipart/form-data`
+
+| Field | Type | Required | Validation |
+|-------|------|:--------:|-----------|
+| `photo` | file | Yes | `image/jpeg` or `image/png` · max **2 MB** |
+
+**`200 OK`**
+```json
+{ "profilePhotoUrl": "https://storage.googleapis.com/bucket/avatars/uid.jpg" }
+```
+
+**`400 Bad Request`** → `VALIDATION_ERROR` (wrong MIME type or file too large)
+
+---
+
+### 3.5 `POST /me/providers/link` — NEW V2
 
 Link a Google or Apple identity to the account (FR-AUTH-010).
 
@@ -398,7 +423,7 @@ Link a Google or Apple identity to the account (FR-AUTH-010).
 
 ---
 
-### 3.5 `DELETE /me/providers/:provider` — NEW V2
+### 3.6 `DELETE /me/providers/:provider` — NEW V2
 
 Unlink a federated provider. Cannot remove the only remaining sign-in method (FR-AUTH-010).
 `:provider` — `google` or `apple`
@@ -411,7 +436,7 @@ Unlink a federated provider. Cannot remove the only remaining sign-in method (FR
 
 ---
 
-### 3.6 `POST /me/fcm-token` — NEW V2
+### 3.7 `POST /me/fcm-token` — NEW V2
 
 Register/refresh an FCM push token. Call after every login and on token rotation (SRS §8.1.1).
 
@@ -425,7 +450,7 @@ Register/refresh an FCM push token. Call after every login and on token rotation
 
 ---
 
-### 3.7 `DELETE /me/fcm-token` — NEW V2
+### 3.8 `DELETE /me/fcm-token` — NEW V2
 
 Remove FCM token on logout or invalidation.
 
@@ -439,7 +464,7 @@ Remove FCM token on logout or invalidation.
 
 ---
 
-### 3.8 `PATCH /me/notifications/preferences` — NEW V2
+### 3.9 `PATCH /me/notifications/preferences` — NEW V2
 
 Update per-channel notification opt-out (FR-NOT-006). Essential notifications always delivered in-app regardless.
 
@@ -828,7 +853,24 @@ Archive a published course. Cannot archive if active enrollments exist (FR-CRS-0
 
 ---
 
-### 6.8 `DELETE /courses/:id`
+### 6.8 `POST /courses/:id/restore`
+
+Restore an `archived` course back to `draft`. The course must be re-published before it is visible to students again.
+
+**Authentication:** Bearer required | **Roles:** `admin`, `super_admin`
+
+**`200 OK`** — Course object with `state: "draft"` (full semester/subject tree intact)
+
+**`404 Not Found`** — Course does not exist
+
+**`409 Conflict`** → `INVALID_STATE`
+```json
+{ "error": { "code": "INVALID_STATE", "message": "Only an ARCHIVED course can be restored." }, "requestId": "..." }
+```
+
+---
+
+### 6.9 `DELETE /courses/:id`
 
 Soft-delete. Sets `deletedAt`; recoverable 30 days.
 
