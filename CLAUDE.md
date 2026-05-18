@@ -18,7 +18,7 @@ Node.js 20 · TypeScript 5 · Express 4 · Microservice Architecture · Firebase
 ## Commands
 
 ```bash
-# Full local dev startup (all 10 services — connects to online Firebase)
+# V1 core dev startup (gateway + 9 services + outbox-worker; V2 services excluded — use docker-compose for full stack)
 bash scripts/start.sh
 
 # Install all workspace dependencies
@@ -54,7 +54,7 @@ npm run test:e2e
 # Run a single test file
 npx jest packages/progress-service/tests/unit/application/ComputeCourseProgressUseCase.test.ts
 
-# Start all services in watch mode without Docker (connects to online Firebase)
+# Alias for bash scripts/start.sh — starts V1 core services only (same as above)
 npm run dev:all
 
 # Start all services locally via Docker (connects to online Firebase)
@@ -94,6 +94,8 @@ node scripts/migrations/001-backfill-roles-array.js        # role: string → ro
 node scripts/migrations/002-backfill-firebase-claims.js    # Firebase custom claims → {roles[], preferredLanguage}
 node scripts/migrations/003-backfill-notifications-locale.js  # set localeRendered='en' on existing notifications
 node scripts/migrations/004-verify-migration.js            # validate migration results
+node scripts/migrations/005-legacy-batches.js              # create 'Legacy' batch per course; backfill enrollments.batchId
+node scripts/migrations/006-semester-dates.js              # set openDate=createdAt, endDate=null on semesters missing openDate
 
 # Live API tests — verify V2 registration behaviour (requires running services)
 node scripts/test-phase1-apis.js
@@ -445,10 +447,10 @@ The `User` domain entity (`packages/user-service/src/domain/entities/User.ts`) g
 - `roles: UserRole[]` — mutable array replacing the immutable V1 `role` scalar for authorization logic.
 - `preferredLanguage: string` — defaults to `'en'`; valid values are `'en' | 'si' | 'ta'`. Stored on the Firestore user doc and validated by `z.enum(['en','si','ta'])` in `meValidator.ts`. Updatable via `PATCH /me`.
 - `providers: string[]` — sign-in providers attached to the account (e.g. `['password', 'google.com']`); populated from Firebase Auth and stored on the user doc.
-- `fcmTokens: string[]` — device FCM tokens for push notifications; updated via `POST /me/fcm-token` (endpoint pending).
+- `fcmTokens: string[]` — device FCM tokens for push notifications; updated via `POST /me/fcm-token`.
 - `notificationPreferences: { email: boolean; push: boolean }` — per-user notification opt-in flags; defaults `true` for both.
 
-**Implemented V2 user-service endpoints:** `POST /me/fcm-token` (register device FCM token — idempotent), `DELETE /me/fcm-token` (deregister), `PATCH /me/notifications/preferences` (opt-out per channel), and `PATCH /users/:uid/roles` (admin direct role assignment, bypasses the role-request flow — `authorize('admin', 'super_admin')`).
+**Implemented V2 user-service endpoints:** `POST /me/fcm-token` (register device FCM token — idempotent), `DELETE /me/fcm-token` (deregister), `PATCH /me/notifications/preferences` (opt-out per channel), `POST /me/providers/link` (link an OAuth provider), `DELETE /me/providers/:provider` (unlink an OAuth provider), and `PATCH /users/:uid/roles` (admin direct role assignment, bypasses the role-request flow — `authorize('admin', 'super_admin')`).
 
 When writing new use cases or Firestore repository methods that touch the `users` collection, always read/write all V2 fields alongside existing fields.
 
@@ -624,6 +626,7 @@ FIREBASE_WEB_API_KEY                    # Firebase web client key (auth-service 
 
 # Inter-service URLs (set all even if unused by a given service)
 SERVICE_AUTH_URL … SERVICE_AUDIT_URL
+SERVICE_CELL_URL, SERVICE_ANALYTICS_URL  # V2 services (cell-service :3010, analytics-service :3011)
 
 # Internal service authentication
 INTERNAL_SERVICE_KEY                    # shared secret for /internal/* routes
@@ -697,7 +700,7 @@ Project-specific commands live in `.claude/commands/`. Use them with `/command-n
 
 | Command | File | What it does |
 |---------|------|-------------|
-| `/feature-spec-creator` | `git.md` | Create a feature spec file + git branch from a short description |
+| `/git` | `git.md` | Create a feature spec file + git branch from a short description |
 | `/new-service` | `new-service.md` | Scaffold a complete microservice (all 4 layers, Dockerfile, package.json) |
 | `/new-endpoint` | `new-endpoint.md` | Add a route + controller + use case + Zod validator + container wiring |
 | `/new-use-case` | `new-use-case.md` | Scaffold a use case (standard / with-event / idempotent templates) |
