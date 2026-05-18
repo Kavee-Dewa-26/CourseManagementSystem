@@ -1687,8 +1687,7 @@ Include `X-Idempotency-Key: <client-uuid>` on every `POST /cells/:id/reports`. S
 
 **Typical mobile flow for filing a report:**
 1. `GET /cells/:id` — fetch cell roster to pre-populate the attendance / absent-members fields
-2. *(optional)* `POST /cells/:id/report-photos` — upload meeting photos, receive `photoUrls[]`
-3. `POST /cells/:id/reports` — file the report, including `photoUrls[]` obtained in step 2
+2. `POST /cells/:id/reports` — file the report **with photos attached in the same request** (`multipart/form-data`; photos are optional)
 
 ---
 
@@ -1733,17 +1732,27 @@ Upload 1–10 meeting photos **before** filing the report. Returns public URLs t
 
 ### 14.2 `POST /cells/:id/reports`
 
+File a cell meeting report. Photos are uploaded **in the same request** as `multipart/form-data` — no separate upload step needed.
+
 `filledByUid` is system-populated from the authenticated user — read-only (FR-CR-002).
 
 **Frontend UX notes:**
-- **Leader name** — auto-display from `GET /me` (`firstName + lastName`); shown as read-only in the form
+- **Leader name** — auto-display from `GET /me` (`firstName + lastName`); shown as read-only
 - **Date** — defaults to today; editable
-- **Names of members absent** — pre-populate from `GET /cells/:id` member roster as removable chips (✕ to remove). Remaining chips = absent members. Pass absent members as `attendance[]` entries with `status: "absent"`
+- **Names of members absent** — pre-populate from `GET /cells/:id` member roster as removable chips. Each chip has a ✕ button. Leader taps ✕ to remove members who **were present**; remaining chips = absent members. Pass them as `attendance[]` entries with `status: "absent"`
 
 **Authentication:** Bearer required | **Roles:** Owning leader, owning G12, `super_admin`
+**Content-Type:** `multipart/form-data`
 **Header:** `X-Idempotency-Key: <client-uuid>` (required)
 
-#### Request Body
+#### Request Fields
+
+| Field | Type | Required | Notes |
+|-------|------|:--------:|-------|
+| `data` | string (JSON) | Yes | All report fields serialised as a JSON string |
+| `photos` | file(s) | No | 0–10 JPEG/PNG images, max **5 MB** each. Named `[Image #1]` through `[Image #10]` in the UI |
+
+#### `data` JSON structure
 
 ```json
 {
@@ -1768,10 +1777,7 @@ Upload 1–10 meeting photos **before** filing the report. Returns public URLs t
   "additionalVisitors":   1,
   "childrenCount":        2,
   "satisfactionRate":     4,
-  "additionalInfo":       "Great session.",
-  "photoUrls": [
-    "https://storage.googleapis.com/bucket/cells/cell-001/report-photos/1716000000000-1.jpg"
-  ]
+  "additionalInfo":       "Great session."
 }
 ```
 
@@ -1782,24 +1788,23 @@ Upload 1–10 meeting photos **before** filing the report. Returns public URLs t
 | `noMeetReason` | When `didMeet=false` | — | Free text |
 | `leaderPresent` | Yes | `didMeet=true` | FR-CR-005 |
 | `conductedByIfAbsent` | When `leaderPresent=false` | — | Substitute name |
-| `location` | Yes | `didMeet=true` | `TCCR` \| `Online` \| `Other` \| free text |
+| `location` | Yes | `didMeet=true` | `TCCR` \| `Online` \| `Other` \| free text (FR-CR-006) |
 | `timeStarted`, `timeEnded` | Yes | `didMeet=true` | ISO datetime with timezone |
 | `language` | Yes | `didMeet=true` | `si` \| `ta` \| `en` |
 | `subjectDiscussed` | Yes | `didMeet=true` | `sunday_sermon` \| `other` |
 | `otherSubjectReason` | When `subjectDiscussed=other` | — | Free text |
 | `cellType` | No | — | `g12` \| `care` \| `children` \| `outreach`; defaults to parent cell's type |
-| `g12LeaderUid` | Yes | `didMeet=true` | From system G12 leader dropdown (FR-CR-009) |
+| `g12LeaderUid` | Yes | `didMeet=true` | From G12 leader dropdown (FR-CR-009) |
 | `immediateG12LeaderText` | No | — | Free-text offline reference (FR-CR-009) |
 | `attendance` | Yes | `didMeet=true` | Pre-populated from `GET /cells/:id` roster; `isNew:true` for walk-ins (FR-CR-010) |
 | `contactedAbsentees` | Yes | `didMeet=true` | `"yes"` \| `"no"` \| `"future"` (FR-CR-011) |
-| `absenteeNotes` | No | — | Notes on contacting absent members (FR-CR-011) |
-| `additionalVisitors` | Yes | `didMeet=true` | Visitor count; 0 if none (FR-CR-012) |
-| `childrenCount` | Yes | `didMeet=true` | Children count; 0 if none (FR-CR-012) |
+| `absenteeNotes` | No | — | Notes on absent members (FR-CR-011) |
+| `additionalVisitors` | Yes | `didMeet=true` | Count; 0 if none (FR-CR-012) |
+| `childrenCount` | Yes | `didMeet=true` | Count; 0 if none (FR-CR-012) |
 | `satisfactionRate` | Yes | `didMeet=true` | Integer **1–6** (FR-CR-013) |
 | `additionalInfo` | No | — | Additional notes (FR-CR-013) |
-| `photoUrls` | No | — | Array of URLs from `POST /cells/:id/report-photos`; max **10** |
 
-**`201 Created`** — CellReport object. (Same key resubmit → **`200 OK`**)
+**`201 Created`** — CellReport object with `photoUrls[]` populated. (Same key resubmit → **`200 OK`**)
 
 ---
 

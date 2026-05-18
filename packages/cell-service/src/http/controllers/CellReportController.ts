@@ -11,6 +11,24 @@ import { VoidReportUseCase }                from '../../application/use-cases/Vo
 import { fileReportSchema, voidReportSchema, listReportsSchema } from '../validators/reportValidator';
 import { CellType } from '../../domain/entities/CellGroup';
 
+// ── helper: upload files to Firebase Storage, return public URLs ────────────
+async function uploadPhotosToStorage(cellId: string, files: Express.Multer.File[]): Promise<string[]> {
+  if (files.length === 0) return [];
+  const bucket    = getStorage().bucket();
+  const timestamp = Date.now();
+  const urls: string[] = [];
+  for (let i = 0; i < files.length; i++) {
+    const f       = files[i];
+    const ext     = f.mimetype === 'image/png' ? 'png' : 'jpg';
+    const path    = `cells/${cellId}/report-photos/${timestamp}-${i + 1}.${ext}`;
+    const fileRef = bucket.file(path);
+    await fileRef.save(f.buffer, { contentType: f.mimetype, resumable: false });
+    await fileRef.makePublic();
+    urls.push(fileRef.publicUrl());
+  }
+  return urls;
+}
+
 export class CellReportController {
   constructor(
     private readonly fileUC:       FileReportUseCase,
@@ -29,10 +47,29 @@ export class CellReportController {
     } catch (err) { next(err); }
   };
 
+  /**
+   * POST /cells/:id/reports
+   * Accepts multipart/form-data:
+   *   data:   JSON string of the report fields
+   *   photos: 0-10 JPEG/PNG images (optional, max 5 MB each)
+   *
+   * Photos are uploaded to Firebase Storage automatically.
+   * The resulting URLs are stored as photoUrls[] on the report.
+   */
   fileReport = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const clientReqId = (req.headers['x-idempotency-key'] ?? '') as string;
-      const body        = { ...req.body as Record<string, unknown>, clientReqId };
+
+      // Upload any attached photos first
+      const files     = (req.files ?? []) as Express.Multer.File[];
+      const photoUrls = await uploadPhotosToStorage(req.params.id, files);
+
+      // Merge uploaded URLs into the body (override any photoUrls already in the JSON)
+      const body = {
+        ...(req.body as Record<string, unknown>),
+        clientReqId,
+        photoUrls,
+      };
 
       const parsed = fileReportSchema.safeParse(body);
       if (!parsed.success) return next(fromZodError(parsed.error));
@@ -47,6 +84,9 @@ export class CellReportController {
         roles,
         requestId,
       );
+
+      if (photoUrls.length > 0)
+        logger.info({ cellId: req.params.id, count: photoUrls.length }, 'Report photos saved');
 
       sendSuccess(res, report, isNew ? 201 : 200);
     } catch (err) { next(err); }
@@ -75,32 +115,17 @@ export class CellReportController {
 
   /**
    * POST /cells/:id/report-photos
-   * Upload 1–10 meeting photos (JPEG/PNG, max 5 MB each) before filing a report.
-   * Returns { photoUrls: string[] } — pass these in photoUrls[] when calling POST /cells/:id/reports.
+   * Standalone photo upload — use when you want to upload photos separately
+   * before filing the report. Returns { photoUrls: string[] }.
    */
   uploadPhotos = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const cellId = req.params.id;
-      const files  = (req.files ?? []) as Express.Multer.File[];
-
+      const files = (req.files ?? []) as Express.Multer.File[];
       if (files.length === 0)
         return next(createHttpError(400, 'VALIDATION_ERROR', 'No photos provided.'));
 
-      const bucket    = getStorage().bucket();
-      const timestamp = Date.now();
-      const photoUrls: string[] = [];
-
-      for (let i = 0; i < files.length; i++) {
-        const f       = files[i];
-        const ext     = f.mimetype === 'image/png' ? 'png' : 'jpg';
-        const path    = `cells/${cellId}/report-photos/${timestamp}-${i + 1}.${ext}`;
-        const fileRef = bucket.file(path);
-        await fileRef.save(f.buffer, { contentType: f.mimetype, resumable: false });
-        await fileRef.makePublic();
-        photoUrls.push(fileRef.publicUrl());
-      }
-
-      logger.info({ cellId, count: photoUrls.length }, 'Cell report photos uploaded');
+      const photoUrls = await uploadPhotosToStorage(req.params.id, files);
+      logger.info({ cellId: req.params.id, count: photoUrls.length }, 'Standalone report photos uploaded');
       sendSuccess(res, { photoUrls }, 201);
     } catch (err) { next(err); }
   };

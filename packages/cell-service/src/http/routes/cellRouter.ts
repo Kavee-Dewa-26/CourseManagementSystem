@@ -1,7 +1,7 @@
 import { Router }                  from 'express';
 import { authenticate, authorize } from '@shared/auth-middleware';
 import { container }               from '../../container';
-import { handleReportPhotos }      from '../middleware/reportPhotoUpload';
+import { handleFileReport, handleReportPhotos } from '../middleware/reportPhotoUpload';
 
 export const cellRouter = Router();
 
@@ -27,6 +27,6 @@ cellRouter.post('/cells/:id/join-requests/:rid/reject',    authenticate(), autho
 // Photo upload must come before report filing — returns URLs to include in photoUrls[]
 cellRouter.post('/cells/:id/report-photos',            authenticate(), authorize('leader', 'g12', 'super_admin'), handleReportPhotos, container.cellReportController.uploadPhotos);
 cellRouter.get( '/cells/:id/reports',                  authenticate(), authorize('member', 'student', 'leader', 'g12', 'admin', 'super_admin'), container.cellReportController.listReports);
-cellRouter.post('/cells/:id/reports',                  authenticate(), authorize('leader', 'g12', 'super_admin'),                              container.cellReportController.fileReport);
+cellRouter.post('/cells/:id/reports',                  authenticate(), authorize('leader', 'g12', 'super_admin'), handleFileReport,               container.cellReportController.fileReport);
 cellRouter.get( '/cells/:id/reports/:rid',             authenticate(), authorize('member', 'student', 'leader', 'g12', 'admin', 'super_admin'), container.cellReportController.getReport);
 cellRouter.post('/cells/:id/reports/:rid/void',        authenticate(), authorize('leader', 'g12', 'admin', 'super_admin'),                     container.cellReportController.voidReport);
