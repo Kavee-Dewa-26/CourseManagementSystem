@@ -28,7 +28,12 @@
       "PowerShell($git = \"C:\\\\Users\\\\Asus\\\\AppData\\\\Local\\\\GitHubDesktop\\\\app-3.5.8\\\\resources\\\\app\\\\git\\\\cmd\\\\git.exe\"; cd \"C:\\\\Users\\\\Asus\\\\Desktop\\\\CMS\"; & $git log --oneline -5)",
       "PowerShell($git = \"C:\\\\Users\\\\Asus\\\\AppData\\\\Local\\\\GitHubDesktop\\\\app-3.5.8\\\\resources\\\\app\\\\git\\\\cmd\\\\git.exe\"; cd \"C:\\\\Users\\\\Asus\\\\Desktop\\\\CMS\"; & $git status)",
       "PowerShell($git = \"C:\\\\Users\\\\Asus\\\\AppData\\\\Local\\\\GitHubDesktop\\\\app-3.5.8\\\\resources\\\\app\\\\git\\\\cmd\\\\git.exe\"; cd \"C:\\\\Users\\\\Asus\\\\Desktop\\\\CMS\"; & $git diff .claude/settings.local.json)",
-      "PowerShell($git = \"C:\\\\Users\\\\Asus\\\\AppData\\\\Local\\\\GitHubDesktop\\\\app-3.5.8\\\\resources\\\\app\\\\git\\\\cmd\\\\git.exe\"; cd \"C:\\\\Users\\\\Asus\\\\Desktop\\\\CMS\"; & $git add .claude/settings.local.json; & $git commit -m \"chore: update auto-approved command patterns in settings.local.json\"; & $git push origin develop)"
+      "PowerShell($git = \"C:\\\\Users\\\\Asus\\\\AppData\\\\Local\\\\GitHubDesktop\\\\app-3.5.8\\\\resources\\\\app\\\\git\\\\cmd\\\\git.exe\"; cd \"C:\\\\Users\\\\Asus\\\\Desktop\\\\CMS\"; & $git add .claude/settings.local.json; & $git commit -m \"chore: update auto-approved command patterns in settings.local.json\"; & $git push origin develop)",
+      "PowerShell(cmd /c \"git --version\" 2>&1)",
+      "PowerShell(wsl git --version 2>&1)",
+      "PowerShell(npx newman --version 2>&1)",
+      "PowerShell(netstat *)",
+      "PowerShell(Start-Process \"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\" -ErrorAction SilentlyContinue)"
     ]
   }
 }

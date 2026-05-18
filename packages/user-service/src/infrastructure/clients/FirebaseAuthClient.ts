@@ -10,12 +10,19 @@ export interface CreateUserInput {
 
 export class FirebaseAuthClient {
   async createUser(input: CreateUserInput): Promise<string> {
-    const record = await getAuth().createUser({
-      email:       input.email,
-      password:    input.password,
-      displayName: input.displayName,
-    });
-    return record.uid;
+    try {
+      const record = await getAuth().createUser({
+        email:       input.email,
+        password:    input.password,
+        displayName: input.displayName,
+      });
+      return record.uid;
+    } catch (err: unknown) {
+      if ((err as { code?: string })?.code === 'auth/email-already-exists') {
+        throw createHttpError(409, 'EMAIL_EXISTS', 'Email address already registered.');
+      }
+      throw err;
+    }
   }
 
   async setCustomClaims(uid: string, claims: Record<string, unknown>): Promise<void> {

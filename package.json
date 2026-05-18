@@ -15,7 +15,8 @@
     "format": "prettier --write 'packages/**/*.{ts,json}'",
     "test": "jest --config jest.config.ts",
     "test:integration": "jest --config jest.integration.config.ts",
-    "test:e2e": "jest --config jest.e2e.config.ts"
+    "test:e2e": "jest --config jest.e2e.config.ts",
+    "test:newman": "newman run postman/CMP_Backend.postman_collection.json --environment postman/CMP_Local.postman_environment.json --delay-request 500 --reporters cli,htmlextra --reporter-htmlextra-export postman/newman-report.html"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.1",
@@ -29,6 +30,8 @@
     "dotenv-cli": "^11.0.0",
     "eslint": "^8.0.0",
     "jest": "^29.0.0",
+    "newman": "^6.2.2",
+    "newman-reporter-htmlextra": "^1.23.1",
     "prettier": "^3.0.0",
     "supertest": "^7.0.0",
     "ts-jest": "^29.0.0",

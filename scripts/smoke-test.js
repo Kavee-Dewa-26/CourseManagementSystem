@@ -107,7 +107,8 @@ async function main() {
   const SA  = await signIn('superadmin@cmp.com', 'SuperAdmin@123');
   let   ADM = await signIn('admin@cmp.com',       'Admin@12345');
   const STU = await signIn('student2@cmp.com',    'Student2@123');
-  console.log('✓  Tokens ready (super_admin, admin, student2)\n');
+  const STU1 = await signIn('student1@cmp.com', 'Student1@123');
+  console.log('✓  Tokens ready (super_admin, admin, student1, student2)\n');
 
   // Unique suffix for this run to avoid email conflicts
   const RUN = Date.now();
@@ -337,38 +338,25 @@ async function main() {
     skipped('POST', '/admin/registrations/bulk-approve', 'TS uid unavailable');
   }
 
-  // Register S2 for the individual approve test
+  // Register S2 — used later for the enrollment reject test
   r = await api('POST', '/auth/register', {
     firstName: 'S2', lastName: 'Student',
     email: `smoke_s2_${RUN}@test.com`, password: 'SmokeS2@2026!',
   });
-  const S2 = await signIn(`smoke_s2_${RUN}@test.com`, 'SmokeS2@2026!').catch(() => null);
+  let S2 = await signIn(`smoke_s2_${RUN}@test.com`, 'SmokeS2@2026!').catch(() => null);
   const s2Uid = S2?.uid;
 
   // 33. POST /admin/registrations/:id/approve
-  if (s2Uid) {
-    r = await api('POST', `/admin/registrations/${s2Uid}/approve`, null, ADM.token);
-    check('POST', '/admin/registrations/:id/approve', r, [200, 409]);
-  } else {
-    skipped('POST', '/admin/registrations/:id/approve', 'S2 uid unavailable');
-  }
-
-  // Register S3 for the reject test
-  r = await api('POST', '/auth/register', {
-    firstName: 'S3', lastName: 'Student',
-    email: `smoke_s3_${RUN}@test.com`, password: 'SmokeS3@2026!',
-  });
-  const S3 = await signIn(`smoke_s3_${RUN}@test.com`, 'SmokeS3@2026!').catch(() => null);
-  const s3Uid = S3?.uid;
+  // V2: new registrations no longer create registration docs. Use student1 (seeded as
+  // pending_approval) which has a real registration document in the registrations collection.
+  r = await api('POST', `/admin/registrations/${STU1.uid}/approve`, null, ADM.token);
+  check('POST', '/admin/registrations/:id/approve', r, [200, 409]);
 
   // 34. POST /admin/registrations/:id/reject
-  if (s3Uid) {
-    r = await api('POST', `/admin/registrations/${s3Uid}/reject`,
-      { reason: 'Smoke test rejection' }, ADM.token);
-    check('POST', '/admin/registrations/:id/reject', r, [200, 409]);
-  } else {
-    skipped('POST', '/admin/registrations/:id/reject', 'S3 uid unavailable');
-  }
+  // student1 is now approved (or was already), so reject returns 409 INVALID_STATE — valid.
+  r = await api('POST', `/admin/registrations/${STU1.uid}/reject`,
+    { reason: 'Smoke test rejection' }, ADM.token);
+  check('POST', '/admin/registrations/:id/reject', r, [200, 409]);
 
   // 35. POST /courses/:id/enroll  (student2 enrols in Course A)
   r = await api('POST', `/courses/${courseA}/enroll`, null, STU.token);
@@ -387,11 +375,16 @@ async function main() {
   r = await api('POST', `/admin/enrollments/${enrollId}/approve`, null, ADM.token);
   check('POST', '/admin/enrollments/:id/approve', r, [200, 409]);
 
-  // Enroll S2 for the rejection test
+  // Enroll S2 for the rejection test.
+  // V2: new users get 'member' role — must be upgraded to 'student' before enrolling.
   let s2EnrollId = null;
   if (s2Uid && S2) {
+    await api('PATCH', `/users/${s2Uid}/roles`, { role: 'student' }, ADM.token);
+    await sleep(800); // allow Firebase emulator to propagate the new custom claim
+    S2 = await signIn(`smoke_s2_${RUN}@test.com`, 'SmokeS2@2026!').catch(() => S2);
     r = await api('POST', `/courses/${courseA}/enroll`, null, S2.token);
-    s2EnrollId = `${s2Uid}_${courseA}`;
+    // Only mark the ID if the enrollment was actually created (201) or already exists (409).
+    if (r.status === 201 || r.status === 409) s2EnrollId = `${s2Uid}_${courseA}`;
   }
 
   // 39. POST /admin/enrollments/:id/reject

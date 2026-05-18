@@ -21,11 +21,19 @@ export class RegisterUseCase {
     const exists = await this.userClient.emailExists(input.email);
     if (exists) throw createHttpError(409, 'EMAIL_EXISTS', 'Email address already registered.');
 
-    const record = await getAuth().createUser({
-      email:       input.email,
-      password:    input.password,
-      displayName: `${input.firstName} ${input.lastName}`,
-    });
+    let record;
+    try {
+      record = await getAuth().createUser({
+        email:       input.email,
+        password:    input.password,
+        displayName: `${input.firstName} ${input.lastName}`,
+      });
+    } catch (authErr: unknown) {
+      if ((authErr as { code?: string })?.code === 'auth/email-already-exists') {
+        throw createHttpError(409, 'EMAIL_EXISTS', 'Email address already registered.');
+      }
+      throw authErr;
+    }
 
     try {
       // V2: new users are active Members immediately — no approval queue

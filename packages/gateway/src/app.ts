@@ -42,6 +42,8 @@ app.use('/api/v1/internal', (_req, res) => {
 app.use('/api/v1/auth', authLimiter, authProxy);
 
 // /me sub-routes — order matters: specific prefixes before the generic /me catch-all
+// /me/notifications/preferences must precede /me/notifications to reach user-service, not notification-service
+app.use('/api/v1/me/notifications/preferences', userProxy);
 app.use('/api/v1/me/notifications', notifyProxy);
 app.use('/api/v1/me/enrollments',   enrollProxy);
 app.use('/api/v1/me/progress',      progressProxy);
@@ -88,3 +90,8 @@ app.use('/api/v1/cells', cellProxy);
 
 // Analytics Service routes — V2
 app.use('/api/v1/analytics', analyticsProxy);
+
+// Catch-all: return JSON 404 so clients never receive an HTML error page
+app.use((_req, res) => {
+  res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Route not found.' } });
+});

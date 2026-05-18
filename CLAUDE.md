@@ -102,6 +102,15 @@ node scripts/test-phase1-apis.js
 
 # Verify service endpoint availability
 node scripts/verify-endpoints.js
+
+# Seed online Firebase with test accounts (requires service account JSON path as argument)
+# Usage: node scripts/seed-online.js path/to/serviceAccount.json
+node scripts/seed-online.js
+
+# Run full Postman collection automatically via Newman (clean-slate emulator run)
+# Prerequisites: npx firebase emulators:start + docker-compose.local.yml stack running
+# Generates HTML report at postman/newman-report.html
+node scripts/newman-run.js
 ```
 
 ---
@@ -141,7 +150,7 @@ The gateway rewrites all proxied paths by stripping the `/api/v1` prefix before 
 The gateway also blocks all `/api/v1/internal/*` paths with 404 before proxying — internal routes are never reachable from outside the cluster.
 
 **Route ordering in `gateway/src/app.ts` is load-bearing.** More-specific prefixes must be registered before their broader siblings:
-- `/api/v1/me/notifications`, `/api/v1/me/enrollments`, `/api/v1/me/progress` each before `/api/v1/me`
+- `/api/v1/me/notifications/preferences` (userProxy) before `/api/v1/me/notifications` (notifyProxy); then `/api/v1/me/enrollments`, `/api/v1/me/progress` each before `/api/v1/me`
 - `/api/v1/users/:uid/audit-log` (auditProxy) before `/api/v1/users` (userProxy)
 - `/api/v1/courses/:id/enroll` before `/api/v1/courses`
 - `/api/v1/subjects/:id/lessons` (courseProxy), `/api/v1/subjects/:id/attachments` (storageProxy), and `/api/v1/subjects/:id/images` (storageProxy) each before `/api/v1/subjects`
@@ -154,6 +163,7 @@ Adding a new proxied route in the wrong order will silently send traffic to the 
 | Path prefix | Service |
 |------------|---------|
 | `/api/v1/auth` | auth-service (+ `authLimiter`) |
+| `/api/v1/me/notifications/preferences` | user-service (must precede `/me/notifications`) |
 | `/api/v1/me/notifications` | notification-service |
 | `/api/v1/me/enrollments` | enrollment-service |
 | `/api/v1/me/progress` | progress-service |
