@@ -23,12 +23,15 @@ export const fileReportSchema = z.object({
   g12LeaderUid:           z.string().optional().default(''),
   immediateG12LeaderText: z.string().max(200).nullable().optional(),
   attendance:             z.array(attendanceEntrySchema).optional().default([]),
-  contactedAbsentees:     z.boolean().optional().default(false),
+  // Three-value enum: yes | no | future (replaces boolean)
+  contactedAbsentees:     z.enum(['yes', 'no', 'future']).optional().default('no'),
   absenteeNotes:          z.string().max(1000).nullable().optional(),
   additionalVisitors:     z.number().int().min(0).optional().default(0),
   childrenCount:          z.number().int().min(0).optional().default(0),
-  satisfactionRate:       z.number().int().min(1).max(5).optional().default(3),
+  satisfactionRate:       z.number().int().min(1).max(6).optional().default(3),
   additionalInfo:         z.string().max(2000).nullable().optional(),
+  // Up to 10 photo URLs uploaded beforehand via POST /cells/:id/report-photos
+  photoUrls:              z.array(z.string().url()).max(10).optional().default([]),
   clientReqId:            z.string().uuid('X-Idempotency-Key must be a UUID'),
 });
 

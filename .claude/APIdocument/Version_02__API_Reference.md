@@ -1685,6 +1685,36 @@ Include `X-Idempotency-Key: <client-uuid>` on every `POST /cells/:id/reports`. S
 
 > **RBAC (SRS §9.3):** Only the owning Leader, G12 Leader, or Super Admin may file. Regular **Admin cannot**. Members cannot regardless of membership (FR-MEM-007).
 
+**Typical mobile flow for filing a report:**
+1. `GET /cells/:id` — fetch cell roster to pre-populate the attendance / absent-members fields
+2. *(optional)* `POST /cells/:id/report-photos` — upload meeting photos, receive `photoUrls[]`
+3. `POST /cells/:id/reports` — file the report, including `photoUrls[]` obtained in step 2
+
+---
+
+### 14.0 `POST /cells/:id/report-photos` — NEW
+
+Upload 1–10 meeting photos **before** filing the report. Returns public URLs to include in `photoUrls[]` when calling `POST /cells/:id/reports`.
+
+**Authentication:** Bearer required | **Roles:** Owning leader, G12, `super_admin`
+**Content-Type:** `multipart/form-data`
+
+| Field | Type | Required | Validation |
+|-------|------|:--------:|-----------|
+| `photos` | file(s) | Yes | Field name `photos`; 1–10 files; `image/jpeg` or `image/png`; max **5 MB** each |
+
+**`201 Created`**
+```json
+{ "photoUrls": [
+    "https://storage.googleapis.com/bucket/cells/cell-001/report-photos/1716000000000-1.jpg",
+    "https://storage.googleapis.com/bucket/cells/cell-001/report-photos/1716000000000-2.jpg"
+] }
+```
+
+**`400`** → `VALIDATION_ERROR` (no files or > 10 files)
+**`413`** → `FILE_TOO_LARGE` (a single photo exceeds 5 MB)
+**`415`** → `UNSUPPORTED_MEDIA_TYPE` (non-JPEG/PNG file)
+
 ---
 
 ### 14.1 `GET /cells/:id/reports`
@@ -1705,6 +1735,11 @@ Include `X-Idempotency-Key: <client-uuid>` on every `POST /cells/:id/reports`. S
 
 `filledByUid` is system-populated from the authenticated user — read-only (FR-CR-002).
 
+**Frontend UX notes:**
+- **Leader name** — auto-display from `GET /me` (`firstName + lastName`); shown as read-only in the form
+- **Date** — defaults to today; editable
+- **Names of members absent** — pre-populate from `GET /cells/:id` member roster as removable chips (✕ to remove). Remaining chips = absent members. Pass absent members as `attendance[]` entries with `status: "absent"`
+
 **Authentication:** Bearer required | **Roles:** Owning leader, owning G12, `super_admin`
 **Header:** `X-Idempotency-Key: <client-uuid>` (required)
 
@@ -1715,7 +1750,7 @@ Include `X-Idempotency-Key: <client-uuid>` on every `POST /cells/:id/reports`. S
   "date":                   "2026-05-15",
   "didMeet":                true,
   "leaderPresent":          true,
-  "location":               "Church Hall A",
+  "location":               "TCCR",
   "timeStarted":            "2026-05-15T18:00:00+05:30",
   "timeEnded":              "2026-05-15T19:30:00+05:30",
   "language":               "si",
@@ -1728,37 +1763,41 @@ Include `X-Idempotency-Key: <client-uuid>` on every `POST /cells/:id/reports`. S
     { "userUid": "usr-mem2", "name": "Viruli W.",       "status": "absent",  "isNew": false },
     { "name":    "Walk-in",                              "status": "present", "isNew": true  }
   ],
-  "contactedAbsentees":   true,
+  "contactedAbsentees":   "yes",
   "absenteeNotes":        "Called Viruli — will attend next week.",
   "additionalVisitors":   1,
   "childrenCount":        2,
   "satisfactionRate":     4,
-  "additionalInfo":       "Great session."
+  "additionalInfo":       "Great session.",
+  "photoUrls": [
+    "https://storage.googleapis.com/bucket/cells/cell-001/report-photos/1716000000000-1.jpg"
+  ]
 }
 ```
 
 | Field | Required | Condition | Notes |
 |-------|:--------:|-----------|-------|
-| `date` | Yes | — | ISO date; FR-CR-003: defaults to today on mobile |
+| `date` | Yes | — | ISO date `YYYY-MM-DD`; defaults to today on mobile (FR-CR-003) |
 | `didMeet` | Yes | — | If `false`, only `noMeetReason` needed; all meeting fields ignored (FR-CR-004) |
 | `noMeetReason` | When `didMeet=false` | — | Free text |
 | `leaderPresent` | Yes | `didMeet=true` | FR-CR-005 |
 | `conductedByIfAbsent` | When `leaderPresent=false` | — | Substitute name |
-| `location` | Yes | `didMeet=true` | FR-CR-006 |
+| `location` | Yes | `didMeet=true` | `TCCR` \| `Online` \| `Other` \| free text |
 | `timeStarted`, `timeEnded` | Yes | `didMeet=true` | ISO datetime with timezone |
 | `language` | Yes | `didMeet=true` | `si` \| `ta` \| `en` |
 | `subjectDiscussed` | Yes | `didMeet=true` | `sunday_sermon` \| `other` |
 | `otherSubjectReason` | When `subjectDiscussed=other` | — | Free text |
-| `cellType` | No | — | Defaults to parent cell's type |
-| `g12LeaderUid` | Yes | `didMeet=true` | From system roster (FR-CR-009) |
+| `cellType` | No | — | `g12` \| `care` \| `children` \| `outreach`; defaults to parent cell's type |
+| `g12LeaderUid` | Yes | `didMeet=true` | From system G12 leader dropdown (FR-CR-009) |
 | `immediateG12LeaderText` | No | — | Free-text offline reference (FR-CR-009) |
-| `attendance` | Yes | `didMeet=true` | Pre-populated from roster; `isNew:true` for new attendees (FR-CR-010) |
-| `contactedAbsentees` | Yes | `didMeet=true` | FR-CR-011 |
-| `absenteeNotes` | No | — | FR-CR-011 |
-| `additionalVisitors` | Yes | `didMeet=true` | Count; 0 if none (FR-CR-012) |
-| `childrenCount` | Yes | `didMeet=true` | Count; 0 if none (FR-CR-012) |
-| `satisfactionRate` | Yes | `didMeet=true` | Integer 1–5 (FR-CR-013) |
-| `additionalInfo` | No | — | FR-CR-013 |
+| `attendance` | Yes | `didMeet=true` | Pre-populated from `GET /cells/:id` roster; `isNew:true` for walk-ins (FR-CR-010) |
+| `contactedAbsentees` | Yes | `didMeet=true` | `"yes"` \| `"no"` \| `"future"` (FR-CR-011) |
+| `absenteeNotes` | No | — | Notes on contacting absent members (FR-CR-011) |
+| `additionalVisitors` | Yes | `didMeet=true` | Visitor count; 0 if none (FR-CR-012) |
+| `childrenCount` | Yes | `didMeet=true` | Children count; 0 if none (FR-CR-012) |
+| `satisfactionRate` | Yes | `didMeet=true` | Integer **1–6** (FR-CR-013) |
+| `additionalInfo` | No | — | Additional notes (FR-CR-013) |
+| `photoUrls` | No | — | Array of URLs from `POST /cells/:id/report-photos`; max **10** |
 
 **`201 Created`** — CellReport object. (Same key resubmit → **`200 OK`**)
 

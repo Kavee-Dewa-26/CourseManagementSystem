@@ -1,8 +1,9 @@
 import { createHttpError } from '@shared/errors';
 import { CellType }        from './CellGroup';
 
-export type ReportLanguage      = 'si' | 'ta' | 'en';
-export type SubjectDiscussed    = 'sunday_sermon' | 'other';
+export type ReportLanguage        = 'si' | 'ta' | 'en';
+export type SubjectDiscussed      = 'sunday_sermon' | 'other';
+export type ContactedAbsenteesVal = 'yes' | 'no' | 'future';
 
 export interface AttendanceEntry {
   userUid?:  string;
@@ -31,12 +32,13 @@ export interface CellReportProps {
   g12LeaderUid:            string;
   immediateG12LeaderText?: string | null;
   attendance:              AttendanceEntry[];
-  contactedAbsentees:      boolean;
+  contactedAbsentees:      ContactedAbsenteesVal;
   absenteeNotes?:          string | null;
   additionalVisitors:      number;
   childrenCount:           number;
-  satisfactionRate:        number;
+  satisfactionRate:        number;   // 1–6
   additionalInfo?:         string | null;
+  photoUrls:               string[]; // up to 10 meeting photo URLs
   voided:                  boolean;
   createdAt:               string;
 }
@@ -61,12 +63,13 @@ export class CellReport {
   g12LeaderUid:            string;
   immediateG12LeaderText:  string | null;
   attendance:              AttendanceEntry[];
-  contactedAbsentees:      boolean;
+  contactedAbsentees:      ContactedAbsenteesVal;
   absenteeNotes:           string | null;
   additionalVisitors:      number;
   childrenCount:           number;
   satisfactionRate:        number;
   additionalInfo:          string | null;
+  photoUrls:               string[];
   voided:                  boolean;
   readonly createdAt:      string;
 
@@ -96,6 +99,7 @@ export class CellReport {
     this.childrenCount          = props.childrenCount;
     this.satisfactionRate       = props.satisfactionRate;
     this.additionalInfo         = props.additionalInfo         ?? null;
+    this.photoUrls              = props.photoUrls              ?? [];
     this.voided                 = props.voided;
     this.createdAt              = props.createdAt;
   }
@@ -104,7 +108,7 @@ export class CellReport {
     if (this.voided) {
       throw createHttpError(409, 'REPORT_ALREADY_VOIDED', 'This report has already been voided.');
     }
-    this.voided        = true;
+    this.voided         = true;
     this.additionalInfo = reason;
   }
 }
