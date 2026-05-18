@@ -3569,6 +3569,56 @@
                                                   }
                                   },
                                   {
+                                      "name":  "Upload Report Photos (before or instead of inline photos) — saves photoUrls",
+                                      "description":  "Upload 1-10 JPEG/PNG photos (max 5 MB each). Returns photoUrls[] to include in the report data field.",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "const j = pm.response.json();",
+                                                                                    "if (j.photoUrls \u0026\u0026 j.photoUrls.length \u003e 0) {",
+                                                                                    "  pm.environment.set(\u0027reportPhotoUrl\u0027, j.photoUrls[0]);",
+                                                                                    "  console.log(\u0027reportPhotoUrl saved:\u0027, j.photoUrls[0]);",
+                                                                                    "}"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "auth":  {
+                                                                   "type":  "bearer",
+                                                                   "bearer":  [
+                                                                                  {
+                                                                                      "key":  "token",
+                                                                                      "value":  "{{superAdminToken}}",
+                                                                                      "type":  "string"
+                                                                                  }
+                                                                              ]
+                                                               },
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "formdata",
+                                                                   "formdata":  [
+                                                                                    {
+                                                                                        "key":  "photos",
+                                                                                        "type":  "file",
+                                                                                        "src":  [
+
+                                                                                                ],
+                                                                                        "disabled":  true,
+                                                                                        "description":  "Attach 1-10 JPEG/PNG image files here (max 5 MB each)"
+                                                                                    }
+                                                                                ]
+                                                               },
+                                                      "url":  "{{baseUrl}}/cells/{{cellId}}/report-photos"
+                                                  }
+                                  },
+                                  {
                                       "name":  "File Cell Report (idempotent via X-Idempotency-Key) — saves cellReportId",
                                       "description":  "Use the same X-Idempotency-Key to test idempotency — second call returns the same record.",
                                       "event":  [
@@ -3600,22 +3650,29 @@
                                                       "method":  "POST",
                                                       "header":  [
                                                                      {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json"
-                                                                     },
-                                                                     {
                                                                          "key":  "X-Idempotency-Key",
                                                                          "value":  "550e8400-e29b-41d4-a716-446655440000"
                                                                      }
                                                                  ],
                                                       "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n  \"date\": \"2026-05-18\",\n  \"didMeet\": true,\n  \"leaderPresent\": true,\n  \"location\": \"Colombo\",\n  \"language\": \"en\",\n  \"subjectDiscussed\": \"sunday_sermon\",\n  \"additionalInfo\": \"Good fellowship, studied John 15\",\n  \"clientReqId\": \"550e8400-e29b-41d4-a716-446655440000\"\n}",
-                                                                   "options":  {
-                                                                                   "raw":  {
-                                                                                               "language":  "json"
-                                                                                           }
-                                                                               }
+                                                                   "mode":  "formdata",
+                                                                   "formdata":  [
+                                                                                    {
+                                                                                        "key":  "data",
+                                                                                        "value":  "{\"date\":\"2026-05-18\",\"didMeet\":true,\"leaderPresent\":true,\"location\":\"TCCR\",\"timeStarted\":\"2026-05-18T18:00:00+05:30\",\"timeEnded\":\"2026-05-18T19:30:00+05:30\",\"language\":\"si\",\"subjectDiscussed\":\"sunday_sermon\",\"cellType\":\"g12\",\"g12LeaderUid\":\"\",\"attendance\":[{\"name\":\"Member One\",\"status\":\"present\",\"isNew\":false},{\"name\":\"Member Two\",\"status\":\"absent\",\"isNew\":false}],\"contactedAbsentees\":\"yes\",\"absenteeNotes\":\"Will follow up with Member Two\",\"additionalVisitors\":1,\"childrenCount\":2,\"satisfactionRate\":5,\"additionalInfo\":\"Good session.\"}",
+                                                                                        "type":  "text",
+                                                                                        "description":  "Report fields as JSON string"
+                                                                                    },
+                                                                                    {
+                                                                                        "key":  "photos",
+                                                                                        "type":  "file",
+                                                                                        "src":  [
+
+                                                                                                ],
+                                                                                        "disabled":  true,
+                                                                                        "description":  "Optional: 0-10 JPEG/PNG images (max 5 MB each) — enable and attach files to test photo upload"
+                                                                                    }
+                                                                                ]
                                                                },
                                                       "url":  "{{baseUrl}}/cells/{{cellId}}/reports"
                                                   }
@@ -3636,22 +3693,20 @@
                                                       "method":  "POST",
                                                       "header":  [
                                                                      {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json"
-                                                                     },
-                                                                     {
                                                                          "key":  "X-Idempotency-Key",
                                                                          "value":  "550e8400-e29b-41d4-a716-446655440000"
                                                                      }
                                                                  ],
                                                       "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n  \"date\": \"2026-05-18\",\n  \"didMeet\": true,\n  \"leaderPresent\": true,\n  \"location\": \"Colombo\",\n  \"language\": \"en\",\n  \"subjectDiscussed\": \"sunday_sermon\",\n  \"additionalInfo\": \"Good fellowship, studied John 15\",\n  \"clientReqId\": \"550e8400-e29b-41d4-a716-446655440000\"\n}",
-                                                                   "options":  {
-                                                                                   "raw":  {
-                                                                                               "language":  "json"
-                                                                                           }
-                                                                               }
+                                                                   "mode":  "formdata",
+                                                                   "formdata":  [
+                                                                                    {
+                                                                                        "key":  "data",
+                                                                                        "value":  "{\"date\":\"2026-05-18\",\"didMeet\":true,\"leaderPresent\":true,\"location\":\"TCCR\",\"timeStarted\":\"2026-05-18T18:00:00+05:30\",\"timeEnded\":\"2026-05-18T19:30:00+05:30\",\"language\":\"si\",\"subjectDiscussed\":\"sunday_sermon\",\"cellType\":\"g12\",\"g12LeaderUid\":\"\",\"attendance\":[{\"name\":\"Member One\",\"status\":\"present\",\"isNew\":false},{\"name\":\"Member Two\",\"status\":\"absent\",\"isNew\":false}],\"contactedAbsentees\":\"yes\",\"absenteeNotes\":\"Will follow up with Member Two\",\"additionalVisitors\":1,\"childrenCount\":2,\"satisfactionRate\":5,\"additionalInfo\":\"Good session.\"}",
+                                                                                        "type":  "text",
+                                                                                        "description":  "Same data + same idempotency key → returns existing report (200 OK)"
+                                                                                    }
+                                                                                ]
                                                                },
                                                       "url":  "{{baseUrl}}/cells/{{cellId}}/reports"
                                                   }
