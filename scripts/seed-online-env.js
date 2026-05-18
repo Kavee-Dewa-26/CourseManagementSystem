@@ -30,6 +30,7 @@ const db   = admin.firestore();
 const USERS = [
   { email: 'superadmin@cmp.com', password: 'SuperAdmin@123', firstName: 'Super',  lastName: 'Admin', role: 'super_admin', status: 'approved' },
   { email: 'admin@cmp.com',      password: 'Admin@12345',    firstName: 'System', lastName: 'Admin', role: 'admin',       status: 'approved' },
+  { email: 'student1@cmp.com',   password: 'Student1@123',   firstName: 'Test',   lastName: 'One',   role: 'student',     status: 'approved' },
   { email: 'student2@cmp.com',   password: 'Student2@123',   firstName: 'Test',   lastName: 'Two',   role: 'student',     status: 'approved' },
 ];
 

@@ -33,7 +33,9 @@
       "PowerShell(wsl git --version 2>&1)",
       "PowerShell(npx newman --version 2>&1)",
       "PowerShell(netstat *)",
-      "PowerShell(Start-Process \"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\" -ErrorAction SilentlyContinue)"
+      "PowerShell(Start-Process \"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\" -ErrorAction SilentlyContinue)",
+      "PowerShell(node scripts/seed-emulator.js 2>&1)",
+      "PowerShell(node scripts/newman-run.js 2>&1)"
     ]
   }
 }

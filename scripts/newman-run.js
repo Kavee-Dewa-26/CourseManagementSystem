@@ -49,15 +49,11 @@ function envVar(key, value) {
 }
 
 async function clearEmulators() {
-  // Clear Firestore emulator data
+  // Clear Firestore only — seed-emulator.js handles Auth accounts individually.
+  // Wiping the Auth emulator entirely destabilises checkRevoked token validation.
   const fsUrl = `http://localhost:8080/emulator/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents`;
   const fsRes = await fetch(fsUrl, { method: 'DELETE' });
   if (!fsRes.ok && fsRes.status !== 404) throw new Error(`Firestore clear failed: ${fsRes.status}`);
-
-  // Clear Firebase Auth emulator data
-  const authUrl = `http://localhost:9099/emulator/v1/projects/${FIREBASE_PROJECT}/accounts`;
-  const authRes = await fetch(authUrl, { method: 'DELETE' });
-  if (!authRes.ok && authRes.status !== 404) throw new Error(`Auth clear failed: ${authRes.status}`);
 }
 
 async function seedAccounts() {
@@ -146,41 +142,18 @@ async function main() {
 
   console.log('\n▶  Running Newman collection...\n');
 
-  // 3. Run Newman with pre-obtained tokens
+  // 3. Run Newman — tokens are populated by the collection's Sign In block
+  //    Only inject config; all token/ID variables start empty so the
+  //    Postman scripts own them exclusively (avoids double-session issues).
   newman.run({
     collection:       path.join(__dirname, '../postman/CMP_Backend.postman_collection.json'),
+    environment:      path.join(__dirname, '../postman/CMP_Local.postman_environment.json'),
     envVar: [
-      envVar('baseUrl',            BASE_URL),
-      envVar('authBaseUrl',        AUTH_EMULATOR),
-      envVar('firebaseWebApiKey',  API_KEY),
-      envVar('superAdminToken',    sa.token),
-      envVar('adminToken',         admin.token),
-      envVar('studentToken',       student1.token),
-      envVar('student2Token',      student2.token),
-      envVar('idToken',            student2.token),
-      envVar('userId',             student1.uid),
-      envVar('student2Id',         student2.uid),
-      envVar('adminUserId',        ''),
-      envVar('promotedAdminId',    ''),
-      envVar('courseId',           ''),
-      envVar('semesterId',         ''),
-      envVar('subjectId',          ''),
-      envVar('subjectId2',         ''),
-      envVar('lessonId',           ''),
-      envVar('batchId',            ''),
-      envVar('draftBatchId',       ''),
-      envVar('enrollmentId',       ''),
-      envVar('enrollmentId2',      ''),
-      envVar('registrationId',     ''),
-      envVar('roleRequestId',      ''),
-      envVar('notificationId',     ''),
-      envVar('attachmentId',       ''),
-      envVar('imageAttachmentId',  ''),
-      envVar('cellId',             ''),
-      envVar('joinRequestId',      ''),
-      envVar('cellReportId',       ''),
+      envVar('baseUrl',           BASE_URL),
+      envVar('authBaseUrl',       AUTH_EMULATOR),
+      envVar('firebaseWebApiKey', API_KEY),
     ],
-    delayRequest:     200,
+    delayRequest:     400,
     timeoutRequest:   15000,
     color:            'on',
     reporters:        ['cli', 'htmlextra'],

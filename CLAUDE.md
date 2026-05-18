@@ -67,7 +67,7 @@ docker-compose -f docker-compose.yml -f docker-compose.local.yml up --build
 # Stop all services
 docker-compose down
 
-# Verify all 52 endpoints are reachable (requires all services running)
+# Verify all 53 endpoints are reachable (requires all services running)
 node scripts/smoke-test.js
 
 # Deploy Firestore composite indexes to online Firebase (reads creds from .env.local)
@@ -111,6 +111,11 @@ node scripts/seed-online.js
 # Prerequisites: npx firebase emulators:start + docker-compose.local.yml stack running
 # Generates HTML report at postman/newman-report.html
 node scripts/newman-run.js
+
+# Supplement smoke test — covers 10 endpoints not in smoke-test.js (lesson CRUD, password-reset verify,
+# avatar upload, course restore, title search, make-admin, health probes)
+# Requires all services running with online Firebase credentials
+node scripts/gap-test.js
 ```
 
 ---
@@ -238,7 +243,7 @@ Controllers are thin — they call one use case and delegate errors with `next(e
 | `@shared/health` | `healthRouter` (`/healthz`, `/readyz`) |
 | `@shared/firebase` | `initFirebaseAdmin()` (idempotent) |
 | `@shared/tracing` | `initTracing(serviceName)` |
-| `@shared/i18n` | Locale resolver + template renderer; supports `en` / `si` / `ta` with English fallback (V2 — not yet scaffolded) |
+| `@shared/i18n` | Locale resolver + template renderer; supports `en` / `si` / `ta` with English fallback — **package not yet created** (`packages/shared/i18n/` does not exist); do not import it until scaffolded |
 
 **Request ID propagation:** The gateway's `requestId` middleware generates a UUID (or passes through an incoming `X-Request-Id`), stores it on `req.headers['x-request-id']`, and echoes it back on the response. Downstream services receive it as a plain HTTP header. `@shared/internal-http-client` also exports `runWithRequestId(id, fn)` / `getRequestId()` backed by `AsyncLocalStorage` — if a service wraps its request handler with `runWithRequestId`, the ID is stored in async context and `createInternalClient()`'s Axios interceptor will inject `X-Request-Id` automatically on every outbound call. This is why you never pass `requestId` through use case parameters.
 
@@ -757,3 +762,4 @@ When reading a spec to implement a feature:
 - **`.claude/tracker/tracker.md`** — Phase-by-phase implementation checklist (Phases 0–19). Update `[ ]` → `[x]` as work completes. Check this before starting any phase to understand what's done and what's blocked.
 - **`.claude/plan/implementation-plan.md`** — Detailed implementation plan with phase dependencies and sequencing.
 - **`.claude/sprints/`** — Per-sprint breakdown (`sprint-1-*.md` through `sprint-7-*.md`) with user stories and acceptance criteria.
+- **`.claude/settings.local.json`** — Pre-approved PowerShell/Bash permission patterns so Claude Code does not prompt for common `npm run *`, `node *`, `docker-compose *`, and `git` operations. Edit this file (via `/update-config`) when new command patterns need approval.

@@ -20,6 +20,8 @@ services:
   gateway:
     environment:
       <<: *emulator-env
+      RATE_LIMIT_MAX: 2000
+      AUTH_RATE_LIMIT_MAX: 100
     extra_hosts: *extra-hosts
 
   auth-service:

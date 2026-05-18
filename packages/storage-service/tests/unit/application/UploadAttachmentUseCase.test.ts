@@ -44,4 +44,22 @@ describe('UploadAttachmentUseCase', () => {
     await expect(useCase.execute(INPUT)).rejects.toMatchObject({ status: 404, errorCode: 'SUBJECT_NOT_FOUND' });
     expect(storage.upload).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['image/png',   'photo.PNG',  'png'],
+    ['image/jpeg',  'photo.JPEG', 'jpg'],
+    ['image/jpeg',  'photo.jpg',  'jpg'],
+    ['application/pdf', 'doc.pdf', 'pdf'],
+    ['application/msword', 'doc.doc', 'doc'],
+    ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'doc.docx', 'docx'],
+  ])('derives extension from MIME type for %s (filename: %s → .%s)', async (mimeType, filename, expectedExt) => {
+    client.getSubject.mockResolvedValue({ id: 'sub1', courseId: 'c1' });
+    storage.upload.mockResolvedValue(undefined);
+    repo.create.mockResolvedValue(undefined);
+
+    await useCase.execute({ ...INPUT, mimeType, filename });
+
+    const [_buf, storagePath] = storage.upload.mock.calls[0];
+    expect(storagePath).toMatch(new RegExp(`\\.${expectedExt}$`));
+  });
 });

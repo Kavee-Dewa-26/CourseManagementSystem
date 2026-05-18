@@ -25,7 +25,14 @@ export class UploadAttachmentUseCase {
     if (!subject) throw createHttpError(404, 'SUBJECT_NOT_FOUND', 'Subject not found.');
 
     const id          = uuidv4();
-    const ext         = input.filename.split('.').pop() ?? 'bin';
+    const MIME_TO_EXT: Record<string, string> = {
+      'image/png':   'png',
+      'image/jpeg':  'jpg',
+      'application/pdf': 'pdf',
+      'application/msword': 'doc',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+    };
+    const ext         = MIME_TO_EXT[input.mimeType] ?? input.filename.split('.').pop()?.toLowerCase() ?? 'bin';
     const storagePath = `attachments/${input.subjectId}/${id}.${ext}`;
 
     await this.storageRepo.upload(input.buffer, storagePath, input.mimeType);
