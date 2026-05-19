@@ -55,7 +55,7 @@ export class MeController {
         buffer:   req.file!.buffer,
         mimeType: req.file!.mimetype,
       });
-      sendSuccess(res, user);
+      sendSuccess(res, { profilePhotoUrl: user.profilePhotoUrl });
     } catch (err) { next(err); }
   };
 
