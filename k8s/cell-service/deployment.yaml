@@ -19,7 +19,7 @@ spec:
         - name: cell-service
           image: REGISTRY/cmp-cell-service:latest
           ports:
-            - containerPort: 3010
+            - containerPort: 3009
           envFrom:
             - secretRef:
                 name: cmp-secrets
@@ -27,20 +27,20 @@ spec:
             - name: SERVICE_NAME
               value: cell-service
             - name: PORT
-              value: "3010"
+              value: "3009"
             - name: NODE_ENV
               value: production
           livenessProbe:
             httpGet:
               path: /healthz
-              port: 3010
+              port: 3009
             initialDelaySeconds: 10
             periodSeconds: 15
             failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /readyz
-              port: 3010
+              port: 3009
             initialDelaySeconds: 5
             periodSeconds: 10
             failureThreshold: 3

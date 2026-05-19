@@ -4213,19 +4213,19 @@
           }
         },
         {
-          "name": "Cell Service /healthz :3010",
+          "name": "Cell Service /healthz :3009",
           "request": {
             "method": "GET",
             "header": [],
-            "url": "http://localhost:3010/healthz"
+            "url": "http://localhost:3009/healthz"
           }
         },
         {
-          "name": "Cell Service /readyz :3010",
+          "name": "Cell Service /readyz :3009",
           "request": {
             "method": "GET",
             "header": [],
-            "url": "http://localhost:3010/readyz"
+            "url": "http://localhost:3009/readyz"
           }
         },
         {

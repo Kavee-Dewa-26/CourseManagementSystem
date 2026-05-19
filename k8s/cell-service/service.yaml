@@ -6,6 +6,6 @@ spec:
   selector:
     app: cmp-cell-service
   ports:
-    - port: 3010
-      targetPort: 3010
+    - port: 3009
+      targetPort: 3009
   type: ClusterIP

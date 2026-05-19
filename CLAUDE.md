@@ -144,7 +144,7 @@ packages/
   notification-service/ # :3007  In-app notifications, email (3-retry backoff), push (best-effort)
   audit-service/        # :3008  Append-only audit_log; purely event-driven
   outbox-worker/        #        Background worker — no HTTP port; polls outbox every 5 s
-  cell-service/         # :3010  Cell groups, join requests, cell reports; V2
+  cell-service/         # :3009  Cell groups, join requests, cell reports; V2
   analytics-service/    # :3011  Pre-aggregated weekly/monthly dashboards; V2
   scheduled-jobs/       #        Background worker — no HTTP port; batch/semester sweeps, analytics snapshots; V2
   shared/               # No Dockerfile — shared npm packages consumed by all services
@@ -234,7 +234,7 @@ Controllers are thin — they call one use case and delegate errors with `next(e
 
 - `notification-service` — has `src/application/handlers/` (e.g. `UserRegisteredHandler`) that call a `NotificationDispatcher` service. Email dispatch retries 3× with exponential backoff (1 s → 2 s → 4 s); failure is logged but never thrown. Push notifications are best-effort — a failure logs a warning and is silently swallowed. The service still exposes `/notifications` read endpoints for the frontend via the standard route → controller path.
 - `audit-service` — has `src/application/handlers/` that write append-only entries to `audit_log` via a repository. No HTTP creation endpoint exists; entries are only created by event handlers. `GET /audit-log` supports `?actorUid=:uid` for per-user timeline filtering; `GET /users/:uid/audit-log` is the per-user timeline endpoint (admin + super_admin).
-- `cell-service` (:3010, V2) — full Clean Architecture stack. 17 endpoints for cell group CRUD, member management, join request workflow, and cell report filing (idempotent via `X-Idempotency-Key`). Cell report photos can be pre-uploaded via `POST /cells/:id/report-photos` (returns URLs to pass in `photoUrls[]`) or submitted inline with `POST /cells/:id/reports` as `multipart/form-data` — both routes share the same multer middleware family (`handleReportPhotos` / `handleFileReport`). Publishes cell domain events to the outbox (currently unrouted in EventDispatcher — see above).
+- `cell-service` (:3009, V2) — full Clean Architecture stack. 17 endpoints for cell group CRUD, member management, join request workflow, and cell report filing (idempotent via `X-Idempotency-Key`). Cell report photos can be pre-uploaded via `POST /cells/:id/report-photos` (returns URLs to pass in `photoUrls[]`) or submitted inline with `POST /cells/:id/reports` as `multipart/form-data` — both routes share the same multer middleware family (`handleReportPhotos` / `handleFileReport`). Publishes cell domain events to the outbox (currently unrouted in EventDispatcher — see above).
 - `analytics-service` (:3011, V2) — reads `analytics_snapshots` written by scheduled-jobs. Exposes 6 read-only endpoints (weekly cells, attendance, meeting types, growth, participation, CSV export). No writes. Background workers (scheduled-jobs) are the sole writers to `analytics_snapshots`.
 - `scheduled-jobs` (no HTTP port, V2) — background worker running 3 `setInterval` loops: `batchSweepJob` (opens/closes batches by schedule), `semesterSweepJob` (disables semesters past `endDate`, runs once per day), `snapshotJob` (aggregates cell reports into `analytics_snapshots`, runs weekly). All jobs are wrapped in `safeRun()` — failures log and continue. Direct Firestore reads (exempt from the cross-service HTTP rule, same as outbox-worker).
 
@@ -649,7 +649,7 @@ FIREBASE_WEB_API_KEY                    # Firebase web client key (auth-service 
 
 # Inter-service URLs (set all even if unused by a given service)
 SERVICE_AUTH_URL … SERVICE_AUDIT_URL
-SERVICE_CELL_URL, SERVICE_ANALYTICS_URL  # V2 services (cell-service :3010, analytics-service :3011)
+SERVICE_CELL_URL, SERVICE_ANALYTICS_URL  # V2 services (cell-service :3009, analytics-service :3011)
 
 # Internal service authentication
 INTERNAL_SERVICE_KEY                    # shared secret for /internal/* routes

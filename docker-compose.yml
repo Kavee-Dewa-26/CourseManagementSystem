@@ -15,7 +15,7 @@ services:
       SERVICE_STORAGE_URL:      http://storage-service:3006
       SERVICE_NOTIFICATION_URL: http://notification-service:3007
       SERVICE_AUDIT_URL:        http://audit-service:3008
-      SERVICE_CELL_URL:         http://cell-service:3010
+      SERVICE_CELL_URL:         http://cell-service:3009
       SERVICE_ANALYTICS_URL:    http://analytics-service:3011
     depends_on:
       - auth-service
@@ -113,11 +113,11 @@ services:
 
   cell-service:
     build: { context: ., dockerfile: packages/cell-service/Dockerfile }
-    ports: ['3010:3010']
+    ports: ['3009:3009']
     env_file: .env
     environment:
       SERVICE_NAME: cell-service
-      PORT:         3010
+      PORT:         3009
 
   analytics-service:
     build: { context: ., dockerfile: packages/analytics-service/Dockerfile }
