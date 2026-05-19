@@ -7,18 +7,20 @@ import { SuspendUserUseCase }             from '../../application/use-cases/Susp
 import { ReactivateUserUseCase }          from '../../application/use-cases/ReactivateUserUseCase';
 import { AddRoleUseCase }                 from '../../application/use-cases/AddRoleUseCase';
 import { RemoveRoleUseCase }              from '../../application/use-cases/RemoveRoleUseCase';
-import { listUsersSchema, assignRoleSchema } from '../validators/userValidator';
+import { CreateUserDirectlyUseCase }      from '../../application/use-cases/CreateUserDirectlyUseCase';
+import { listUsersSchema, assignRoleSchema, createUserDirectlySchema } from '../validators/userValidator';
 import { TtlCache }                       from '../../infrastructure/cache/TtlCache';
 import { FindAllResult }                  from '../../domain/repositories/IUserRepository';
 
 export class UsersController {
   constructor(
-    private readonly getUsersUseCase:     GetUsersUseCase,
-    private readonly getUserByIdUseCase:  GetUserByIdUseCase,
-    private readonly suspendUserUseCase:  SuspendUserUseCase,
-    private readonly reactivateUseCase:   ReactivateUserUseCase,
-    private readonly addRoleUseCase:      AddRoleUseCase,
-    private readonly removeRoleUseCase:   RemoveRoleUseCase,
+    private readonly getUsersUseCase:         GetUsersUseCase,
+    private readonly getUserByIdUseCase:      GetUserByIdUseCase,
+    private readonly suspendUserUseCase:      SuspendUserUseCase,
+    private readonly reactivateUseCase:       ReactivateUserUseCase,
+    private readonly addRoleUseCase:          AddRoleUseCase,
+    private readonly removeRoleUseCase:       RemoveRoleUseCase,
+    private readonly createUserDirectlyUseCase: CreateUserDirectlyUseCase,
   ) {}
 
   private static readonly listCache = new TtlCache<FindAllResult>(30_000);
@@ -57,6 +59,16 @@ export class UsersController {
     try {
       const user = await this.reactivateUseCase.execute(req.params.uid);
       sendSuccess(res, user);
+    } catch (err) { next(err); }
+  };
+
+  create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = createUserDirectlySchema.safeParse(req.body);
+      if (!parsed.success) return next(fromZodError(parsed.error));
+      const requestId = (req.headers['x-request-id'] as string) ?? '';
+      const user = await this.createUserDirectlyUseCase.execute(parsed.data, requestId);
+      sendSuccess(res, user, 201);
     } catch (err) { next(err); }
   };
 

@@ -15,8 +15,9 @@ import { DeleteAdminUseCase }      from './application/use-cases/DeleteAdminUseC
 import { PromoteToAdminUseCase }   from './application/use-cases/PromoteToAdminUseCase';
 import { CheckEmailExistsUseCase } from './application/use-cases/CheckEmailExistsUseCase';
 import { ApproveUserUseCase }      from './application/use-cases/ApproveUserUseCase';
-import { AddRoleUseCase }          from './application/use-cases/AddRoleUseCase';
-import { RemoveRoleUseCase }       from './application/use-cases/RemoveRoleUseCase';
+import { AddRoleUseCase }               from './application/use-cases/AddRoleUseCase';
+import { RemoveRoleUseCase }            from './application/use-cases/RemoveRoleUseCase';
+import { CreateUserDirectlyUseCase }    from './application/use-cases/CreateUserDirectlyUseCase';
 import { RegisterFcmTokenUseCase }              from './application/use-cases/RegisterFcmTokenUseCase';
 import { DeregisterFcmTokenUseCase }            from './application/use-cases/DeregisterFcmTokenUseCase';
 import { UpdateNotificationPreferencesUseCase } from './application/use-cases/UpdateNotificationPreferencesUseCase';
@@ -47,8 +48,9 @@ const deleteAdmin      = new DeleteAdminUseCase(userRepo, authClient);
 const promoteToAdmin   = new PromoteToAdminUseCase(userRepo, authClient, outbox);
 const checkEmail       = new CheckEmailExistsUseCase(userRepo);
 const approveUser      = new ApproveUserUseCase(userRepo, authClient);
-const addRole          = new AddRoleUseCase(userRepo, authClient);
-const removeRole       = new RemoveRoleUseCase(userRepo, authClient);
+const addRole              = new AddRoleUseCase(userRepo, authClient);
+const removeRole           = new RemoveRoleUseCase(userRepo, authClient);
+const createUserDirectly   = new CreateUserDirectlyUseCase(userRepo, authClient, outbox);
 const registerFcm      = new RegisterFcmTokenUseCase(userRepo);
 const deregisterFcm    = new DeregisterFcmTokenUseCase(userRepo);
 const updateNotifPrefs = new UpdateNotificationPreferencesUseCase(userRepo);
@@ -62,7 +64,7 @@ export const container = {
     registerFcm, deregisterFcm, updateNotifPrefs,
     linkProvider, unlinkProvider,
   ),
-  usersController:      new UsersController(getUsers, getUserById, suspendUser, reactivate, addRole, removeRole),
+  usersController:      new UsersController(getUsers, getUserById, suspendUser, reactivate, addRole, removeRole, createUserDirectly),
   superAdminController: new SuperAdminController(createAdmin, deleteAdmin, getUsers, getUserById, suspendUser, reactivate, promoteToAdmin),
   internalController:   new InternalController(checkEmail, approveUser, getUsers, addRole),
 };

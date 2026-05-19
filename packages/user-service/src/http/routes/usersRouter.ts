@@ -4,6 +4,7 @@ import { container }               from '../../container';
 
 export const usersRouter = Router();
 
+usersRouter.post('/users',               authenticate(), authorize('admin'), container.usersController.create);
 usersRouter.get( '/users',               authenticate(), authorize('admin'), container.usersController.list);
 usersRouter.get( '/users/:uid',          authenticate(), authorize('admin'), container.usersController.getOne);
 usersRouter.post( '/users/:uid/suspend',    authenticate(), authorize('admin'), container.usersController.suspend);

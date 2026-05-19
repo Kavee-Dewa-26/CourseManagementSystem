@@ -11,3 +11,11 @@ export const assignRoleSchema = z.object({
   role:   z.enum(['member', 'student', 'leader', 'g12', 'admin', 'super_admin']),
   action: z.enum(['add', 'remove']),
 });
+
+export const createUserDirectlySchema = z.object({
+  firstName:       z.string().min(1).max(50),
+  lastName:        z.string().min(1).max(50),
+  email:           z.string().email(),
+  initialPassword: z.string().min(8),
+  role:            z.enum(['leader', 'g12']),
+});

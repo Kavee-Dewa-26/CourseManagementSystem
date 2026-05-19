@@ -85,6 +85,9 @@ node scripts/seed-emulator.js
 # Seed a single admin account in the emulator
 node scripts/seed-admin.js
 
+# Seed V2 role users (leader, g12) into emulators — run after seed-emulator.js
+node scripts/seed-v2-roles.js
+
 # One-time migration: backfill `roles` array on all users in online Firebase
 # Usage: node scripts/migrate-roles.js path/to/serviceAccount.json
 node scripts/migrate-roles.js
@@ -96,6 +99,7 @@ node scripts/migrations/003-backfill-notifications-locale.js  # set localeRender
 node scripts/migrations/004-verify-migration.js            # validate migration results
 node scripts/migrations/005-legacy-batches.js              # create 'Legacy' batch per course; backfill enrollments.batchId
 node scripts/migrations/006-semester-dates.js              # set openDate=createdAt, endDate=null on semesters missing openDate
+node scripts/migrations/007-backfill-leader-g12-firebase-auth.js --temp-password=Change@Me2026  # create missing Firebase Auth accounts for seeded leader/g12 users
 
 # Live API tests — verify V2 registration behaviour (requires running services)
 node scripts/test-phase1-apis.js
@@ -111,6 +115,10 @@ node scripts/seed-online.js
 # Prerequisites: npx firebase emulators:start + docker-compose.local.yml stack running
 # Generates HTML report at postman/newman-report.html
 node scripts/newman-run.js
+
+# Run Postman collection via Newman directly against already-running services
+# (no clean-slate setup — services must already be running)
+npm run test:newman
 
 # Supplement smoke test — covers 10 endpoints not in smoke-test.js (lesson CRUD, password-reset verify,
 # avatar upload, course restore, title search, make-admin, health probes)
@@ -703,10 +711,12 @@ Two Jest configs exist in the repo. A third (`jest.e2e.config.ts`) is referenced
 | `admin` | `admin@cmp.com` | `Admin@12345` | approved |
 | `student` | `student1@cmp.com` | `Student1@123` | pending_approval |
 | `student` | `student2@cmp.com` | `Student2@123` | approved |
+| `leader` | `leader@cmp.com` | `Leader@12345` | approved |
+| `g12` | `g12leader@cmp.com` | `G12Lead@123` | approved |
 
 **Firebase emulator ports** (from `firebase.json`): Auth `9099`, Firestore `8080`, Storage `9199`, UI `4000` (`http://localhost:4000`).
 
-**Postman:** Import `postman/CMP_Backend.postman_collection.json` with either `postman/CMP_Local.postman_environment.json` (local Docker stack) or `postman/CMP_Online.postman_environment.json` (online Firebase) for manual API testing.
+**Postman:** Import `postman/CMP_Backend.postman_collection.json` (covers all 97 system routes) with either `postman/CMP_Local.postman_environment.json` (local Docker stack) or `postman/CMP_Online.postman_environment.json` (online Firebase) for manual API testing. The `smoke-test.js` script covers a subset of 53 endpoints; the Newman run (`node scripts/newman-run.js`) exercises the full 97.
 
 Use `jest.clearAllMocks()` in `beforeEach` to prevent test bleed. Integration tests use the Firebase emulator — `tests/integration/setup.ts` automatically sets `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080` and `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099` with fake credentials, so no real Firebase project credentials are needed. Just ensure the emulators are running before `npm run test:integration`.
 

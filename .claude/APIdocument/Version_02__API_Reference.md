@@ -19,6 +19,9 @@
    - 3.4 [Upload Avatar](#34-post-meavatar) · 3.5 [Link Provider](#35-post-meproviders-link) · 3.6 [Unlink Provider](#36-delete-meproviders-provider)
    - 3.7 [Register FCM Token](#37-post-mefcm-token) · 3.8 [Deregister FCM Token](#38-delete-mefcm-token) · 3.9 [Notification Preferences](#39-patch-menotificationspreferences)
 4. [User Management — Admin](#4-user-management--admin)
+   - 4.1 [List Users](#41-get-users) · 4.2 [Get User](#42-get-usersuid) · 4.3 [Assign Roles](#43-patch-usersuidroles--new-v2)
+   - 4.4 [User Audit Log](#44-get-usersuidaudit-log--new-v2) · 4.5 [Suspend](#45-post-usersusidsuspend) · 4.6 [Reactivate](#46-post-usersuidreactivate)
+   - 4.7 [Create Leader/G12 User](#47-post-users--new)
 5. [Role Requests — NEW V2](#5-role-requests--new-v2)
 6. [Course Endpoints](#6-course-endpoints)
    - 6.1–6.7 [List/Get/Create/Update/Publish/Unpublish/Archive](#61-get-courses)
@@ -574,6 +577,70 @@ Per-user audit timeline — entries where user was actor or target (FR-SADM-005 
 **Authentication:** Bearer required | **Roles:** `admin`, `super_admin`
 
 **`200 OK`** — Updated User with `status: "approved"`.
+
+---
+
+### 4.7 `POST /users` — NEW
+
+Create a new **leader** or **g12** account directly. Both a Firebase Auth account and a Firestore user record are created atomically — the user can log in immediately with the provided `initialPassword`.
+
+Use this when an admin provisions a cell leader or G12 leader account without requiring them to self-register and go through the role-request flow. This mirrors how `POST /super-admin/admins` provisions admin accounts.
+
+> **Why this endpoint exists:** `PATCH /users/:uid/roles` only updates an existing user's roles — it cannot create a Firebase Auth login for a brand-new account. This endpoint is required to create leader/g12 accounts that can actually log in.
+
+**Side effects:** An `admin.created` outbox event is published → audit log entry written.
+
+**Authentication:** Bearer required | **Roles:** `admin`, `super_admin`
+
+#### Request Body
+
+```json
+{
+  "firstName":       "Saman",
+  "lastName":        "Silva",
+  "email":           "saman@tccr.lk",
+  "initialPassword": "Leader@12345",
+  "role":            "leader"
+}
+```
+
+| Field | Type | Required | Validation |
+|-------|------|:--------:|-----------|
+| `firstName` | string | Yes | 1–50 chars |
+| `lastName` | string | Yes | 1–50 chars |
+| `email` | string | Yes | Valid email; must be unique across the system |
+| `initialPassword` | string | Yes | Min 8 characters |
+| `role` | string | Yes | `"leader"` or `"g12"` only — use `POST /super-admin/admins` for admin accounts |
+
+#### Responses
+
+**`201 Created`** — Full User object. The user is `status: "approved"` and holds `roles: ["member", "<role>"]`.
+
+```json
+{
+  "uid":             "firebase-uid-abc123",
+  "email":           "saman@tccr.lk",
+  "firstName":       "Saman",
+  "lastName":        "Silva",
+  "role":            "leader",
+  "roles":           ["member", "leader"],
+  "status":          "approved",
+  "profilePhotoUrl": null,
+  "createdAt":       "2026-05-19T08:00:00.000Z",
+  "updatedAt":       "2026-05-19T08:00:00.000Z",
+  "deletedAt":       null
+}
+```
+
+**`409 Conflict`** — Email already registered
+```json
+{ "error": { "code": "EMAIL_EXISTS", "message": "Email address already registered." }, "requestId": "..." }
+```
+
+**`400 Bad Request`** — Validation failure (wrong role, missing field, password too short)
+```json
+{ "error": { "code": "VALIDATION_ERROR", "message": "..." }, "requestId": "..." }
+```
 
 ---
 

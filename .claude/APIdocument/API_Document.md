@@ -85,6 +85,7 @@
     - 13.2 [Get User by ID](#132-get-usersuid)
     - 13.3 [Suspend User](#133-post-usersusidsuspend)
     - 13.4 [Reactivate User](#134-post-usersuidreactivate)
+    - 13.5 [Create Leader / G12 User](#135-post-users)
 14. [Admin Management — Super Admin](#14-admin-management--super-admin)
     - 14.1 [List Admins](#141-get-super-adminadmins)
     - 14.2 [Create Admin](#142-post-super-adminadmins)
@@ -2463,6 +2464,74 @@ None.
 ```json
 {
   "error": { "code": "USER_NOT_FOUND", "message": "User not found." },
+  "requestId": "..."
+}
+```
+
+---
+
+### 13.5 `POST /users`
+
+Create a new leader or g12 user account directly. Both a Firebase Auth account and a Firestore user record are created in one operation — the user can log in immediately with the provided `initialPassword`.
+
+Use this when an admin needs to provision a cell leader or G12 leader account without requiring them to self-register and go through the role-request flow.
+
+**Side effects:** An `admin.created` outbox event is published (triggers an audit log entry).
+
+**Authentication:** Bearer token required
+**Roles:** `admin`, `super_admin`
+
+#### Request Body
+
+```json
+{
+  "firstName":       "Saman",
+  "lastName":        "Silva",
+  "email":           "saman@tccr.lk",
+  "initialPassword": "Leader@12345",
+  "role":            "leader"
+}
+```
+
+| Field | Type | Required | Validation |
+|-------|------|:--------:|-----------|
+| `firstName` | `string` | Yes | 1–50 characters |
+| `lastName` | `string` | Yes | 1–50 characters |
+| `email` | `string` | Yes | Valid email; must be unique |
+| `initialPassword` | `string` | Yes | Min 8 characters |
+| `role` | `string` | Yes | `"leader"` or `"g12"` only |
+
+#### Responses
+
+**`201 Created`** — Full User object for the new account
+```json
+{
+  "uid":             "firebase-uid-abc123",
+  "email":           "saman@tccr.lk",
+  "firstName":       "Saman",
+  "lastName":        "Silva",
+  "role":            "leader",
+  "roles":           ["member", "leader"],
+  "status":          "approved",
+  "profilePhotoUrl": null,
+  "createdAt":       "2026-05-19T08:00:00.000Z",
+  "updatedAt":       "2026-05-19T08:00:00.000Z",
+  "deletedAt":       null
+}
+```
+
+**`409 Conflict`** — Email already registered
+```json
+{
+  "error": { "code": "EMAIL_EXISTS", "message": "Email address already registered." },
+  "requestId": "..."
+}
+```
+
+**`400 Bad Request`** — Validation failure (e.g. invalid role, missing field)
+```json
+{
+  "error": { "code": "VALIDATION_ERROR", "message": "..." },
   "requestId": "..."
 }
 ```
