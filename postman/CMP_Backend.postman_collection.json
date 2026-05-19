@@ -523,13 +523,26 @@
           }
         },
         {
-          "name": "Assign Role to User (V2) — grant 'student' role",
+          "name": "Add Role to User (V2) — grant 'student' role",
           "request": {
             "method": "PATCH",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"role\": \"student\"\n}",
+              "raw": "{\n  \"role\": \"student\",\n  \"action\": \"add\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/users/{{student2Id}}/roles"
+          }
+        },
+        {
+          "name": "Remove Role from User (V2) — revoke 'student' role",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"student\",\n  \"action\": \"remove\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": "{{baseUrl}}/users/{{student2Id}}/roles"
@@ -961,18 +974,6 @@
           }
         },
         {
-          "name": "Get Lesson by ID",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
-            },
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/lessons/{{lessonId}}"
-          }
-        },
-        {
           "name": "Update Lesson",
           "request": {
             "auth": {
@@ -1245,9 +1246,10 @@
     },
     {
       "name": "7️⃣ Enrollment — student2 Fast-track Flow",
+      "description": "V1 path: POST /courses/:id/enroll. V2 path: POST /enrollments {courseId, batchId}.",
       "item": [
         {
-          "name": "student2 — Enroll in Course — saves enrollmentId2",
+          "name": "student2 — Enroll V1 (POST /courses/:id/enroll) — saves enrollmentId2",
           "event": [
             {
               "listen": "test",
@@ -1272,7 +1274,25 @@
           }
         },
         {
-          "name": "student2 — My Enrollments",
+          "name": "student2 — Enroll V2 (POST /enrollments) with courseId+batchId body",
+          "description": "V2 alias: body-based enrollment. batchId is optional until batch-keyed enrollment is fully wired.",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": \"{{courseId}}\",\n  \"batchId\": \"{{batchId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/enrollments"
+          }
+        },
+        {
+          "name": "student2 — My Enrollments V1 (GET /me/enrollments)",
           "request": {
             "auth": {
               "type": "bearer",
@@ -1281,6 +1301,18 @@
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/me/enrollments"
+          }
+        },
+        {
+          "name": "student2 — My Enrollments V2 (GET /enrollments/mine)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/enrollments/mine"
           }
         },
         {
@@ -1662,11 +1694,24 @@
           }
         },
         {
-          "name": "Admin tries Global Audit Log (expect 403)",
+          "name": "Admin — List Global Audit Log (expect 200)",
+          "description": "auditRouter authorizes both admin and super_admin on GET /audit-log.",
           "request": {
             "auth": {
               "type": "bearer",
               "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/audit-log"
+          }
+        },
+        {
+          "name": "Student tries Audit Log (expect 403)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{student2Token}}", "type": "string" }]
             },
             "method": "GET",
             "header": [],
