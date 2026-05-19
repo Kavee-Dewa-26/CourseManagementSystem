@@ -29,8 +29,9 @@ const reportInput = {
   location: 'Hall A', timeStarted: '2026-05-17T18:00:00+05:30', timeEnded: '2026-05-17T19:30:00+05:30',
   language: 'en' as const, subjectDiscussed: 'sunday_sermon' as const,
   cellType: 'g12' as const, g12LeaderUid: 'g12-1',
-  attendance: [], contactedAbsentees: false,
+  attendance: [], contactedAbsentees: 'no' as const,
   additionalVisitors: 0, childrenCount: 0, satisfactionRate: 4,
+  photoUrls: [],
 };
 
 describe('FileReportUseCase', () => {
@@ -68,7 +69,7 @@ describe('FileReportUseCase', () => {
   });
 
   it('returns existing report (isNew=false) when same idempotency key used', async () => {
-    const existing = new CellReport({ ...reportInput, id: 'existing-id', cellId: 'cell-1', filledByUid: 'leader-1', voided: false, createdAt: '2026-01-01T00:00:00Z' });
+    const existing = new CellReport({ ...reportInput, id: 'existing-id', cellId: 'cell-1', filledByUid: 'leader-1', voided: false, createdAt: '2026-01-01T00:00:00Z', photoUrls: [] });
     cellRepo.findById.mockResolvedValue(makeCell());
     reportRepo.findByClientReqId.mockResolvedValue(existing);
 

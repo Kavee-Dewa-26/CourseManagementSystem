@@ -313,9 +313,9 @@ app.get('/readyz', healthCheck);
 
 ```
 POST /api/v1/auth/register
-  Body: { email, password, firstName, lastName, phone, gender, dateOfBirth, preferredLanguage }
+  Body: { email, password, firstName, lastName, preferredLanguage? }
 
-  1. Validate input (Zod registerSchema — min 8 chars + letter + number)
+  1. Validate input (Zod registerSchema — min 10 chars + upper + lower + number + special)
   2. Check email uniqueness via User Service /internal/users/exists
   3. Create Firebase Auth user
   4. Set V2 custom claims: { roles: ['member'], preferredLanguage }
@@ -438,7 +438,7 @@ export function authorize(...allowed: Role[]) {
 
 **Port:** 3002 | **Owns:** `users`
 
-**V2 changes:** `role:string` → `roles:string[]`; adds `preferredLanguage`, `providers[]`, `phone`, `gender`, `dateOfBirth`, `notificationPreferences`, `fcmTokens`; new role-management, FCM, and notification preference endpoints; per-user audit-log proxy.
+**V2 changes:** `role:string` → `roles:string[]`; adds `preferredLanguage`, `providers[]`, `notificationPreferences`, `fcmTokens`; new role-management, FCM, and notification preference endpoints; per-user audit-log proxy.
 
 #### Endpoints
 
@@ -2251,7 +2251,7 @@ Each script: Cloud Run Job, idempotent (safe to re-run), processes documents in 
 
 After all clients migrate to V2 endpoints:
 
-- `POST /auth/register` old body (no `phone`/`gender`/`dateOfBirth`) → `410 Gone` with migration note
+- `POST /auth/register` old body (V1 `pending_approval` flow) → `410 Gone` with migration note
 - `GET /admin/registrations` → `410 Gone`; use `GET /role-requests`
 - `POST /admin/registrations/:id/approve` → `410 Gone`; use `POST /role-requests/:id/approve`
 - `POST /admin/registrations/:id/reject` → `410 Gone`
@@ -2265,7 +2265,7 @@ After all clients migrate to V2 endpoints:
 
 | SRS ID | Requirement | Service | Implementation |
 |--------|-------------|---------|---------------|
-| FR-AUTH-001 | Register with lang, phone, gender, DOB → active Member | Auth Service | `RegisterUseCase` (amended) |
+| FR-AUTH-001 | Register with optional preferredLanguage → active Member | Auth Service | `RegisterUseCase` (amended) |
 | FR-AUTH-002 | Email uniqueness check | Auth Service | User Service `/internal/users/exists` |
 | FR-AUTH-003 | Google federated sign-in | Auth Service | `FederatedSignInUseCase('google')` |
 | FR-AUTH-004 | Apple federated sign-in | Auth Service | `FederatedSignInUseCase('apple')` |

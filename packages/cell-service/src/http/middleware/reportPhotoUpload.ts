@@ -33,7 +33,7 @@ export function handleFileReport(req: Request, res: Response, next: NextFunction
       return next(createHttpError(400, 'VALIDATION_ERROR', 'Request must include a "data" field with the report JSON.'));
     }
     try {
-      req.body = JSON.parse(raw);
+      req.body = JSON.parse(raw) as Record<string, unknown>;
     } catch {
       return next(createHttpError(400, 'VALIDATION_ERROR', 'The "data" field must be valid JSON.'));
     }

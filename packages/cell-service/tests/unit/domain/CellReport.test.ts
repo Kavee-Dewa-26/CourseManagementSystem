@@ -6,8 +6,8 @@ const make = (voided = false): CellReport =>
     date: '2026-05-17', didMeet: true, leaderPresent: true,
     location: 'Hall', timeStarted: '2026-05-17T18:00:00Z', timeEnded: '2026-05-17T19:00:00Z',
     language: 'en', subjectDiscussed: 'sunday_sermon', cellType: 'g12', g12LeaderUid: 'g12-1',
-    attendance: [], contactedAbsentees: false, additionalVisitors: 0, childrenCount: 0,
-    satisfactionRate: 4, voided, createdAt: '2026-05-17T19:00:00Z',
+    attendance: [], contactedAbsentees: 'no' as const, additionalVisitors: 0, childrenCount: 0,
+    satisfactionRate: 4, photoUrls: [], voided, createdAt: '2026-05-17T19:00:00Z',
   });
 
 describe('CellReport entity', () => {

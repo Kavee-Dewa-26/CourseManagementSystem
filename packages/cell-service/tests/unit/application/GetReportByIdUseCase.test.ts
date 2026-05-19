@@ -30,9 +30,9 @@ const makeReport = (): CellReport =>
     location: 'Colombo', timeStarted: '18:00', timeEnded: '20:00',
     language: 'en', subjectDiscussed: 'sunday_sermon',
     cellType: 'care', g12LeaderUid: 'g12-uid',
-    attendance: [], contactedAbsentees: false,
+    attendance: [], contactedAbsentees: 'no' as const,
     additionalVisitors: 0, childrenCount: 0, satisfactionRate: 4,
-    voided: false,
+    photoUrls: [], voided: false,
     createdAt: '2026-05-18T18:00:00Z',
   });
 

@@ -9,10 +9,11 @@ const passwordRule = z
   .regex(/[^A-Za-z0-9]/, 'Password must contain a special character.');
 
 export const registerSchema = z.object({
-  firstName: z.string().min(1).max(100),
-  lastName:  z.string().min(1).max(100),
-  email:     z.string().email(),
-  password:  passwordRule,
+  firstName:         z.string().min(1).max(100),
+  lastName:          z.string().min(1).max(100),
+  email:             z.string().email(),
+  password:          passwordRule,
+  preferredLanguage: z.enum(['en', 'si', 'ta']).default('en').optional(),
 });
 
 export const passwordResetSchema = z.object({

@@ -200,9 +200,6 @@ Register a new account. **V2:** Creates an **active Member** immediately — no 
   "lastName":          "Weerasinghe",
   "email":             "viruli@example.com",
   "password":          "SecurePass1",
-  "phone":             "+94771234567",
-  "gender":            "female",
-  "dateOfBirth":       "1998-03-15",
   "preferredLanguage": "si"
 }
 ```
@@ -212,11 +209,8 @@ Register a new account. **V2:** Creates an **active Member** immediately — no 
 | `firstName` | string | Yes | 1–100 chars |
 | `lastName` | string | Yes | 1–100 chars |
 | `email` | string | Yes | Valid email; unique |
-| `password` | string | Yes | Min 8 chars · 1 letter · 1 number (FR-AUTH-007) |
-| `phone` | string | Yes | E.164 format |
-| `gender` | string | Yes | `male` \| `female` \| `other` |
-| `dateOfBirth` | string | Yes | ISO date `YYYY-MM-DD` |
-| `preferredLanguage` | string | Yes | `si` \| `ta` \| `en` |
+| `password` | string | Yes | Min 10 chars · uppercase · lowercase · number · special char |
+| `preferredLanguage` | string | No | `si` \| `ta` \| `en` — defaults to `en` |
 
 #### Responses
 
@@ -339,13 +333,10 @@ Get the authenticated user's full profile.
   "email":                   "viruli@example.com",
   "firstName":               "Viruli",
   "lastName":                "Weerasinghe",
-  "phone":                   "+94771234567",
-  "gender":                  "female",
-  "dateOfBirth":             "1998-03-15",
   "preferredLanguage":       "si",
   "roles":                   ["member", "student"],
   "providers":               ["password"],
-  "status":                  "active",
+  "status":                  "approved",
   "profilePhotoUrl":         "https://storage.googleapis.com/...",
   "notificationPreferences": { "email": true, "push": true },
   "createdAt":               "2026-05-01T08:00:00.000Z",
@@ -365,7 +356,6 @@ Update own profile. `email`, `roles`, `status` are immutable through this endpoi
 {
   "firstName":         "Viruli",
   "lastName":          "Weerasinghe",
-  "phone":             "+94771234567",
   "preferredLanguage": "ta",
   "profilePhotoUrl":   "https://..."
 }
@@ -443,7 +433,7 @@ Register/refresh an FCM push token. Call after every login and on token rotation
 **Authentication:** Bearer required | **Roles:** Any
 
 ```json
-{ "token": "<fcm-token>", "platform": "android", "appVersion": "2.0.0" }
+{ "token": "<fcm-token>" }
 ```
 
 **`204 No Content`**
@@ -492,7 +482,7 @@ List users with filtering.
 |-----------|-------------|
 | `search` | Partial match on name or email |
 | `roles` | Comma-separated, e.g. `leader,g12` |
-| `status` | `active` \| `suspended` |
+| `status` | `approved` \| `suspended` |
 | `courseId` | Users enrolled in this course |
 | `batchId` | Users enrolled in this batch — **NEW V2** |
 | `limit`, `cursor` | Pagination |
@@ -583,7 +573,7 @@ Per-user audit timeline — entries where user was actor or target (FR-SADM-005 
 
 **Authentication:** Bearer required | **Roles:** `admin`, `super_admin`
 
-**`200 OK`** — Updated User with `status: "active"`.
+**`200 OK`** — Updated User with `status: "approved"`.
 
 ---
 
@@ -1278,7 +1268,7 @@ List own enrollments (SRS §7.3.5 path).
     "userUid": "Xf3aBC...",
     "courseId": "course-abc", "courseName": "Bible Foundations",
     "batchId": "batch-xyz",  "batchName": "2026 Intake",
-    "status": "active",
+    "status": "approved",
     "enrolledAt": "2026-05-10T09:00:00.000Z",
     "createdAt": "2026-05-08T12:00:00.000Z",
     "updatedAt": "2026-05-10T09:00:00.000Z"
@@ -1326,7 +1316,7 @@ Admin view.
 | `userId` | Filter by user UID |
 | `courseId` | Filter by course |
 | `batchId` | Filter by batch — **NEW V2** |
-| `status` | `pending` \| `active` \| `completed` \| `withdrawn` \| `rejected` |
+| `status` | `pending` \| `approved` \| `withdrawn` \| `rejected` |
 | `search` | Partial match on user name/email |
 | `limit`, `cursor` | Pagination |
 
@@ -1344,7 +1334,7 @@ Approve an enrollment. Notifies student with approver name (FR-ENR-005).
 { "note": "Approved for the 2026 intake." }
 ```
 
-**`200 OK`** — Enrollment with `status: "active"`.
+**`200 OK`** — Enrollment with `status: "approved"`.
 
 ---
 
@@ -1521,7 +1511,7 @@ Fetch cell with full member roster (FR-CG-005).
   "id": "cell-001", "name": "Rathmalana West G12",
   "type": "g12", "area": "Rathmalana",
   "leaderUid": "usr-leader1", "g12LeaderUid": "usr-g12-1",
-  "members": [{ "uid": "usr-mem1", "displayName": "Sapna Nethmini", "phone": "+94771234567" }],
+  "members": [{ "uid": "usr-mem1", "displayName": "Sapna Nethmini" }],
   "memberCount": 8, "reportCount": 12, "state": "active",
   "createdAt": "2026-01-15T00:00:00.000Z", "updatedAt": "2026-05-14T00:00:00.000Z"
 }
@@ -2084,7 +2074,7 @@ Create Admin account (FR-SADM-001).
 
 **Authentication:** Bearer required | **Roles:** `super_admin`
 
-**`200 OK`** — User with `status: "active"`.
+**`200 OK`** — User with `status: "approved"`.
 
 ---
 
@@ -2144,13 +2134,10 @@ Readiness probe.
 | `email` | string | Unique |
 | `firstName` | string | |
 | `lastName` | string | |
-| `phone` | string | E.164 format — **NEW V2** |
-| `gender` | string | `male` \| `female` \| `other` — **NEW V2** |
-| `dateOfBirth` | string | ISO date — **NEW V2** |
-| `preferredLanguage` | string | `si` \| `ta` \| `en` — **NEW V2** |
+| `preferredLanguage` | string | `si` \| `ta` \| `en` — defaults to `en` — **NEW V2** |
 | `roles` | string[] | `member`, `student`, `leader`, `g12`, `admin`, `super_admin` — **NEW V2** (was scalar `role` in V1) |
 | `providers` | string[] | `password`, `google.com`, `apple.com` — **NEW V2** |
-| `status` | string | `active` \| `suspended` |
+| `status` | string | `approved` \| `suspended` |
 | `profilePhotoUrl` | string or null | |
 | `notificationPreferences` | object | `{ email: boolean, push: boolean }` — **NEW V2** (FR-NOT-006) |
 | `createdAt` | string | ISO 8601 |
@@ -2220,7 +2207,7 @@ Readiness probe.
 | `number` | number | Sequence within course |
 | `openDate` | string | **NEW** — ISO date; content accessible from this date |
 | `endDate` | string or null | **NEW** — auto-disables after this date |
-| `status` | string | `draft` \| `active` \| `disabled` |
+| `status` | string | `active` \| `disabled` |
 | `subjectCount` | number | |
 | `createdAt` | string | ISO 8601 |
 | `updatedAt` | string | ISO 8601 |
@@ -2289,7 +2276,7 @@ Readiness probe.
 | `courseId` | string | |
 | `batchId` | string | **NEW** — FK → batches |
 | `roleRequestId` | string or null | **NEW** — links to originating role request |
-| `status` | string | `pending` \| `active` \| `completed` \| `withdrawn` \| `rejected` |
+| `status` | string | `pending` \| `approved` \| `withdrawn` \| `rejected` |
 | `enrolledAt` | string or null | Set on approval |
 | `createdAt` | string | ISO 8601 |
 | `updatedAt` | string | ISO 8601 |

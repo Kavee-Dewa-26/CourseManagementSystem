@@ -35,7 +35,13 @@
       "PowerShell(netstat *)",
       "PowerShell(Start-Process \"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\" -ErrorAction SilentlyContinue)",
       "PowerShell(node scripts/seed-emulator.js 2>&1)",
-      "PowerShell(node scripts/newman-run.js 2>&1)"
+      "PowerShell(node scripts/newman-run.js 2>&1)",
+      "Bash(sed 's/.*\"url\"[^\"]*\"{{baseUrl}}\\\\\\([^\"]*\\\\\\)\".*/\\\\1/')",
+      "Read(//tmp/**)",
+      "Bash(docker-compose up *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Asus\\\\Desktop\\\\CMS\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(docker-compose ps *)"
     ]
   }
 }

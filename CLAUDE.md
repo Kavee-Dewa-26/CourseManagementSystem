@@ -226,7 +226,7 @@ Controllers are thin — they call one use case and delegate errors with `next(e
 
 - `notification-service` — has `src/application/handlers/` (e.g. `UserRegisteredHandler`) that call a `NotificationDispatcher` service. Email dispatch retries 3× with exponential backoff (1 s → 2 s → 4 s); failure is logged but never thrown. Push notifications are best-effort — a failure logs a warning and is silently swallowed. The service still exposes `/notifications` read endpoints for the frontend via the standard route → controller path.
 - `audit-service` — has `src/application/handlers/` that write append-only entries to `audit_log` via a repository. No HTTP creation endpoint exists; entries are only created by event handlers. `GET /audit-log` supports `?actorUid=:uid` for per-user timeline filtering; `GET /users/:uid/audit-log` is the per-user timeline endpoint (admin + super_admin).
-- `cell-service` (:3010, V2) — full Clean Architecture stack. 16 endpoints for cell group CRUD, member management, join request workflow, and cell report filing (idempotent via `X-Idempotency-Key`). Publishes cell domain events to the outbox (currently unrouted in EventDispatcher — see above).
+- `cell-service` (:3010, V2) — full Clean Architecture stack. 17 endpoints for cell group CRUD, member management, join request workflow, and cell report filing (idempotent via `X-Idempotency-Key`). Cell report photos can be pre-uploaded via `POST /cells/:id/report-photos` (returns URLs to pass in `photoUrls[]`) or submitted inline with `POST /cells/:id/reports` as `multipart/form-data` — both routes share the same multer middleware family (`handleReportPhotos` / `handleFileReport`). Publishes cell domain events to the outbox (currently unrouted in EventDispatcher — see above).
 - `analytics-service` (:3011, V2) — reads `analytics_snapshots` written by scheduled-jobs. Exposes 6 read-only endpoints (weekly cells, attendance, meeting types, growth, participation, CSV export). No writes. Background workers (scheduled-jobs) are the sole writers to `analytics_snapshots`.
 - `scheduled-jobs` (no HTTP port, V2) — background worker running 3 `setInterval` loops: `batchSweepJob` (opens/closes batches by schedule), `semesterSweepJob` (disables semesters past `endDate`, runs once per day), `snapshotJob` (aggregates cell reports into `analytics_snapshots`, runs weekly). All jobs are wrapped in `safeRun()` — failures log and continue. Direct Firestore reads (exempt from the cross-service HTTP rule, same as outbox-worker).
 
@@ -471,7 +471,7 @@ When writing new use cases or Firestore repository methods that touch the `users
 
 ### Profile Photo Upload
 
-`POST /api/v1/me/avatar` — multipart `photo` field, `image/jpeg` or `image/png` only, max 2 MB. Handled entirely inside user-service (not storage-service): `UploadAvatarUseCase` saves to Firebase Storage under `avatars/{uid}.{ext}`, calls `file.makePublic()`, then stores the resulting public URL on the user document as `profilePhotoUrl`. The `handleAvatarUpload` multer middleware lives at `packages/user-service/src/http/middleware/avatarUpload.ts`. `multer` is a dependency of user-service; all other services do not use it.
+`POST /api/v1/me/avatar` — multipart `photo` field, `image/jpeg` or `image/png` only, max 2 MB. Handled entirely inside user-service (not storage-service): `UploadAvatarUseCase` saves to Firebase Storage under `avatars/{uid}.{ext}`, calls `file.makePublic()`, then stores the resulting public URL on the user document as `profilePhotoUrl`. The `handleAvatarUpload` multer middleware lives at `packages/user-service/src/http/middleware/avatarUpload.ts`. `multer` is a dependency of user-service and cell-service (report photo uploads); all other services do not use it.
 
 ### Storage: Download Authorization
 
@@ -654,6 +654,10 @@ SENDGRID_API_KEY, EMAIL_FROM
 SMTP_HOST, SMTP_PORT                    # defaults: smtp.gmail.com / 587
 SMTP_USER, SMTP_PASS                    # SMTP credentials for OTP emails
 
+# Federated OAuth (auth-service — V2)
+GOOGLE_CLIENT_ID                        # Google OAuth client ID for POST /auth/federated/google
+APPLE_CLIENT_ID                         # Apple OAuth client ID for POST /auth/federated/apple
+
 # Gateway
 ALLOWED_ORIGINS                         # comma-separated CORS allowlist
 RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX    # global rate limit
@@ -664,6 +668,11 @@ ATTACHMENT_MAX_SIZE_BYTES               # storage-service (default: 26214400)
 OUTBOX_POLL_INTERVAL_SECONDS            # outbox-worker (default: 5)
 OUTBOX_BATCH_SIZE                       # outbox-worker (default: 20)
 ENROLLMENT_REJECTION_COOLOFF_HOURS      # enrollment-service
+BATCH_SWEEP_INTERVAL_MS                 # scheduled-jobs batchSweepJob interval (default: 60000)
+SEMESTER_SWEEP_INTERVAL_MS              # scheduled-jobs semesterSweepJob interval (default: 86400000)
+SNAPSHOT_CHECK_INTERVAL_MS             # scheduled-jobs snapshotJob poll interval
+SNAPSHOT_HOUR_UTC                       # UTC hour to run weekly snapshot (default: 0)
+SNAPSHOT_WEEKDAY                        # Day of week for snapshot (0=Sun … 6=Sat, default: 0)
 
 # Observability
 OTEL_SERVICE_NAME                       # OpenTelemetry service name for tracing
@@ -697,7 +706,7 @@ Two Jest configs exist in the repo. A third (`jest.e2e.config.ts`) is referenced
 
 **Firebase emulator ports** (from `firebase.json`): Auth `9099`, Firestore `8080`, Storage `9199`, UI `4000` (`http://localhost:4000`).
 
-**Postman:** Import `postman/CMP_Backend.postman_collection.json` and `postman/CMP_Local.postman_environment.json` for manual API testing against a local stack.
+**Postman:** Import `postman/CMP_Backend.postman_collection.json` with either `postman/CMP_Local.postman_environment.json` (local Docker stack) or `postman/CMP_Online.postman_environment.json` (online Firebase) for manual API testing.
 
 Use `jest.clearAllMocks()` in `beforeEach` to prevent test bleed. Integration tests use the Firebase emulator — `tests/integration/setup.ts` automatically sets `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080` and `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099` with fake credentials, so no real Firebase project credentials are needed. Just ensure the emulators are running before `npm run test:integration`.
 

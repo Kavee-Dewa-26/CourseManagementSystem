@@ -28,8 +28,8 @@ export class AuthController {
       const parsed = registerSchema.safeParse(req.body);
       if (!parsed.success) return next(fromZodError(parsed.error));
       const requestId = (req.headers['x-request-id'] as string) ?? '';
-      await this.registerUseCase.execute(parsed.data, requestId);
-      sendSuccess(res, { message: 'Registration successful. You are now an active member.' }, 201);
+      const { uid } = await this.registerUseCase.execute(parsed.data, requestId);
+      sendSuccess(res, { uid, message: 'Registration successful. You are now an active member.' }, 201);
     } catch (err) { next(err); }
   };
 

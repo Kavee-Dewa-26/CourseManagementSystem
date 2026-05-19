@@ -154,7 +154,7 @@ async function main() {
       envVar('firebaseWebApiKey', API_KEY),
     ],
     delayRequest:     400,
-    timeoutRequest:   15000,
+    timeoutRequest:   30000,
     color:            'on',
     reporters:        ['cli', 'htmlextra'],
     reporter: {

@@ -5,10 +5,11 @@ import { OutboxEventPublisher } from '@shared/events';
 import { UserServiceClient }   from '../../infrastructure/clients/UserServiceClient';
 
 export interface RegisterInput {
-  firstName: string;
-  lastName:  string;
-  email:     string;
-  password:  string;
+  firstName:          string;
+  lastName:           string;
+  email:              string;
+  password:           string;
+  preferredLanguage?: string;
 }
 
 export class RegisterUseCase {
@@ -17,7 +18,7 @@ export class RegisterUseCase {
     private readonly outbox:     OutboxEventPublisher,
   ) {}
 
-  async execute(input: RegisterInput, requestId: string): Promise<void> {
+  async execute(input: RegisterInput, requestId: string): Promise<{ uid: string }> {
     const exists = await this.userClient.emailExists(input.email);
     if (exists) throw createHttpError(409, 'EMAIL_EXISTS', 'Email address already registered.');
 
@@ -51,7 +52,7 @@ export class RegisterUseCase {
         roles:             ['member'],
         status:            'approved',
         profilePhotoUrl:   null,
-        preferredLanguage: 'en',
+        preferredLanguage: input.preferredLanguage ?? 'en',
         createdAt:         now,
         updatedAt:         now,
         deletedAt:         null,
@@ -68,5 +69,7 @@ export class RegisterUseCase {
       await getAuth().deleteUser(record.uid).catch(() => undefined);
       throw err;
     }
+
+    return { uid: record.uid };
   }
 }
