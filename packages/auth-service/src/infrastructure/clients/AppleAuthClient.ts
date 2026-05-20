@@ -30,6 +30,19 @@ function getSigningKey(header: jwt.JwtHeader): Promise<string> {
 
 export class AppleAuthClient {
   async verifyIdToken(idToken: string): Promise<ApplePayload> {
+    // Emulator bypass: accept base64-encoded JSON test payload in non-production
+    if (process.env.FIREBASE_AUTH_EMULATOR_HOST && process.env.NODE_ENV !== 'production') {
+      try {
+        const parsed = JSON.parse(Buffer.from(idToken, 'base64').toString('utf8')) as Record<string, unknown>;
+        if (typeof parsed?.email === 'string') {
+          return {
+            email:    parsed.email,
+            appleUid: (parsed.sub as string | undefined) ?? parsed.email,
+          };
+        }
+      } catch { /* not a test payload — fall through to real verification */ }
+    }
+
     try {
       const decoded = await new Promise<jwt.JwtPayload>((resolve, reject) => {
         jwt.verify(

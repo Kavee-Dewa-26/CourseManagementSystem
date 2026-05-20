@@ -50,6 +50,24 @@ const ROUTES: Record<string, Handler[]> = {
   'audit.action': [
     (p, r) => sendEvent(auditClient,  'audit.action', p, r),
   ],
+  'cell.created': [
+    (p, r) => sendEvent(auditClient,  'cell.created', p, r),
+  ],
+  'cell.join_requested': [
+    (p, r) => sendEvent(auditClient,  'cell.join_requested', p, r),
+  ],
+  'cell.join_approved': [
+    (p, r) => sendEvent(auditClient,  'cell.join_approved', p, r),
+  ],
+  'cell.join_rejected': [
+    (p, r) => sendEvent(auditClient,  'cell.join_rejected', p, r),
+  ],
+  'cell_report.filed': [
+    (p, r) => sendEvent(auditClient,  'cell_report.filed', p, r),
+  ],
+  'cell_report.voided': [
+    (p, r) => sendEvent(auditClient,  'cell_report.voided', p, r),
+  ],
 };
 
 export class EventDispatcher {

@@ -32,7 +32,9 @@ const USERS = [
   { email: 'admin@cmp.com',      password: 'Admin@12345',    firstName: 'System', lastName: 'Admin', role: 'admin',       roles: ['admin'],                 status: 'approved' },
   { email: 'student1@cmp.com',      password: 'Student1@123',   firstName: 'Test',  lastName: 'One',    role: 'student', roles: ['member', 'student'],  status: 'approved' },
   { email: 'student2@cmp.com',      password: 'Student2@123',   firstName: 'Test',  lastName: 'Two',    role: 'student', roles: ['member', 'student'],  status: 'approved' },
-  { email: 'saman.leader@tccr.lk',  password: 'Leader@12345',   firstName: 'Saman', lastName: 'Silva',  role: 'leader',  roles: ['member', 'leader'],   status: 'approved' },
+  { email: 'saman.leader@tccr.lk',  password: 'Leader@12345',   firstName: 'Saman',  lastName: 'Silva',   role: 'leader',  roles: ['member', 'leader'],        status: 'approved' },
+  { email: 'leader@cmp.com',         password: 'Leader@12345',   firstName: 'Test',   lastName: 'Leader',  role: 'leader',  roles: ['member', 'leader'],        status: 'approved' },
+  { email: 'g12leader@cmp.com',      password: 'G12Lead@123',    firstName: 'Test',   lastName: 'G12',     role: 'g12',     roles: ['member', 'g12'],           status: 'approved' },
 ];
 
 async function deleteIfExists(email) {

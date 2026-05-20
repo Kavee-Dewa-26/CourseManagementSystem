@@ -89,6 +89,42 @@ const EVENT_META: Record<string, EventMeta> = {
     getActorEmail: _p => null,
     getTargetId:   p => str(p.subjectId),
   },
+  'cell.created': {
+    category: 'cell',     targetType: 'cell_group',
+    getActorUid:   p => str(p.leaderUid),
+    getActorEmail: _p => null,
+    getTargetId:   p => str(p.cellId),
+  },
+  'cell.join_requested': {
+    category: 'cell',     targetType: 'join_request',
+    getActorUid:   p => str(p.requesterUid),
+    getActorEmail: _p => null,
+    getTargetId:   p => str(p.joinRequestId),
+  },
+  'cell.join_approved': {
+    category: 'cell',     targetType: 'join_request',
+    getActorUid:   p => str(p.decidedByUid),
+    getActorEmail: _p => null,
+    getTargetId:   p => str(p.joinRequestId),
+  },
+  'cell.join_rejected': {
+    category: 'cell',     targetType: 'join_request',
+    getActorUid:   p => str(p.decidedByUid),
+    getActorEmail: _p => null,
+    getTargetId:   p => str(p.joinRequestId),
+  },
+  'cell_report.filed': {
+    category: 'cell',     targetType: 'cell_report',
+    getActorUid:   p => str(p.filledByUid),
+    getActorEmail: _p => null,
+    getTargetId:   p => str(p.reportId),
+  },
+  'cell_report.voided': {
+    category: 'cell',     targetType: 'cell_report',
+    getActorUid:   p => str(p.voidedByUid),
+    getActorEmail: _p => null,
+    getTargetId:   p => str(p.reportId),
+  },
 };
 
 export class AuditEventHandler {

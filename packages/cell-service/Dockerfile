@@ -27,5 +27,5 @@ COPY --from=builder /app/packages/cell-service/dist ./dist
 COPY --from=builder /app/packages/shared ./packages/shared
 COPY --from=builder /app/node_modules ./node_modules
 ENV NODE_ENV=production
-EXPOSE 3010
+EXPOSE 3009
 CMD ["node", "dist/server.js"]

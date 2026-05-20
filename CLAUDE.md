@@ -13,6 +13,8 @@ Node.js 20 · TypeScript 5 · Express 4 · Microservice Architecture · Firebase
 
 **V2 (TCCR) is fully implemented.** V1 is CMP (single learning portal). V2 is TCCR — the same codebase extended with Cell Groups, Analytics, Scheduled Jobs, federated OAuth (Google/Apple), and an additive roles model. All V1 endpoints remain live; V2 adds on top. Read `.claude/Architecture/Version_02__Architecture_Overview.md` before modifying any V2 feature — it defines the full change set, migration strategy, and service boundaries.
 
+**Git workflow:** Feature branches cut from `develop`; PRs target `develop`. `main` is the production branch — PRs to `main` come from `develop` only at release time.
+
 ---
 
 ## Commands
@@ -116,6 +118,11 @@ node scripts/seed-online.js
 # Generates HTML report at postman/newman-report.html
 node scripts/newman-run.js
 
+# Run only the Cell Service folder from the Postman collection via Newman (clean-slate emulator run)
+# Prerequisites: npx firebase emulators:start + docker-compose.local.yml stack running
+# Generates HTML report at postman/newman-cell-report.html
+node scripts/newman-cell-service.js
+
 # Run Postman collection via Newman directly against already-running services
 # (no clean-slate setup — services must already be running)
 npm run test:newman
@@ -216,6 +223,10 @@ Adding a new proxied route in the wrong order will silently send traffic to the 
 **Registration now creates an active Member (V2).** `POST /auth/register` sets `role: 'member'`, `roles: ['member']`, `status: 'approved'` — the `pending_approval` / registration-queue flow from V1 no longer applies to new registrations. The V1 registration table (`registrations` collection) and `POST /admin/registrations/*` routes remain for existing data; new users bypass it entirely.
 
 **Federated OAuth (V2).** `POST /auth/federated/:provider` (`google` or `apple`) accepts an OAuth token, exchanges it with Firebase Auth, and returns a Firebase ID token. The OAuth token is never stored — only the resulting Firebase session is kept (NFR-SEC-006). Providers supported: `google` and `apple`.
+
+**Emulator bypass for federated OAuth testing:** When `FIREBASE_AUTH_EMULATOR_HOST` is set and `NODE_ENV` is not `production`, both `GoogleAuthClient` and `AppleAuthClient` accept a base64-encoded JSON payload in place of a real token. Encode `{ "email": "test@example.com", "sub": "uid123", "name": "Test User" }` as base64 and pass it as the `idToken` to exercise the federated flow without real Google/Apple credentials.
+
+**Apple private relay fallback:** When a real Apple ID token does not include an `email` claim (users who chose to hide their email), `AppleAuthClient` synthesises a private relay address: `${sub}@privaterelay.appleid.com`. Downstream code that stores or compares emails must tolerate this format.
 
 ### Clean Architecture Layers (per service)
 
@@ -418,7 +429,7 @@ pending → processing → delivered
 
 Across a batch, the worker uses `Promise.allSettled()` so one event's failure does not abort processing of the remaining events in the same poll cycle.
 
-The outbox-worker's `EventDispatcher` routes each event type to one or more handlers. The full event routing table. `audit.action` is the generic escape hatch for direct audit writes that don't fit a typed domain event — publish it with `actor`, `action`, `targetType`, `targetId`, and optional `metadata` (used for operations like password changes that produce no other domain event):
+The outbox-worker's `EventDispatcher` routes each event type to one or more handlers. The full event routing table. `audit.action` is the generic escape hatch for direct audit writes that don't fit a typed domain event — publish it with `actorUid`, `actorEmail`, `action`, `category`, `targetType`, `targetId`, and optional `ip` (used for operations like password changes that produce no other domain event). Extra fields pass through the `[key: string]: unknown` index on `AuditEventPayload`:
 
 | Event type | Handlers |
 |-----------|---------|
@@ -429,13 +440,19 @@ The outbox-worker's `EventDispatcher` routes each event type to one or more hand
 | `enrollment.approved` | notify, audit |
 | `enrollment.rejected` | notify, audit |
 | `enrollment.withdrawn` | audit |
-| `course.published` | audit only — outbox routes to notify but notification-service has no handler; event is silently dropped |
+| `course.published` | notify (silently dropped — no handler in notification-service), audit |
 | `progress.subjectCompleted` | audit |
 | `admin.created` | notify, audit |
 | `admin.suspended` | notify, audit |
 | `audit.action` | audit |
+| `cell.created` | audit |
+| `cell.join_requested` | audit |
+| `cell.join_approved` | audit |
+| `cell.join_rejected` | audit |
+| `cell_report.filed` | audit |
+| `cell_report.voided` | audit |
 
-**Unrouted events (published to outbox but not wired in EventDispatcher):** `role.requested`, `role.granted`, `cell.created`, `cell.join_requested`, `cell.join_approved`, `cell.join_rejected`, `cell_report.filed`, `cell_report.voided` — all silently skipped by the outbox-worker. Adding notify/audit coverage for these is a known gap.
+**Unrouted events (published to outbox but not wired in EventDispatcher):** `role.requested`, `role.granted` — silently skipped by the outbox-worker. Adding notify/audit coverage for these is a known gap.
 
 ### Firestore Collection Ownership
 

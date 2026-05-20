@@ -16,10 +16,24 @@ export class GoogleAuthClient {
   }
 
   async verifyIdToken(idToken: string): Promise<GooglePayload> {
+    // Emulator bypass: accept base64-encoded JSON test payload in non-production
+    if (process.env.FIREBASE_AUTH_EMULATOR_HOST && process.env.NODE_ENV !== 'production') {
+      try {
+        const parsed = JSON.parse(Buffer.from(idToken, 'base64').toString('utf8')) as Record<string, unknown>;
+        if (typeof parsed?.email === 'string') {
+          return {
+            email:     parsed.email,
+            name:      (parsed.name as string | undefined) ?? parsed.email.split('@')[0],
+            googleUid: (parsed.sub  as string | undefined) ?? parsed.email,
+          };
+        }
+      } catch { /* not a test payload — fall through to real verification */ }
+    }
+
     try {
       const ticket  = await this.client.verifyIdToken({
         idToken,
-        audience: config.googleClientId || undefined, // skip audience check if not configured
+        audience: config.googleClientId || undefined,
       });
       const payload = ticket.getPayload();
       if (!payload?.email) {
