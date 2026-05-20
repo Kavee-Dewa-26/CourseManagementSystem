@@ -3444,16 +3444,161 @@
     },
     {
       "name": "🏘 V2 — Cell Service",
-      "description": "Cell groups, member management, join requests, cell reports.\nNote: adminToken is used for leader-role operations.\nCell reports use X-Idempotency-Key for safe retries.",
+      "description": "Cell groups, member management, join requests, cell reports.\n\nToken usage:\n  leaderToken   — leader operations (create cell, add/remove members, file reports, archive)\n  g12Token      — G12 operations (same as leader; also unlocks Analytics)\n  adminToken    — admin-only (approve/reject join requests)\n  student2Token — member/student (create join requests only)\n\nTest flow:\n  1. Sign In Leader + G12 first (from Sign In folder)\n  2. Member Search — verify leader/g12 can find members by name\n  3. Create Cell → Manage Members → Join Requests → Reports → Archive",
       "item": [
         {
-          "name": "Create Cell Group (admin as leader) — saves cellId",
+          "name": "👥 Member Search (leader / g12)",
+          "item": [
+            {
+              "name": "Search by firstName prefix — leader",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "const j = pm.response.json();",
+                      "pm.test('has items array', () => pm.expect(j.items).to.be.an('array'));",
+                      "pm.test('no admin in results', () => {",
+                      "  (j.items || []).forEach(u => {",
+                      "    pm.expect((u.roles || [])).to.not.include('admin');",
+                      "    pm.expect((u.roles || [])).to.not.include('super_admin');",
+                      "  });",
+                      "});",
+                      "if (j.items && j.items.length > 0 && j.items[0].uid) {",
+                      "  pm.environment.set('foundMemberUid', j.items[0].uid);",
+                      "  console.log('foundMemberUid saved:', j.items[0].uid);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{leaderToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/users?name=Saman"
+              }
+            },
+            {
+              "name": "Search by firstName prefix — g12",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                      "const j = pm.response.json();",
+                      "pm.test('has items array', () => pm.expect(j.items).to.be.an('array'));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{g12Token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/users?name=Test"
+              }
+            },
+            {
+              "name": "List members (no filter) — leader",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{leaderToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/users?limit=20"
+              }
+            },
+            {
+              "name": "Filter by role=member — leader",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{leaderToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/users?role=member&limit=20"
+              }
+            },
+            {
+              "name": "Member tries user list (expect 403)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('403 Forbidden', () => pm.response.to.have.status(403));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{student2Token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": "{{baseUrl}}/users"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Cell Group (leader) — saves cellId",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
                   "const j = pm.response.json();",
+                  "pm.test('has id', () => pm.expect(j.id).to.be.a('string'));",
+                  "pm.test('state is active', () => pm.expect(j.state).to.equal('active'));",
                   "if (j.id) { pm.environment.set('cellId', j.id); console.log('cellId saved:', j.id); }"
                 ],
                 "type": "text/javascript"
@@ -3466,7 +3611,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{adminToken}}",
+                  "value": "{{leaderToken}}",
                   "type": "string"
                 }
               ]
@@ -3491,7 +3636,7 @@
           }
         },
         {
-          "name": "List All Cells (admin sees all)",
+          "name": "List All Cells (admin)",
           "request": {
             "auth": {
               "type": "bearer",
@@ -3509,14 +3654,50 @@
           }
         },
         {
-          "name": "List My Cells",
+          "name": "List All Cells (leader — scoped)",
           "request": {
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{adminToken}}",
+                  "value": "{{leaderToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cells"
+          }
+        },
+        {
+          "name": "List Cells — filter ?type=care",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{leaderToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cells?type=care"
+          }
+        },
+        {
+          "name": "List My Cells (leader)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{leaderToken}}",
                   "type": "string"
                 }
               ]
@@ -3534,7 +3715,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{adminToken}}",
+                  "value": "{{leaderToken}}",
                   "type": "string"
                 }
               ]
@@ -3545,14 +3726,14 @@
           }
         },
         {
-          "name": "Update Cell Group",
+          "name": "Update Cell Group (leader)",
           "request": {
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{adminToken}}",
+                  "value": "{{leaderToken}}",
                   "type": "string"
                 }
               ]
@@ -3566,7 +3747,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Colombo South Cell (Updated)\",\n  \"description\": \"Updated description\"\n}",
+              "raw": "{\n  \"name\": \"Colombo South Cell (Updated)\",\n  \"area\": \"Colombo South (Extended)\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3577,14 +3758,25 @@
           }
         },
         {
-          "name": "Add Members to Cell (batch add)",
+          "name": "Add Members to Cell (leader) — adds student2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{adminToken}}",
+                  "value": "{{leaderToken}}",
                   "type": "string"
                 }
               ]
@@ -3609,14 +3801,25 @@
           }
         },
         {
-          "name": "Remove Member from Cell",
+          "name": "Remove Member from Cell (leader)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{adminToken}}",
+                  "value": "{{leaderToken}}",
                   "type": "string"
                 }
               ]
@@ -3633,7 +3836,9 @@
               "listen": "test",
               "script": {
                 "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
                   "const j = pm.response.json();",
+                  "pm.test('has id', () => pm.expect(j.id).to.be.a('string'));",
                   "if (j.id) { pm.environment.set('joinRequestId', j.id); console.log('joinRequestId saved:', j.id); }"
                 ],
                 "type": "text/javascript"
@@ -3672,6 +3877,17 @@
         },
         {
           "name": "Duplicate Join Request (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",
@@ -3703,14 +3919,32 @@
           }
         },
         {
-          "name": "Admin — List Join Requests (pending)",
+          "name": "Leader — List All Join Requests",
           "request": {
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{adminToken}}",
+                  "value": "{{leaderToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cells/{{cellId}}/join-requests"
+          }
+        },
+        {
+          "name": "Leader — List Pending Join Requests",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{leaderToken}}",
                   "type": "string"
                 }
               ]
@@ -3721,25 +3955,18 @@
           }
         },
         {
-          "name": "Admin — Approve Join Request",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{adminToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [],
-            "url": "{{baseUrl}}/cells/{{cellId}}/join-requests/{{joinRequestId}}/approve"
-          }
-        },
-        {
           "name": "Admin — Reject Join Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",
@@ -3760,7 +3987,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"reason\": \"Cell is currently at capacity\"\n}",
+              "raw": "{\n  \"note\": \"Cell is currently at capacity\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3771,7 +3998,133 @@
           }
         },
         {
-          "name": "Upload Report Photos — saves reportPhotoUrl",
+          "name": "student2 resubmits after rejection — saves joinRequestId",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const j = pm.response.json();",
+                  "if (j.id) { pm.environment.set('joinRequestId', j.id); console.log('joinRequestId saved (overwrite):', j.id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{student2Token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Resubmitting after rejection was reviewed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/cells/{{cellId}}/join-requests"
+          }
+        },
+        {
+          "name": "Admin — Approve Join Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Welcome to the cell group\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/cells/{{cellId}}/join-requests/{{joinRequestId}}/approve"
+          }
+        },
+        {
+          "name": "Approve already-decided (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/cells/{{cellId}}/join-requests/{{joinRequestId}}/approve"
+          }
+        },
+        {
+          "name": "Upload Report Photos (leader) — saves reportPhotoUrl",
           "description": "Upload 1-10 JPEG/PNG photos (max 5 MB each). Returns photoUrls[] to include in report.",
           "event": [
             {
@@ -3794,7 +4147,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{superAdminToken}}",
+                  "value": "{{leaderToken}}",
                   "type": "string"
                 }
               ]
@@ -3817,14 +4170,16 @@
           }
         },
         {
-          "name": "File Cell Report (idempotent via X-Idempotency-Key) — saves cellReportId",
+          "name": "File Cell Report (leader + idempotency key) — saves cellReportId",
           "description": "Use the same X-Idempotency-Key to test idempotency — second call returns the same record.",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
                   "const j = pm.response.json();",
+                  "pm.test('has id', () => pm.expect(j.id).to.be.a('string'));",
                   "if (j.id) { pm.environment.set('cellReportId', j.id); console.log('cellReportId saved:', j.id); }"
                 ],
                 "type": "text/javascript"
@@ -3837,7 +4192,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{superAdminToken}}",
+                  "value": "{{leaderToken}}",
                   "type": "string"
                 }
               ]
@@ -3854,7 +4209,7 @@
               "formdata": [
                 {
                   "key": "data",
-                  "value": "{\"date\":\"2026-05-18\",\"didMeet\":true,\"leaderPresent\":true,\"location\":\"TCCR\",\"timeStarted\":\"2026-05-18T18:00:00+05:30\",\"timeEnded\":\"2026-05-18T19:30:00+05:30\",\"language\":\"si\",\"subjectDiscussed\":\"sunday_sermon\",\"cellType\":\"g12\",\"g12LeaderUid\":\"\",\"attendance\":[{\"name\":\"Member One\",\"status\":\"present\",\"isNew\":false},{\"name\":\"Member Two\",\"status\":\"absent\",\"isNew\":false}],\"contactedAbsentees\":\"yes\",\"absenteeNotes\":\"Will follow up with Member Two\",\"additionalVisitors\":1,\"childrenCount\":2,\"satisfactionRate\":5,\"additionalInfo\":\"Good session.\"}",
+                  "value": "{\"date\":\"2026-05-18\",\"didMeet\":true,\"leaderPresent\":true,\"location\":\"TCCR\",\"timeStarted\":\"2026-05-18T18:00:00+05:30\",\"timeEnded\":\"2026-05-18T19:30:00+05:30\",\"language\":\"si\",\"subjectDiscussed\":\"sunday_sermon\",\"cellType\":\"care\",\"g12LeaderUid\":\"\",\"attendance\":[{\"name\":\"Member One\",\"status\":\"present\",\"isNew\":false},{\"name\":\"Member Two\",\"status\":\"absent\",\"isNew\":false}],\"contactedAbsentees\":\"yes\",\"absenteeNotes\":\"Will follow up with Member Two\",\"additionalVisitors\":1,\"childrenCount\":2,\"satisfactionRate\":5,\"additionalInfo\":\"Good session.\"}",
                   "type": "text",
                   "description": "Report fields as JSON string"
                 },
@@ -3871,14 +4226,25 @@
           }
         },
         {
-          "name": "File Cell Report again (same idempotency key — expect same record)",
+          "name": "File Cell Report again (same key — expect same record / 200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 or 201', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{superAdminToken}}",
+                  "value": "{{leaderToken}}",
                   "type": "string"
                 }
               ]
@@ -3895,9 +4261,9 @@
               "formdata": [
                 {
                   "key": "data",
-                  "value": "{\"date\":\"2026-05-18\",\"didMeet\":true,\"leaderPresent\":true,\"location\":\"TCCR\",\"timeStarted\":\"2026-05-18T18:00:00+05:30\",\"timeEnded\":\"2026-05-18T19:30:00+05:30\",\"language\":\"si\",\"subjectDiscussed\":\"sunday_sermon\",\"cellType\":\"g12\",\"g12LeaderUid\":\"\",\"attendance\":[{\"name\":\"Member One\",\"status\":\"present\",\"isNew\":false},{\"name\":\"Member Two\",\"status\":\"absent\",\"isNew\":false}],\"contactedAbsentees\":\"yes\",\"absenteeNotes\":\"Will follow up with Member Two\",\"additionalVisitors\":1,\"childrenCount\":2,\"satisfactionRate\":5,\"additionalInfo\":\"Good session.\"}",
+                  "value": "{\"date\":\"2026-05-18\",\"didMeet\":true,\"leaderPresent\":true,\"location\":\"TCCR\",\"timeStarted\":\"2026-05-18T18:00:00+05:30\",\"timeEnded\":\"2026-05-18T19:30:00+05:30\",\"language\":\"si\",\"subjectDiscussed\":\"sunday_sermon\",\"cellType\":\"care\",\"g12LeaderUid\":\"\",\"attendance\":[{\"name\":\"Member One\",\"status\":\"present\",\"isNew\":false},{\"name\":\"Member Two\",\"status\":\"absent\",\"isNew\":false}],\"contactedAbsentees\":\"yes\",\"absenteeNotes\":\"Will follow up with Member Two\",\"additionalVisitors\":1,\"childrenCount\":2,\"satisfactionRate\":5,\"additionalInfo\":\"Good session.\"}",
                   "type": "text",
-                  "description": "Same data + same idempotency key → returns existing report (200 OK)"
+                  "description": "Same key → returns existing report"
                 }
               ]
             },
@@ -3905,14 +4271,14 @@
           }
         },
         {
-          "name": "List Cell Reports",
+          "name": "List Cell Reports (leader)",
           "request": {
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{adminToken}}",
+                  "value": "{{leaderToken}}",
                   "type": "string"
                 }
               ]
@@ -3923,14 +4289,14 @@
           }
         },
         {
-          "name": "Get Cell Report by ID",
+          "name": "Get Cell Report by ID (leader)",
           "request": {
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{adminToken}}",
+                  "value": "{{leaderToken}}",
                   "type": "string"
                 }
               ]
@@ -3941,14 +4307,25 @@
           }
         },
         {
-          "name": "Void Cell Report",
+          "name": "Void Cell Report (leader)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{superAdminToken}}",
+                  "value": "{{leaderToken}}",
                   "type": "string"
                 }
               ]
@@ -3974,13 +4351,24 @@
         },
         {
           "name": "Void already-voided report (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{adminToken}}",
+                  "value": "{{leaderToken}}",
                   "type": "string"
                 }
               ]
@@ -4005,14 +4393,27 @@
           }
         },
         {
-          "name": "Archive Cell Group (expect 200)",
+          "name": "Archive Cell Group (leader)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('state is archived', () => pm.expect(j.state).to.equal('archived'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{adminToken}}",
+                  "value": "{{leaderToken}}",
                   "type": "string"
                 }
               ]
@@ -4024,13 +4425,24 @@
         },
         {
           "name": "Archive already-archived (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{adminToken}}",
+                  "value": "{{leaderToken}}",
                   "type": "string"
                 }
               ]
