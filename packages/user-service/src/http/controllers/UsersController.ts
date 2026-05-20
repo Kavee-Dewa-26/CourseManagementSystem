@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { fromZodError }                    from '@shared/errors';
 import { sendSuccess, sendPaginated }      from '@shared/response';
+import { AuthenticatedRequest }            from '@shared/auth-middleware';
 import { GetUsersUseCase }                 from '../../application/use-cases/GetUsersUseCase';
 import { GetUserByIdUseCase }              from '../../application/use-cases/GetUserByIdUseCase';
 import { SuspendUserUseCase }             from '../../application/use-cases/SuspendUserUseCase';
@@ -30,11 +31,12 @@ export class UsersController {
       const parsed = listUsersSchema.safeParse(req.query);
       if (!parsed.success) return next(fromZodError(parsed.error));
 
-      const cacheKey = JSON.stringify(parsed.data);
-      const cached   = UsersController.listCache.get(cacheKey);
+      const callerRoles = (req as AuthenticatedRequest).principal?.roles ?? [];
+      const cacheKey    = JSON.stringify({ ...parsed.data, _roles: [...callerRoles].sort().join(',') });
+      const cached      = UsersController.listCache.get(cacheKey);
       if (cached) return sendPaginated(res, cached.items, cached.nextCursor, cached.total);
 
-      const result = await this.getUsersUseCase.execute(parsed.data);
+      const result = await this.getUsersUseCase.execute(parsed.data, callerRoles);
       UsersController.listCache.set(cacheKey, result);
       sendPaginated(res, result.items, result.nextCursor, result.total);
     } catch (err) { next(err); }

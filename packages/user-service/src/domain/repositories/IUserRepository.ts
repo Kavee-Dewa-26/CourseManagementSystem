@@ -1,10 +1,12 @@
 import { User, UserRole, UserStatus } from '../entities/User';
 
 export interface FindAllOptions {
-  limit:   number;
-  cursor?: string;
-  role?:   UserRole;
-  status?: UserStatus;
+  limit:         number;
+  cursor?:       string;
+  role?:         UserRole;
+  status?:       UserStatus;
+  name?:         string;
+  excludeRoles?: UserRole[];
 }
 
 export interface FindAllResult {

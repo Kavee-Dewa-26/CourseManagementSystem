@@ -50,6 +50,29 @@ export class FirestoreUserRepository implements IUserRepository {
     if (opts.role)   base = base.where('role',   '==', opts.role);
     if (opts.status) base = base.where('status', '==', opts.status);
 
+    if (opts.name) {
+      // Prefix search on firstName — orderBy switches to firstName asc
+      const end = opts.name + '';
+      base = base.where('firstName', '>=', opts.name).where('firstName', '<=', end);
+
+      const countSnap = await base.count().get();
+      const total     = countSnap.data().count;
+
+      let query = base.orderBy('firstName', 'asc').limit(opts.limit);
+      if (opts.cursor) {
+        const cursorSnap = await this.col.doc(opts.cursor).get();
+        if (cursorSnap.exists) query = query.startAfter(cursorSnap);
+      }
+
+      const snap = await query.get();
+      let items  = snap.docs.map(d => toUser(d.id, d.data()));
+      if (opts.excludeRoles?.length) {
+        items = items.filter(u => !u.roles.some(r => opts.excludeRoles!.includes(r)));
+      }
+      const last = snap.docs[snap.docs.length - 1];
+      return { items, nextCursor: snap.docs.length === opts.limit && last ? last.id : null, total };
+    }
+
     const countSnap = await base.count().get();
     const total     = countSnap.data().count;
 
@@ -59,12 +82,13 @@ export class FirestoreUserRepository implements IUserRepository {
       if (cursorSnap.exists) query = query.startAfter(cursorSnap);
     }
 
-    const snap  = await query.get();
-    const items = snap.docs.map(d => toUser(d.id, d.data()));
-    const last  = snap.docs[snap.docs.length - 1];
-    const nextCursor = snap.docs.length === opts.limit && last ? last.id : null;
-
-    return { items, nextCursor, total };
+    const snap = await query.get();
+    let items  = snap.docs.map(d => toUser(d.id, d.data()));
+    if (opts.excludeRoles?.length) {
+      items = items.filter(u => !u.roles.some(r => opts.excludeRoles!.includes(r)));
+    }
+    const last = snap.docs[snap.docs.length - 1];
+    return { items, nextCursor: snap.docs.length === opts.limit && last ? last.id : null, total };
   }
 
   async create(user: User): Promise<void> {

@@ -210,6 +210,43 @@
             },
             "url": "{{authBaseUrl}}/accounts:signInWithPassword?key={{firebaseWebApiKey}}"
           }
+        },
+        {
+          "name": "Sign In — G12 (g12leader@tccr.lk)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.idToken) {",
+                  "  pm.environment.set(\"g12Token\", j.idToken);",
+                  "  console.log(\"g12Token saved\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"g12leader@tccr.lk\",\n  \"password\": \"Change@Me2026\",\n  \"returnSecureToken\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{authBaseUrl}}/accounts:signInWithPassword?key={{firebaseWebApiKey}}"
+          }
         }
       ]
     },
@@ -373,7 +410,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"idToken\": \"google-oauth-id-token-here\",\n  \"preferredLanguage\": \"en\"\n}",
+              "raw": "{\n  \"idToken\": \"eyJlbWFpbCI6InRlc3QuZ29vZ2xlQGdtYWlsLmNvbSIsIm5hbWUiOiJUZXN0IEdvb2dsZSBVc2VyIiwic3ViIjoiZ29vZ2xlLXRlc3QtdWlkLTAwMSJ9\",\n  \"preferredLanguage\": \"en\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -381,7 +418,22 @@
               }
             },
             "url": "{{baseUrl}}/auth/federated/google"
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"has firebaseToken\", () => pm.expect(j.firebaseToken).to.be.a(\"string\"));",
+                  "pm.test(\"has uid\",          () => pm.expect(j.uid).to.be.a(\"string\"));",
+                  "if (j.firebaseToken) { pm.environment.set(\"googleFederatedToken\", j.firebaseToken); console.log(\"Google federated token saved\"); }"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Federated Sign-In — Apple (V2)",
@@ -398,7 +450,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"idToken\": \"apple-identity-token-here\",\n  \"preferredLanguage\": \"en\"\n}",
+              "raw": "{\n  \"idToken\": \"eyJlbWFpbCI6InRlc3QuYXBwbGVAcHJpdmF0ZXJlbGF5LmFwcGxlaWQuY29tIiwic3ViIjoiYXBwbGUtdGVzdC11aWQtMDAxIn0=\",\n  \"preferredLanguage\": \"en\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -406,7 +458,22 @@
               }
             },
             "url": "{{baseUrl}}/auth/federated/apple"
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"has firebaseToken\", () => pm.expect(j.firebaseToken).to.be.a(\"string\"));",
+                  "pm.test(\"has uid\",          () => pm.expect(j.uid).to.be.a(\"string\"));",
+                  "if (j.firebaseToken) { pm.environment.set(\"appleFederatedToken\", j.firebaseToken); console.log(\"Apple federated token saved\"); }"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Logout (student1)",
@@ -1071,6 +1138,34 @@
               }
             },
             "url": "{{baseUrl}}/users/{{student2Id}}/roles"
+          }
+        },
+        {
+          "name": "Delete User — soft delete (Admin)",
+          "auth": {
+            "type": "bearer",
+            "bearer": [
+              {
+                "key": "token",
+                "value": "{{adminToken}}",
+                "type": "string"
+              }
+            ]
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/users/{{userId}}"
           }
         },
         {
@@ -3712,8 +3807,8 @@
                 {
                   "key": "photos",
                   "type": "file",
-                  "src": [],
-                  "disabled": true,
+                  "src": "test-photo.png",
+                  "disabled": false,
                   "description": "Attach 1-10 JPEG/PNG image files (max 5 MB each)"
                 }
               ]

@@ -4,8 +4,25 @@
       "collectionGroup": "users",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "deletedAt",  "order": "ASCENDING" },
-        { "fieldPath": "createdAt",  "order": "DESCENDING" }
+        { "fieldPath": "deletedAt",   "order": "ASCENDING" },
+        { "fieldPath": "createdAt",   "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "deletedAt",   "order": "ASCENDING" },
+        { "fieldPath": "firstName",   "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "deletedAt",   "order": "ASCENDING" },
+        { "fieldPath": "status",      "order": "ASCENDING" },
+        { "fieldPath": "firstName",   "order": "ASCENDING" }
       ]
     },
     {
@@ -220,6 +237,199 @@
       "fields": [
         { "fieldPath": "status",    "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "batches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "courseId",  "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "role_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status",    "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "role_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "requesterUid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt",    "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "analytics_snapshots",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "scope",     "order": "ASCENDING" },
+        { "fieldPath": "periodKey", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "analytics_snapshots",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "scope",     "order": "ASCENDING" },
+        { "fieldPath": "periodKey", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cell_groups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "state",     "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cell_groups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "type",      "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cell_groups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "area",      "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cell_groups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "leaderUid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cell_groups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "state",     "order": "ASCENDING" },
+        { "fieldPath": "type",      "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cell_groups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "state",     "order": "ASCENDING" },
+        { "fieldPath": "area",      "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cell_groups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "state",     "order": "ASCENDING" },
+        { "fieldPath": "leaderUid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cell_groups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "type",      "order": "ASCENDING" },
+        { "fieldPath": "area",      "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cell_groups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "type",      "order": "ASCENDING" },
+        { "fieldPath": "leaderUid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cell_groups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "area",      "order": "ASCENDING" },
+        { "fieldPath": "leaderUid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cell_groups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "state",     "order": "ASCENDING" },
+        { "fieldPath": "type",      "order": "ASCENDING" },
+        { "fieldPath": "area",      "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cell_groups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "state",     "order": "ASCENDING" },
+        { "fieldPath": "type",      "order": "ASCENDING" },
+        { "fieldPath": "leaderUid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cell_groups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "state",     "order": "ASCENDING" },
+        { "fieldPath": "area",      "order": "ASCENDING" },
+        { "fieldPath": "leaderUid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cell_groups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "type",      "order": "ASCENDING" },
+        { "fieldPath": "area",      "order": "ASCENDING" },
+        { "fieldPath": "leaderUid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cell_groups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "state",     "order": "ASCENDING" },
+        { "fieldPath": "type",      "order": "ASCENDING" },
+        { "fieldPath": "area",      "order": "ASCENDING" },
+        { "fieldPath": "leaderUid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "join_requests",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "status",    "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cell_reports",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "voided", "order": "ASCENDING" },
+        { "fieldPath": "date",   "order": "DESCENDING" }
       ]
     }
   ],
