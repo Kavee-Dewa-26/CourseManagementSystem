@@ -1,4 +1,4 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -6,21 +6,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**CMP → TCCR (Course Management Portal / The Christian Center Rathmalana)** — `slp-backend`
+**CMP â†’ TCCR (Course Management Portal / The Christian Center Rathmalana)** â€” `slp-backend`
 Organisation: Future CX Lanka (Pvt) Ltd
 
-Node.js 20 · TypeScript 5 · Express 4 · Microservice Architecture · Firebase (Firestore, Auth, Storage, FCM) · npm workspaces monorepo
+Node.js 20 Â· TypeScript 5 Â· Express 4 Â· Microservice Architecture Â· Firebase (Firestore, Auth, Storage, FCM) Â· npm workspaces monorepo
 
-**V2 (TCCR) is fully implemented.** V1 is CMP (single learning portal). V2 is TCCR — the same codebase extended with Cell Groups, Analytics, Scheduled Jobs, federated OAuth (Google/Apple), and an additive roles model. All V1 endpoints remain live; V2 adds on top. Read `.claude/Architecture/Version_02__Architecture_Overview.md` before modifying any V2 feature — it defines the full change set, migration strategy, and service boundaries.
+**V2 (TCCR) is fully implemented.** V1 is CMP (single learning portal). V2 is TCCR â€” the same codebase extended with Cell Groups, Analytics, Scheduled Jobs, federated OAuth (Google/Apple), and an additive roles model. All V1 endpoints remain live; V2 adds on top. Read `.claude/Architecture/Version_02__Architecture_Overview.md` before modifying any V2 feature â€” it defines the full change set, migration strategy, and service boundaries.
 
-**Git workflow:** Feature branches cut from `develop`; PRs target `develop`. `main` is the production branch — PRs to `main` come from `develop` only at release time.
+**Git workflow:** Feature branches cut from `develop`; PRs target `develop`. `main` is the production branch â€” PRs to `main` come from `develop` only at release time.
 
 ---
 
 ## Commands
 
 ```bash
-# V1 core dev startup (gateway + 9 services + outbox-worker; V2 services excluded — use docker-compose for full stack)
+# V1 core dev startup (gateway + 9 services + outbox-worker; V2 services excluded â€” use docker-compose for full stack)
 bash scripts/start.sh
 
 # Install all workspace dependencies
@@ -56,7 +56,7 @@ npm run test:e2e
 # Run a single test file
 npx jest packages/progress-service/tests/unit/application/ComputeCourseProgressUseCase.test.ts
 
-# Alias for bash scripts/start.sh — starts V1 core services only (same as above)
+# Alias for bash scripts/start.sh â€” starts V1 core services only (same as above)
 npm run dev:all
 
 # Start all services locally via Docker (connects to online Firebase)
@@ -87,7 +87,7 @@ node scripts/seed-emulator.js
 # Seed a single admin account in the emulator
 node scripts/seed-admin.js
 
-# Seed V2 role users (leader, g12) into emulators — run after seed-emulator.js
+# Seed V2 role users (leader, g12) into emulators â€” run after seed-emulator.js
 node scripts/seed-v2-roles.js
 
 # Fix missing Firebase Auth account for the g12 seeded user in emulator (idempotent)
@@ -100,23 +100,23 @@ node scripts/seed-new-g12.js
 node scripts/seed-new-g12-online.js
 
 # Regenerate the Postman collection from source (overwrites postman/CMP_Backend.postman_collection.json)
-# Run this after adding new endpoints — generates 130 requests across 17 folders
+# Run this after adding new endpoints â€” generates 139 requests across 17 folders
 node scripts/build-postman-collection.js
 
 # One-time migration: backfill `roles` array on all users in online Firebase
 # Usage: node scripts/migrate-roles.js path/to/serviceAccount.json
 node scripts/migrate-roles.js
 
-# V1→V2 data migrations (all idempotent — safe to re-run):
-node scripts/migrations/001-backfill-roles-array.js        # role: string → roles: string[]
-node scripts/migrations/002-backfill-firebase-claims.js    # Firebase custom claims → {roles[], preferredLanguage}
+# V1â†’V2 data migrations (all idempotent â€” safe to re-run):
+node scripts/migrations/001-backfill-roles-array.js        # role: string â†’ roles: string[]
+node scripts/migrations/002-backfill-firebase-claims.js    # Firebase custom claims â†’ {roles[], preferredLanguage}
 node scripts/migrations/003-backfill-notifications-locale.js  # set localeRendered='en' on existing notifications
 node scripts/migrations/004-verify-migration.js            # validate migration results
 node scripts/migrations/005-legacy-batches.js              # create 'Legacy' batch per course; backfill enrollments.batchId
 node scripts/migrations/006-semester-dates.js              # set openDate=createdAt, endDate=null on semesters missing openDate
 node scripts/migrations/007-backfill-leader-g12-firebase-auth.js --temp-password=Change@Me2026  # create missing Firebase Auth accounts for seeded leader/g12 users
 
-# Live API tests — verify V2 registration behaviour (requires running services)
+# Live API tests â€” verify V2 registration behaviour (requires running services)
 node scripts/test-phase1-apis.js
 
 # Verify service endpoint availability
@@ -137,20 +137,20 @@ node scripts/newman-run.js
 node scripts/newman-cell-service.js
 
 # Run Postman collection via Newman directly against already-running services
-# (no clean-slate setup — services must already be running)
+# (no clean-slate setup â€” services must already be running)
 npm run test:newman
 
-# Supplement smoke test — covers 10 endpoints not in smoke-test.js (lesson CRUD, password-reset verify,
+# Supplement smoke test â€” covers 10 endpoints not in smoke-test.js (lesson CRUD, password-reset verify,
 # avatar upload, course restore, title search, make-admin, health probes)
 # Requires all services running with online Firebase credentials
 node scripts/gap-test.js
 
-# Bash curl-based smoke test — 53 V1 endpoints including health probes for all 9 core services
+# Bash curl-based smoke test â€” 53 V1 endpoints including health probes for all 9 core services
 # Requires bash (Git Bash / WSL on Windows) and all services running with online Firebase
 bash scripts/api-test.sh
 
 # Verify online Firebase connectivity (Firestore + Auth + outbox collection)
-# Reads credentials from .env.local — run before seeding or deploying to confirm creds are valid
+# Reads credentials from .env.local â€” run before seeding or deploying to confirm creds are valid
 node scripts/check-firebase.js
 ```
 
@@ -165,22 +165,22 @@ packages/
   gateway/              # :3000  Single entry point; rate limiting, CORS, request ID, proxy
   auth-service/         # :3001  Token verification, registration, logout, lockout tracking
   user-service/         # :3002  User profiles, admin management, account lifecycle
-  course-service/       # :3003  Courses → Semesters → Subjects → Lessons, course lifecycle state machine; V2: batches
+  course-service/       # :3003  Courses â†’ Semesters â†’ Subjects â†’ Lessons, course lifecycle state machine; V2: batches
   enrollment-service/   # :3004  Registration queue, enrollment approvals, bulk operations; V2: role_requests
   progress-service/     # :3005  Subject completion (idempotent), course progress aggregates
   storage-service/      # :3006  File upload/download, signed URLs; attachments: PDF/DOC/DOCX max 25 MB; subject images: PNG/JPEG max 10 MB
   notification-service/ # :3007  In-app notifications, email (3-retry backoff), push (best-effort)
   audit-service/        # :3008  Append-only audit_log; purely event-driven
-  outbox-worker/        #        Background worker — no HTTP port; polls outbox every 5 s
+  outbox-worker/        #        Background worker â€” no HTTP port; polls outbox every 5 s
   cell-service/         # :3009  Cell groups, join requests, cell reports; V2
   analytics-service/    # :3011  Pre-aggregated weekly/monthly dashboards; V2
-  scheduled-jobs/       #        Background worker — no HTTP port; batch/semester sweeps, analytics snapshots; V2
-  shared/               # No Dockerfile — shared npm packages consumed by all services
+  scheduled-jobs/       #        Background worker â€” no HTTP port; batch/semester sweeps, analytics snapshots; V2
+  shared/               # No Dockerfile â€” shared npm packages consumed by all services
 k8s/                    # Kubernetes Deployment + HPA manifests (one folder per service)
 postman/                # Postman collections for manual API testing
-firebase.json           # Firebase CLI config — indexes, rules, emulator ports
-firestore.indexes.json  # Composite indexes — required for any query combining where() + orderBy() on different fields, or filtering deletedAt + another field + ordering
-firestore.rules         # Firestore security rules — update when adding new collections
+firebase.json           # Firebase CLI config â€” indexes, rules, emulator ports
+firestore.indexes.json  # Composite indexes â€” required for any query combining where() + orderBy() on different fields, or filtering deletedAt + another field + ordering
+firestore.rules         # Firestore security rules â€” update when adding new collections
 storage.rules           # Firebase Storage security rules
 ```
 
@@ -188,7 +188,7 @@ storage.rules           # Firebase Storage security rules
 
 The gateway rewrites all proxied paths by stripping the `/api/v1` prefix before forwarding. A public request to `GET /api/v1/courses` becomes `GET /courses` at course-service:3003. **Routes inside each service must NOT include the `/api/v1` prefix.**
 
-The gateway also blocks all `/api/v1/internal/*` paths with 404 before proxying — internal routes are never reachable from outside the cluster.
+The gateway also blocks all `/api/v1/internal/*` paths with 404 before proxying â€” internal routes are never reachable from outside the cluster.
 
 **Route ordering in `gateway/src/app.ts` is load-bearing.** More-specific prefixes must be registered before their broader siblings:
 - `/api/v1/me/notifications/preferences` (userProxy) before `/api/v1/me/notifications` (notifyProxy); then `/api/v1/me/enrollments`, `/api/v1/me/progress` each before `/api/v1/me`
@@ -199,7 +199,7 @@ The gateway also blocks all `/api/v1/internal/*` paths with 404 before proxying 
 
 Adding a new proxied route in the wrong order will silently send traffic to the wrong service.
 
-**Complete route→service map** (in registration order — first match wins):
+**Complete routeâ†’service map** (in registration order â€” first match wins):
 
 | Path prefix | Service |
 |------------|---------|
@@ -228,7 +228,7 @@ Adding a new proxied route in the wrong order will silently send traffic to the 
 
 ### Roles
 
-**V2 additive roles model** — `roles: string[]` on every user (up from V1's single `role: string`). Users can hold multiple roles simultaneously (e.g. `["member", "student", "leader"]`). `authorize()` union-matches against the full `roles[]` array. The `role` scalar is kept for backward compatibility only — always use `roles[]` for authorization logic.
+**V2 additive roles model** â€” `roles: string[]` on every user (up from V1's single `role: string`). Users can hold multiple roles simultaneously (e.g. `["member", "student", "leader"]`). `authorize()` union-matches against the full `roles[]` array. The `role` scalar is kept for backward compatibility only â€” always use `roles[]` for authorization logic.
 
 | Role | V2 Access |
 |------|-----------|
@@ -239,11 +239,11 @@ Adding a new proxied route in the wrong order will silently send traffic to the 
 | `admin` | All student access + user management, course management, enrollment approvals |
 | `super_admin` | All admin access + admin account management, audit log access |
 
-`super_admin` inherits all `admin` permissions inside `authorize()` — no need to list both roles on admin routes.
+`super_admin` inherits all `admin` permissions inside `authorize()` â€” no need to list both roles on admin routes.
 
-**Registration now creates an active Member (V2).** `POST /auth/register` sets `role: 'member'`, `roles: ['member']`, `status: 'approved'` — the `pending_approval` / registration-queue flow from V1 no longer applies to new registrations. The V1 registration table (`registrations` collection) and `POST /admin/registrations/*` routes remain for existing data; new users bypass it entirely.
+**Registration now creates an active Member (V2).** `POST /auth/register` sets `role: 'member'`, `roles: ['member']`, `status: 'approved'` â€” the `pending_approval` / registration-queue flow from V1 no longer applies to new registrations. The V1 registration table (`registrations` collection) and `POST /admin/registrations/*` routes remain for existing data; new users bypass it entirely.
 
-**Federated OAuth (V2).** `POST /auth/federated/:provider` (`google` or `apple`) accepts an OAuth token, exchanges it with Firebase Auth, and returns a Firebase ID token. The OAuth token is never stored — only the resulting Firebase session is kept (NFR-SEC-006). Providers supported: `google` and `apple`.
+**Federated OAuth (V2).** `POST /auth/federated/:provider` (`google` or `apple`) accepts an OAuth token, exchanges it with Firebase Auth, and returns a Firebase ID token. The OAuth token is never stored â€” only the resulting Firebase session is kept (NFR-SEC-006). Providers supported: `google` and `apple`.
 
 **Emulator bypass for federated OAuth testing:** When `FIREBASE_AUTH_EMULATOR_HOST` is set and `NODE_ENV` is not `production`, both `GoogleAuthClient` and `AppleAuthClient` accept a base64-encoded JSON payload in place of a real token. Encode `{ "email": "test@example.com", "sub": "uid123", "name": "Test User" }` as base64 and pass it as the `idToken` to exercise the federated flow without real Google/Apple credentials.
 
@@ -254,21 +254,21 @@ Adding a new proxied route in the wrong order will silently send traffic to the 
 Each service enforces a strict one-way dependency chain:
 
 ```
-http/          (routes, controllers, validators)      → application
-application/   (use cases, event publishers, clients) → domain
-domain/        (entities, value objects, repo interfaces — zero infrastructure)
+http/          (routes, controllers, validators)      â†’ application
+application/   (use cases, event publishers, clients) â†’ domain
+domain/        (entities, value objects, repo interfaces â€” zero infrastructure)
 infrastructure/(Firestore repos, Firebase SDK, email clients)
 ```
 
-Controllers are thin — they call one use case and delegate errors with `next(err)`. All business rules live in use cases.
+Controllers are thin â€” they call one use case and delegate errors with `next(err)`. All business rules live in use cases.
 
-**Exception — notification-service, audit-service, analytics-service, outbox-worker, and scheduled-jobs do not follow this pattern in the same way.** They have no controllers or use cases driven by HTTP. Instead they receive domain events from the outbox-worker over internal HTTP and process them through handler classes:
+**Exception â€” notification-service, audit-service, analytics-service, outbox-worker, and scheduled-jobs do not follow this pattern in the same way.** They have no controllers or use cases driven by HTTP. Instead they receive domain events from the outbox-worker over internal HTTP and process them through handler classes:
 
-- `notification-service` — has `src/application/handlers/` (e.g. `UserRegisteredHandler`) that call a `NotificationDispatcher` service. Email dispatch retries 3× with exponential backoff (1 s → 2 s → 4 s); failure is logged but never thrown. Push notifications are best-effort — a failure logs a warning and is silently swallowed. The service still exposes `/notifications` read endpoints for the frontend via the standard route → controller path.
-- `audit-service` — has `src/application/handlers/` that write append-only entries to `audit_log` via a repository. No HTTP creation endpoint exists; entries are only created by event handlers. `GET /audit-log` supports `?actorUid=:uid` for per-user timeline filtering; `GET /users/:uid/audit-log` is the per-user timeline endpoint (admin + super_admin).
-- `cell-service` (:3009, V2) — full Clean Architecture stack. 17 endpoints for cell group CRUD, member management, join request workflow, and cell report filing (idempotent via `X-Idempotency-Key`). Cell report photos can be pre-uploaded via `POST /cells/:id/report-photos` (returns URLs to pass in `photoUrls[]`) or submitted inline with `POST /cells/:id/reports` as `multipart/form-data` — both routes share the same multer middleware family (`handleReportPhotos` / `handleFileReport`). Publishes cell domain events to the outbox (currently unrouted in EventDispatcher — see above).
-- `analytics-service` (:3011, V2) — reads `analytics_snapshots` written by scheduled-jobs. Exposes 6 read-only endpoints (weekly cells, attendance, meeting types, growth, participation, CSV export). No writes. Background workers (scheduled-jobs) are the sole writers to `analytics_snapshots`.
-- `scheduled-jobs` (no HTTP port, V2) — background worker running 3 `setInterval` loops: `batchSweepJob` (opens/closes batches by schedule), `semesterSweepJob` (disables semesters past `endDate`, runs once per day), `snapshotJob` (aggregates cell reports into `analytics_snapshots`, runs weekly). All jobs are wrapped in `safeRun()` — failures log and continue. Direct Firestore reads (exempt from the cross-service HTTP rule, same as outbox-worker).
+- `notification-service` â€” has `src/application/handlers/` (e.g. `UserRegisteredHandler`) that call a `NotificationDispatcher` service. Email dispatch retries 3Ã— with exponential backoff (1 s â†’ 2 s â†’ 4 s); failure is logged but never thrown. Push notifications are best-effort â€” a failure logs a warning and is silently swallowed. The service still exposes `/notifications` read endpoints for the frontend via the standard route â†’ controller path.
+- `audit-service` â€” has `src/application/handlers/` that write append-only entries to `audit_log` via a repository. No HTTP creation endpoint exists; entries are only created by event handlers. `GET /audit-log` supports `?actorUid=:uid` for per-user timeline filtering; `GET /users/:uid/audit-log` is the per-user timeline endpoint (admin + super_admin).
+- `cell-service` (:3009, V2) â€” full Clean Architecture stack. 17 endpoints for cell group CRUD, member management, join request workflow, and cell report filing (idempotent via `X-Idempotency-Key`). Cell report photos can be pre-uploaded via `POST /cells/:id/report-photos` (returns URLs to pass in `photoUrls[]`) or submitted inline with `POST /cells/:id/reports` as `multipart/form-data` â€” both routes share the same multer middleware family (`handleReportPhotos` / `handleFileReport`). Publishes cell domain events to the outbox (currently unrouted in EventDispatcher â€” see above).
+- `analytics-service` (:3011, V2) â€” reads `analytics_snapshots` written by scheduled-jobs. Exposes 6 read-only endpoints (weekly cells, attendance, meeting types, growth, participation, CSV export). No writes. Background workers (scheduled-jobs) are the sole writers to `analytics_snapshots`.
+- `scheduled-jobs` (no HTTP port, V2) â€” background worker running 3 `setInterval` loops: `batchSweepJob` (opens/closes batches by schedule), `semesterSweepJob` (disables semesters past `endDate`, runs once per day), `snapshotJob` (aggregates cell reports into `analytics_snapshots`, runs weekly). All jobs are wrapped in `safeRun()` â€” failures log and continue. Direct Firestore reads (exempt from the cross-service HTTP rule, same as outbox-worker).
 
 ### Shared Packages
 
@@ -283,25 +283,25 @@ Controllers are thin — they call one use case and delegate errors with `next(e
 | `@shared/health` | `healthRouter` (`/healthz`, `/readyz`) |
 | `@shared/firebase` | `initFirebaseAdmin()` (idempotent) |
 | `@shared/tracing` | `initTracing(serviceName)` |
-| `@shared/i18n` | Locale resolver + template renderer; supports `en` / `si` / `ta` with English fallback — **package not yet created** (`packages/shared/i18n/` does not exist); do not import it until scaffolded |
+| `@shared/i18n` | Locale resolver + template renderer; supports `en` / `si` / `ta` with English fallback â€” **package not yet created** (`packages/shared/i18n/` does not exist); do not import it until scaffolded |
 
-**Request ID propagation:** The gateway's `requestId` middleware generates a UUID (or passes through an incoming `X-Request-Id`), stores it on `req.headers['x-request-id']`, and echoes it back on the response. Downstream services receive it as a plain HTTP header. `@shared/internal-http-client` also exports `runWithRequestId(id, fn)` / `getRequestId()` backed by `AsyncLocalStorage` — if a service wraps its request handler with `runWithRequestId`, the ID is stored in async context and `createInternalClient()`'s Axios interceptor will inject `X-Request-Id` automatically on every outbound call. This is why you never pass `requestId` through use case parameters.
+**Request ID propagation:** The gateway's `requestId` middleware generates a UUID (or passes through an incoming `X-Request-Id`), stores it on `req.headers['x-request-id']`, and echoes it back on the response. Downstream services receive it as a plain HTTP header. `@shared/internal-http-client` also exports `runWithRequestId(id, fn)` / `getRequestId()` backed by `AsyncLocalStorage` â€” if a service wraps its request handler with `runWithRequestId`, the ID is stored in async context and `createInternalClient()`'s Axios interceptor will inject `X-Request-Id` automatically on every outbound call. This is why you never pass `requestId` through use case parameters.
 
 ### TypeScript Path Aliases
 
 Two alias groups are in use, but they resolve differently:
 
-- `@shared/*` — resolved at compile time via **npm workspace symlinks** (each service declares `"@shared/errors": "*"` etc. in its `package.json`). `tsconfig.base.json` has no `paths` for these. At test time, `jest.config.ts` maps them via `moduleNameMapper`.
-- `@/*` → `src/*` — a TypeScript `paths` alias defined in each service's own `tsconfig.json` (not in `tsconfig.base.json`). Also mapped in `jest.config.ts` as `^@/(.*)$`.
+- `@shared/*` â€” resolved at compile time via **npm workspace symlinks** (each service declares `"@shared/errors": "*"` etc. in its `package.json`). `tsconfig.base.json` has no `paths` for these. At test time, `jest.config.ts` maps them via `moduleNameMapper`.
+- `@/*` â†’ `src/*` â€” a TypeScript `paths` alias defined in each service's own `tsconfig.json` (not in `tsconfig.base.json`). Also mapped in `jest.config.ts` as `^@/(.*)$`.
 
 ### Service Entry Point Pattern
 
 Every service follows the same two-file startup split:
 
-- `src/index.ts` — calls `initFirebaseAdmin()`, `initTracing(serviceName)`, then starts the server. Excluded from coverage.
-- `src/server.ts` — creates the Express app, binds to the port, attaches graceful shutdown on `SIGTERM`/`SIGINT`. Excluded from coverage.
+- `src/index.ts` â€” calls `initFirebaseAdmin()`, `initTracing(serviceName)`, then starts the server. Excluded from coverage.
+- `src/server.ts` â€” creates the Express app, binds to the port, attaches graceful shutdown on `SIGTERM`/`SIGINT`. Excluded from coverage.
 
-`app.ts` is the testable unit — it wires middleware and routes without starting a server.
+`app.ts` is the testable unit â€” it wires middleware and routes without starting a server.
 
 ### Docker Compose Networking
 
@@ -309,7 +309,7 @@ When services communicate inside Docker Compose they use the service hostname, n
 
 ### Dependency Injection
 
-Manual constructor injection via a `container.ts` file per service. No DI framework. Instantiation order is always: repositories → infrastructure clients → use cases → controllers. Export a single `container` object.
+Manual constructor injection via a `container.ts` file per service. No DI framework. Instantiation order is always: repositories â†’ infrastructure clients â†’ use cases â†’ controllers. Export a single `container` object.
 
 ### Per-Service config.ts
 
@@ -336,7 +336,7 @@ create = async (req: Request, res: Response, next: NextFunction): Promise<void> 
 
 ### Validator Pattern
 
-Zod schemas live in `src/http/validators/`. Use `.safeParse()` in the controller and convert failures with `fromZodError()` from `@shared/errors` — never throw Zod errors directly.
+Zod schemas live in `src/http/validators/`. Use `.safeParse()` in the controller and convert failures with `fromZodError()` from `@shared/errors` â€” never throw Zod errors directly.
 
 ### Value Objects
 
@@ -364,11 +364,11 @@ export class SlugValue {
 - `authenticate()` calls `verifyIdToken(token, checkRevoked=true)` and attaches `req.principal = { uid, email, role, roles }` where `role` is the primary claim and `roles` is the full array (used by `authorize()` for effective-role checks).
 - `super_admin` inherits all `admin` permissions inside `authorize()`.
 - Ownership-sensitive routes add `mustBeOwnerOrAdmin()` after `authorize()`.
-- **`tryAuthenticate()`** — used on public routes where the response shape differs by role (e.g., `GET /courses` shows DRAFT courses to admins but not students). It attaches `req.principal` if a valid Bearer token is present but never rejects missing or invalid tokens. This is **not** in `@shared/auth-middleware` — copy it to `src/http/middleware/tryAuthenticate.ts` in any service that needs it (currently only course-service has one).
+- **`tryAuthenticate()`** â€” used on public routes where the response shape differs by role (e.g., `GET /courses` shows DRAFT courses to admins but not students). It attaches `req.principal` if a valid Bearer token is present but never rejects missing or invalid tokens. This is **not** in `@shared/auth-middleware` â€” copy it to `src/http/middleware/tryAuthenticate.ts` in any service that needs it (currently only course-service has one).
 
 ### Account Lockout
 
-auth-service tracks failed sign-ins via the `loginAttempts` Firestore collection (keyed by email). After **10 failures within a 15-minute window**, the account is locked and further attempts return 403 `ACCOUNT_LOCKED`. The `POST /auth/track-failure` client-side call increments this counter after each failed Firebase sign-in. Locks clear automatically after the window expires — no admin action required.
+auth-service tracks failed sign-ins via the `loginAttempts` Firestore collection (keyed by email). After **10 failures within a 15-minute window**, the account is locked and further attempts return 403 `ACCOUNT_LOCKED`. The `POST /auth/track-failure` client-side call increments this counter after each failed Firebase sign-in. Locks clear automatically after the window expires â€” no admin action required.
 
 ### HTTP Status Code Policy
 
@@ -387,48 +387,48 @@ auth-service tracks failed sign-ins via the `loginAttempts` Firestore collection
 
 ### Logging
 
-Never use `console.*` — the ESLint config treats it as an error (`no-console`). Unhandled promises are also a lint error (`no-floating-promises`) — always `await` or attach `.catch()`. Use `logger` from `@shared/logger` (Pino). Sensitive fields (`authorization`, `password`, `token`, `idToken`) are redacted automatically. Register `httpLogger` in `app.ts` for request/response logging.
+Never use `console.*` â€” the ESLint config treats it as an error (`no-console`). Unhandled promises are also a lint error (`no-floating-promises`) â€” always `await` or attach `.catch()`. Use `logger` from `@shared/logger` (Pino). Sensitive fields (`authorization`, `password`, `token`, `idToken`) are redacted automatically. Register `httpLogger` in `app.ts` for request/response logging.
 
 ### Middleware Order (app.ts)
 
 Every service's `app.ts` must register middleware in this exact order or request logging and error propagation break:
 
 ```
-helmet() → express.json() → httpLogger → routes → errorHandler (last)
+helmet() â†’ express.json() â†’ httpLogger â†’ routes â†’ errorHandler (last)
 ```
 
 The gateway additionally inserts `cors()`, `requestId`, and `generalLimiter` between `helmet()` and the route handlers. Note that `generalLimiter` is registered **after** `httpLogger` but **before** the health router, meaning health probes (`/healthz`, `/readyz`) are subject to rate limiting:
 
 ```
-helmet() → cors() → requestId → httpLogger → generalLimiter → healthRouter → routes → errorHandler (last)
+helmet() â†’ cors() â†’ requestId â†’ httpLogger â†’ generalLimiter â†’ healthRouter â†’ routes â†’ errorHandler (last)
 ```
 
-`errorHandler` must be the final middleware — Express identifies it by its four-argument signature `(err, req, res, next)`.
+`errorHandler` must be the final middleware â€” Express identifies it by its four-argument signature `(err, req, res, next)`.
 
-**Exception — the gateway does not register `errorHandler`.** It is a pure reverse proxy (`http-proxy-middleware`) with no business logic; all responses pass through from upstream services unchanged.
+**Exception â€” the gateway does not register `errorHandler`.** It is a pure reverse proxy (`http-proxy-middleware`) with no business logic; all responses pass through from upstream services unchanged.
 
 ### Error Handling
 
-Always use `createHttpError(status, 'ERROR_CODE', 'Human message')` from `@shared/errors`. Never throw plain `Error`. Controllers catch and forward with `next(err)`. The global `errorHandler` (registered last in `app.ts`) sanitises 5xx responses — stack traces never reach clients.
+Always use `createHttpError(status, 'ERROR_CODE', 'Human message')` from `@shared/errors`. Never throw plain `Error`. Controllers catch and forward with `next(err)`. The global `errorHandler` (registered last in `app.ts`) sanitises 5xx responses â€” stack traces never reach clients.
 
-**`AppError` property names** — `AppError` exposes `status` (number) and `errorCode` (string), **not** `statusCode` / `code`. Always use the correct names in unit-test assertions and any code that inspects a caught error:
+**`AppError` property names** â€” `AppError` exposes `status` (number) and `errorCode` (string), **not** `statusCode` / `code`. Always use the correct names in unit-test assertions and any code that inspects a caught error:
 
 ```typescript
-// ✅ correct
+// âœ… correct
 .rejects.toMatchObject({ status: 404, errorCode: 'USER_NOT_FOUND' })
 
-// ❌ wrong — these properties do not exist on AppError
+// âŒ wrong â€” these properties do not exist on AppError
 .rejects.toMatchObject({ statusCode: 404, code: 'USER_NOT_FOUND' })
 ```
 
-For multi-step operations that touch external systems (e.g., Firebase Auth then Firestore), clean up earlier writes on failure — e.g., delete the Firebase Auth user if the Firestore batch commit fails — to prevent orphaned records.
+For multi-step operations that touch external systems (e.g., Firebase Auth then Firestore), clean up earlier writes on failure â€” e.g., delete the Firebase Auth user if the Firestore batch commit fails â€” to prevent orphaned records.
 
 ### Code Style
 
 Prettier is configured in `.prettierrc` with non-default settings:
 
 ```
-printWidth: 100        # not the common 80 — wrap at 100 chars
+printWidth: 100        # not the common 80 â€” wrap at 100 chars
 singleQuote: true
 trailingComma: 'all'   # trailing commas on multi-line params, arrays, objects
 arrowParens: 'avoid'   # omit parens for single-param arrow functions
@@ -439,9 +439,9 @@ arrowParens: 'avoid'   # omit parens for single-param arrow functions
 `tsconfig.base.json` enables `noUnusedLocals`, `noUnusedParameters`, `noImplicitReturns`, and `noFallthroughCasesInSwitch`. Unused imports or parameters are compile errors, not warnings.
 
 The ESLint config enforces:
-- `no-console` — error (use `logger` from `@shared/logger`)
-- `no-floating-promises`, `await-thenable`, `no-misused-promises` — errors
-- `no-explicit-any` — **warning** only (not an error)
+- `no-console` â€” error (use `logger` from `@shared/logger`)
+- `no-floating-promises`, `await-thenable`, `no-misused-promises` â€” errors
+- `no-explicit-any` â€” **warning** only (not an error)
 - Unused variables prefixed with `_` are allowed (e.g., `_req`, `_next`)
 - ESLint runs with TypeScript type-checking (`recommended-requiring-type-checking`), so type errors surface at lint time too
 
@@ -453,14 +453,14 @@ Domain events are never lost. Services write to the `outbox` Firestore collectio
 
 **Outbox event status lifecycle:**
 ```
-pending → processing → delivered
-                  ↘ (on failure, retried up to 5×, then) → failed
+pending â†’ processing â†’ delivered
+                  â†˜ (on failure, retried up to 5Ã—, then) â†’ failed
 ```
-`processedAt` is set only on `delivered`. Within a single event, handlers are called **sequentially** (for-await loop) — a handler failure stops remaining handlers for that event and the event is retried on the next poll cycle. Failed events remain queryable for manual investigation.
+`processedAt` is set only on `delivered`. Within a single event, handlers are called **sequentially** (for-await loop) â€” a handler failure stops remaining handlers for that event and the event is retried on the next poll cycle. Failed events remain queryable for manual investigation.
 
 Across a batch, the worker uses `Promise.allSettled()` so one event's failure does not abort processing of the remaining events in the same poll cycle.
 
-The outbox-worker's `EventDispatcher` routes each event type to one or more handlers. The full event routing table. `audit.action` is the generic escape hatch for direct audit writes that don't fit a typed domain event — publish it with `actorUid`, `actorEmail`, `action`, `category`, `targetType`, `targetId`, and optional `ip` (used for operations like password changes that produce no other domain event). Extra fields pass through the `[key: string]: unknown` index on `AuditEventPayload`:
+The outbox-worker's `EventDispatcher` routes each event type to one or more handlers. The full event routing table. `audit.action` is the generic escape hatch for direct audit writes that don't fit a typed domain event â€” publish it with `actorUid`, `actorEmail`, `action`, `category`, `targetType`, `targetId`, and optional `ip` (used for operations like password changes that produce no other domain event). Extra fields pass through the `[key: string]: unknown` index on `AuditEventPayload`:
 
 | Event type | Handlers |
 |-----------|---------|
@@ -471,9 +471,9 @@ The outbox-worker's `EventDispatcher` routes each event type to one or more hand
 | `enrollment.approved` | notify, audit |
 | `enrollment.rejected` | notify, audit |
 | `enrollment.withdrawn` | audit |
-| `course.published` | notify (silently dropped — no handler in notification-service), audit |
+| `course.published` | notify (silently dropped â€” no handler in notification-service), audit |
 | `progress.subjectCompleted` | audit |
-| `admin.created` | notify, audit — fired by both `CreateAdminUseCase` and `CreateUserDirectlyUseCase`; payload fields: `uid`, `email`, `firstName`, `lastName`, `initialPassword?`, `promoted?`, `role?` (e.g. `'leader'`, `'g12'`, `'admin'`), `passwordResetUrl?` (Firebase reset link — generated at creation time, `null` on emulator quirk), `systemUrl?` (from `APP_URL` env var). `AdminCreatedHandler` has **three** branches: (1) `promoted: true` → short promotion email, no password; (2) `role === 'leader'` or `'g12'` → leader/g12 welcome email with credentials + "Set Your Password" button; (3) default → admin welcome email. |
+| `admin.created` | notify, audit â€” fired by both `CreateAdminUseCase` and `CreateUserDirectlyUseCase`; payload fields: `uid`, `email`, `firstName`, `lastName`, `initialPassword?`, `promoted?`, `role?` (e.g. `'leader'`, `'g12'`, `'admin'`), `passwordResetUrl?` (Firebase reset link â€” generated at creation time, `null` on emulator quirk), `systemUrl?` (from `APP_URL` env var). `AdminCreatedHandler` has **three** branches: (1) `promoted: true` â†’ short promotion email, no password; (2) `role === 'leader'` or `'g12'` â†’ leader/g12 welcome email with credentials + "Set Your Password" button; (3) default â†’ admin welcome email. |
 | `admin.suspended` | notify, audit |
 | `audit.action` | audit |
 | `cell.created` | audit |
@@ -483,7 +483,7 @@ The outbox-worker's `EventDispatcher` routes each event type to one or more hand
 | `cell_report.filed` | audit |
 | `cell_report.voided` | audit |
 
-**Unrouted events (published to outbox but not wired in EventDispatcher):** `role.requested`, `role.granted` — silently skipped by the outbox-worker. Adding notify/audit coverage for these is a known gap.
+**Unrouted events (published to outbox but not wired in EventDispatcher):** `role.requested`, `role.granted` â€” silently skipped by the outbox-worker. Adding notify/audit coverage for these is a known gap.
 
 ### Firestore Collection Ownership
 
@@ -492,15 +492,15 @@ No service reads another service's Firestore collections directly. Cross-service
 | Collection | Owning Service | Document ID |
 |-----------|---------------|-------------|
 | `users` | user-service | Firebase Auth UID |
-| `loginAttempts` | auth-service | **email address** — unique among all collections; every other collection uses UID |
-| `passwordResetOtps` | auth-service | **email address** — stores 6-digit OTP, `expiresAt` (ISO string), `attempts` counter |
+| `loginAttempts` | auth-service | **email address** â€” unique among all collections; every other collection uses UID |
+| `passwordResetOtps` | auth-service | **email address** â€” stores 6-digit OTP, `expiresAt` (ISO string), `attempts` counter |
 | `courses` | course-service | auto UUID |
 | `courses/{id}/semesters` | course-service | auto UUID |
 | `courses/{id}/semesters/{id}/subjects` | course-service | auto UUID |
-| `courses/{id}/batches` | course-service | auto UUID — V2; state machine: `draft → open → closed`; fields: `name`, `scheduledOpenAt`, `scheduledCloseAt`, `status` |
-| `lessons` | course-service | auto UUID — flat collection; fields: `title`, `description`, `youtubeVideoId` (nullable), `attachmentIds[]`, `subjectId`, `semesterId`, `courseId` foreign keys, `order` |
-| `registrations` | enrollment-service | Firebase Auth UID (studentUid) — V1 legacy; new users bypass this via V2 registration |
-| `role_requests` | enrollment-service | auto UUID — V2; tracks role grants for non-member roles; state machine: `pending → approved / rejected` |
+| `courses/{id}/batches` | course-service | auto UUID â€” V2; state machine: `draft â†’ open â†’ closed`; fields: `name`, `scheduledOpenAt`, `scheduledCloseAt`, `status` |
+| `lessons` | course-service | auto UUID â€” flat collection; fields: `title`, `description`, `youtubeVideoId` (nullable), `attachmentIds[]`, `subjectId`, `semesterId`, `courseId` foreign keys, `order` |
+| `registrations` | enrollment-service | Firebase Auth UID (studentUid) â€” V1 legacy; new users bypass this via V2 registration |
+| `role_requests` | enrollment-service | auto UUID â€” V2; tracks role grants for non-member roles; state machine: `pending â†’ approved / rejected` |
 | `enrollments` | enrollment-service | `${studentUid}_${courseId}` |
 | `progress` | progress-service | `${studentUid}_${subjectId}` |
 | `notifications` | notification-service | auto UUID |
@@ -515,84 +515,84 @@ No service reads another service's Firestore collections directly. Cross-service
 
 The `User` domain entity (`packages/user-service/src/domain/entities/User.ts`) gained new fields in V2:
 
-- `roles: UserRole[]` — mutable array replacing the immutable V1 `role` scalar for authorization logic.
-- `preferredLanguage: string` — defaults to `'en'`; valid values are `'en' | 'si' | 'ta'`. Stored on the Firestore user doc and validated by `z.enum(['en','si','ta'])` in `meValidator.ts`. Updatable via `PATCH /me`.
-- `providers: string[]` — sign-in providers attached to the account (e.g. `['password', 'google.com']`); populated from Firebase Auth and stored on the user doc.
-- `fcmTokens: string[]` — device FCM tokens for push notifications; updated via `POST /me/fcm-token`.
-- `notificationPreferences: { email: boolean; push: boolean }` — per-user notification opt-in flags; defaults `true` for both.
+- `roles: UserRole[]` â€” mutable array replacing the immutable V1 `role` scalar for authorization logic.
+- `preferredLanguage: string` â€” defaults to `'en'`; valid values are `'en' | 'si' | 'ta'`. Stored on the Firestore user doc and validated by `z.enum(['en','si','ta'])` in `meValidator.ts`. Updatable via `PATCH /me`.
+- `providers: string[]` â€” sign-in providers attached to the account (e.g. `['password', 'google.com']`); populated from Firebase Auth and stored on the user doc.
+- `fcmTokens: string[]` â€” device FCM tokens for push notifications; updated via `POST /me/fcm-token`.
+- `notificationPreferences: { email: boolean; push: boolean }` â€” per-user notification opt-in flags; defaults `true` for both.
 
-**Implemented V2 user-service endpoints:** `PATCH /me` (update profile — stores `firstName`, `lastName`, `profilePhotoUrl`, `phoneNumber`, `preferredLanguage` to Firestore), `POST /me/fcm-token` (register device FCM token — idempotent), `DELETE /me/fcm-token` (deregister), `PATCH /me/notifications/preferences` (opt-out per channel), `POST /me/providers/link` (link an OAuth provider), `DELETE /me/providers/:provider` (unlink an OAuth provider), `PATCH /users/:uid/roles` (admin/g12 direct role assignment, bypasses the role-request flow — `authorize('admin', 'g12')`), `POST /users/:uid/promote` (elevate a member/leader to `leader` or `g12` — `authorize('leader', 'g12', 'admin', 'super_admin')`), and `POST /users` (create a leader/g12 user directly — g12/admin-initiated; always assigns `['member', <role>]` as the roles array — `authorize('g12', 'admin', 'super_admin')`).
+**Implemented V2 user-service endpoints:** `PATCH /me` (update profile â€” stores `firstName`, `lastName`, `profilePhotoUrl`, `phoneNumber`, `preferredLanguage` to Firestore), `POST /me/fcm-token` (register device FCM token â€” idempotent), `DELETE /me/fcm-token` (deregister), `PATCH /me/notifications/preferences` (opt-out per channel), `POST /me/providers/link` (link an OAuth provider), `DELETE /me/providers/:provider` (unlink an OAuth provider), `PATCH /users/:uid/roles` (admin/g12 direct role assignment, bypasses the role-request flow â€” `authorize('admin', 'g12')`), `POST /users/:uid/promote` (elevate a member/leader to `leader` or `g12` â€” `authorize('leader', 'g12', 'admin', 'super_admin')`), and `POST /users` (create a leader/g12 user directly â€” g12/admin-initiated; always assigns `['member', <role>]` as the roles array â€” `authorize('g12', 'admin', 'super_admin')`).
 
-**`GET /users` query filters:** `?limit`, `?cursor`, `?role=<UserRole>`, `?status=<UserStatus>`, `?name=<prefix>` (case-sensitive prefix search on `firstName` only — not lastName). Accessible to `leader`, `g12`, and `admin` (super_admin inherits). The list cache key includes the caller's roles to prevent cross-role data leakage.
+**`GET /users` query filters:** `?limit`, `?cursor`, `?role=<UserRole>`, `?status=<UserStatus>`, `?name=<prefix>` (case-sensitive prefix search on `firstName` only â€” not lastName). Accessible to `leader`, `g12`, and `admin` (super_admin inherits). The list cache key includes the caller's roles to prevent cross-role data leakage.
 
-**Promote endpoint caller-role rules (`POST /users/:uid/promote`):** The use case enforces caller permissions beyond the route guard — `callerRoles` is passed in from `req.principal.roles` and checked inside `PromoteMemberUseCase`:
+**Promote endpoint caller-role rules (`POST /users/:uid/promote`):** The use case enforces caller permissions beyond the route guard â€” `callerRoles` is passed in from `req.principal.roles` and checked inside `PromoteMemberUseCase`:
 - **g12 / admin / super_admin** callers: may promote to `leader` or `g12`
 - **leader** callers: may only promote to `g12` (cannot create more leaders)
 - Targeting an admin or super_admin always throws 403 regardless of caller.
-- Idempotent — silently returns if the target already holds the requested role.
+- Idempotent â€” silently returns if the target already holds the requested role.
 
 **Role mutation dual-write rule:** Any use case that adds or removes a role (`AddRoleUseCase`, `RemoveRoleUseCase`, `PromoteMemberUseCase`) must update **both** Firestore (via `userRepo.update(user)`) AND Firebase Auth custom claims (via `authClient.addRoleToUser` / `authClient.removeRoleFromUser`). Omitting the Firebase Auth write means the token's `roles` claim is stale and `authorize()` will fail on subsequent requests until the user refreshes their token. The `FirebaseAuthClient` methods do a read-modify-write on the claims object to preserve any existing claims.
 
-**`User.removeRole()` invariant:** The `member` role is permanently protected — `removeRole('member')` is a no-op. Do not rely on removing `member` to revoke base access; use account suspension (`suspend()`) instead.
+**`User.removeRole()` invariant:** The `member` role is permanently protected â€” `removeRole('member')` is a no-op. Do not rely on removing `member` to revoke base access; use account suspension (`suspend()`) instead.
 
 When writing new use cases or Firestore repository methods that touch the `users` collection, always read/write all V2 fields alongside existing fields.
 
 ### Profile Photo Upload
 
-`POST /api/v1/me/avatar` — multipart `photo` field, `image/jpeg` or `image/png` only, max 2 MB. Handled entirely inside user-service (not storage-service): `UploadAvatarUseCase` saves to Firebase Storage under `avatars/{uid}.{ext}`, calls `file.makePublic()`, then stores the resulting public URL on the user document as `profilePhotoUrl`. The `handleAvatarUpload` multer middleware lives at `packages/user-service/src/http/middleware/avatarUpload.ts`. `multer` is a dependency of user-service and cell-service (report photo uploads); all other services do not use it.
+`POST /api/v1/me/avatar` â€” multipart `photo` field, `image/jpeg` or `image/png` only, max 2 MB. Handled entirely inside user-service (not storage-service): `UploadAvatarUseCase` saves to Firebase Storage under `avatars/{uid}.{ext}`, calls `file.makePublic()`, then stores the resulting public URL on the user document as `profilePhotoUrl`. The `handleAvatarUpload` multer middleware lives at `packages/user-service/src/http/middleware/avatarUpload.ts`. `multer` is a dependency of user-service and cell-service (report photo uploads); all other services do not use it.
 
 ### Storage: Download Authorization
 
-`GET /api/v1/attachments/:id/download` generates a **15-minute signed URL** via Firebase Admin SDK (no direct public file access). Students receive 403 `FORBIDDEN` unless they hold an `approved` enrollment for the attachment's parent course — this check calls enrollment-service internally. Admins bypass the enrollment check. The response includes both `downloadUrl` and `expiresAt` (ISO string).
+`GET /api/v1/attachments/:id/download` generates a **15-minute signed URL** via Firebase Admin SDK (no direct public file access). Students receive 403 `FORBIDDEN` unless they hold an `approved` enrollment for the attachment's parent course â€” this check calls enrollment-service internally. Admins bypass the enrollment check. The response includes both `downloadUrl` and `expiresAt` (ISO string).
 
 ### Enrollment-Service: Two Distinct Flows
 
 enrollment-service manages two separate domain entities and state machines:
 
-**Registration** — tracks a student's one-time account approval by an admin:
+**Registration** â€” tracks a student's one-time account approval by an admin:
 ```
-pending → approve() → approved
-       → reject()  → rejected
+pending â†’ approve() â†’ approved
+       â†’ reject()  â†’ rejected
 ```
 
-**Enrollment** — tracks per-course enrollment after account is approved:
+**Enrollment** â€” tracks per-course enrollment after account is approved:
 ```
-pending → approve()  → approved → withdraw() → withdrawn
-       → reject()   → rejected
+pending â†’ approve()  â†’ approved â†’ withdraw() â†’ withdrawn
+       â†’ reject()   â†’ rejected
         (pending also withdrawable)
 ```
 
-`POST /api/v1/admin/registrations/bulk-approve` accepts up to **100** registration IDs per call. Uses `Promise.allSettled` — partial success is possible; the response separates `approved[]` from `failed[{ id, reason }]`.
+`POST /api/v1/admin/registrations/bulk-approve` accepts up to **100** registration IDs per call. Uses `Promise.allSettled` â€” partial success is possible; the response separates `approved[]` from `failed[{ id, reason }]`.
 
 **Enrollment rejection cooloff:** `ENROLLMENT_REJECTION_COOLOFF_HOURS` sets a mandatory waiting period before a student whose enrollment was rejected can re-enroll in the same course. A new enrollment attempt within the cooloff window returns 409 `ENROLLMENT_REJECTED_COOLOFF`.
 
-**Role Request (V2)** — tracks a member's request to be granted a non-member role (student, leader, g12):
+**Role Request (V2)** â€” tracks a member's request to be granted a non-member role (student, leader, g12):
 ```
-pending → approve() → approved
-       → reject()  → rejected
+pending â†’ approve() â†’ approved
+       â†’ reject()  â†’ rejected
 ```
 Endpoints: `POST /role-requests`, `GET /role-requests/mine`, `GET /role-requests` (admin), `POST /role-requests/:id/approve`, `POST /role-requests/:id/reject`. Creating a role request publishes `role.requested` to the outbox. Approval atomically grants the role on the user document via an internal call to user-service and publishes `role.granted` to the outbox. Neither event is currently wired in the outbox-worker's EventDispatcher.
 
 ### Course Lifecycle State Machine
 
 ```
-DRAFT → publish() → PUBLISHED → archive() → ARCHIVED
-        ← unpublish() ←                      ↓ restore()
+DRAFT â†’ publish() â†’ PUBLISHED â†’ archive() â†’ ARCHIVED
+        â† unpublish() â†                      â†“ restore()
                                              DRAFT
 ```
 
-`publish()` requires: ≥ 1 semester AND every semester has ≥ 1 subject. `restore()` transitions `archived → draft` — the course must then be re-published before it is visible again.
+`publish()` requires: â‰¥ 1 semester AND every semester has â‰¥ 1 subject. `restore()` transitions `archived â†’ draft` â€” the course must then be re-published before it is visible again.
 
-**Course list filtering:** `GET /courses` accepts `?state=draft|published|archived` (admin only) and `?title=<prefix>` (case-sensitive prefix search via Firestore range query `>=` / `<= + `). When `title` is supplied, results are ordered alphabetically by title instead of `createdAt`. Two composite indexes support this — `(deletedAt, title)` and `(deletedAt, state, title)` — both deployed to Firestore.
+**Course list filtering:** `GET /courses` accepts `?state=draft|published|archived` (admin only) and `?title=<prefix>` (case-sensitive prefix search via Firestore range query `>=` / `<= + ï£¿`). When `title` is supplied, results are ordered alphabetically by title instead of `createdAt`. Two composite indexes support this â€” `(deletedAt, title)` and `(deletedAt, state, title)` â€” both deployed to Firestore.
 
 **Schema note:** `Course` has three user-defined fields: `title`, `description` (max 500 chars, default `""`), and `coverImageUrl` (URL or `null`, default `null`). `Semester` and `Subject` have only `title`. Richer per-lesson content (`description` max 2000 chars, `youtubeVideoId`, `attachmentIds`) lives on `Lesson`. There are no value objects in course-service at this time.
 
-### Batch State Machine (V2 — course-service)
+### Batch State Machine (V2 â€” course-service)
 
 Batches are sub-documents under a course (`courses/{id}/batches`) that group enrollments by intake cohort:
 
 ```
-DRAFT → open() → OPEN → close() → CLOSED
+DRAFT â†’ open() â†’ OPEN â†’ close() â†’ CLOSED
 ```
 
 `CreateBatchUseCase` auto-transitions to `OPEN` if `scheduledOpenAt` is in the past at creation time. Date fields (`scheduledOpenAt`, `scheduledCloseAt`) cannot be changed once a batch leaves `DRAFT`. Endpoints: `GET /courses/:id/batches`, `POST /courses/:id/batches`, `GET /batches/:id`, `PATCH /batches/:id`, `POST /batches/:id/open`, `POST /batches/:id/close`.
@@ -601,14 +601,14 @@ DRAFT → open() → OPEN → close() → CLOSED
 
 ### Denormalized Counters & Ordering
 
-`Course` carries `semesterCount` and `Semester` carries `subjectCount`. These are **not** computed on read — they are maintained by use cases:
+`Course` carries `semesterCount` and `Semester` carries `subjectCount`. These are **not** computed on read â€” they are maintained by use cases:
 - `CreateSemesterUseCase` increments `course.semesterCount` and saves the course in the same operation
 - `DeleteSemesterUseCase` decrements it
 - `CreateSubjectUseCase` increments `semester.subjectCount`; `DeleteSubjectUseCase` decrements it
 
 Any new use case that adds or removes a semester/subject must also update the corresponding parent counter or the publish-validation counts will drift.
 
-Both `Semester` and `Subject` have an `order` field assigned as `existing.length + 1` on create. Order is **not** resequenced after deletion — gaps are expected and callers should sort by `order` rather than treating it as a dense sequence.
+Both `Semester` and `Subject` have an `order` field assigned as `existing.length + 1` on create. Order is **not** resequenced after deletion â€” gaps are expected and callers should sort by `order` rather than treating it as a dense sequence.
 
 ### List Response Caching
 
@@ -620,32 +620,32 @@ course-service, user-service, and audit-service each hold an in-process `TtlCach
 | user list | 30 s | TTL expiry only |
 | audit list | 60 s | TTL expiry only (append-only collection) |
 
-No external cache (Redis) is required. The cache lives on the static property `listCache` of each controller class — it is shared across all requests but scoped to the process.
+No external cache (Redis) is required. The cache lives on the static property `listCache` of each controller class â€” it is shared across all requests but scoped to the process.
 
 ### Progress Idempotency
 
-`MarkSubjectCompleteUseCase` is idempotent — if a subject is already `completed`, it returns the existing record unchanged. `completedAt` is immutable once set.
+`MarkSubjectCompleteUseCase` is idempotent â€” if a subject is already `completed`, it returns the existing record unchanged. `completedAt` is immutable once set.
 
-`ComputeCourseProgressUseCase` calculates `completionPercent` as `Math.round((completedCount / totalSubjects) * 1000) / 10` — one decimal place (e.g. 66.7%). Returns `0` when `totalSubjects === 0`. The response also includes `lastAccessedSubjectId` (the most-recently touched subject by ISO sort on `lastAccessedAt`).
+`ComputeCourseProgressUseCase` calculates `completionPercent` as `Math.round((completedCount / totalSubjects) * 1000) / 10` â€” one decimal place (e.g. 66.7%). Returns `0` when `totalSubjects === 0`. The response also includes `lastAccessedSubjectId` (the most-recently touched subject by ISO sort on `lastAccessedAt`).
 
 ### Login is Client-Side
 
-There is no `/auth/login` endpoint. Login is performed client-side using the Firebase SDK — the client exchanges credentials for an ID token directly with Firebase. The backend only receives and verifies those tokens via `authenticate()`. The only server-side auth write is `POST /auth/track-failure`, which the client calls after a failed sign-in to enforce account lockout.
+There is no `/auth/login` endpoint. Login is performed client-side using the Firebase SDK â€” the client exchanges credentials for an ID token directly with Firebase. The backend only receives and verifies those tokens via `authenticate()`. The only server-side auth write is `POST /auth/track-failure`, which the client calls after a failed sign-in to enforce account lockout.
 
 ### Firebase Identity Toolkit REST Calls
 
 Some Firebase Auth operations (password verification, password reset email) are not available in the Admin SDK and must be called directly via the Firebase Identity Toolkit REST API. `FirebaseAuthClient.verifyPassword` (user-service) uses this for sign-in.
 
-The emulator branch is selected via `FIREBASE_AUTH_EMULATOR_HOST` (set automatically by `docker-compose.local.yml`). `FIREBASE_WEB_API_KEY` (client key, not service account) is required — set it in `.env`.
+The emulator branch is selected via `FIREBASE_AUTH_EMULATOR_HOST` (set automatically by `docker-compose.local.yml`). `FIREBASE_WEB_API_KEY` (client key, not service account) is required â€” set it in `.env`.
 
 ### Password Reset: Two-Step OTP Flow
 
 Password reset is a two-step process to prevent email enumeration and unauthorised resets:
 
-**Step 1 — `POST /auth/password-reset { email }`**  
-Generates a 6-digit OTP, stores it in `passwordResetOtps` (15 min TTL, `attempts: 0`), and sends the OTP via SMTP email (`EmailClient`) whenever `SMTP_HOST` is configured — not only in `NODE_ENV=production`. In dev without SMTP configured, the OTP is stored in Firestore but not emailed. Always returns 204 regardless of whether the email exists.
+**Step 1 â€” `POST /auth/password-reset { email }`**  
+Generates a 6-digit OTP, stores it in `passwordResetOtps` (15 min TTL, `attempts: 0`), and sends the OTP via SMTP email (`EmailClient`) whenever `SMTP_HOST` is configured â€” not only in `NODE_ENV=production`. In dev without SMTP configured, the OTP is stored in Firestore but not emailed. Always returns 204 regardless of whether the email exists.
 
-**Step 2 — `POST /auth/password-reset/verify { email, otp }`**  
+**Step 2 â€” `POST /auth/password-reset/verify { email, otp }`**  
 Validates the OTP (max 5 attempts; expired or over-limit records are deleted). On success: deletes the OTP record and triggers a Firebase password reset email via `accounts:sendOobCode`. On failure: returns 400 with remaining attempts count. The Firebase call is fire-and-forget (errors silently swallowed).
 
 ```typescript
@@ -660,7 +660,7 @@ Courses, semesters, subjects, and users are soft-deleted by setting `deletedAt` 
 
 ### Internal Service Communication
 
-Synchronous calls use `createInternalClient(serviceUrl, INTERNAL_SERVICE_KEY)`, which automatically propagates `X-Request-Id`, applies a 5-second timeout, and retries once on 5xx with a 500 ms delay. The retry is tracked via a `_retried` flag on the Axios config to prevent infinite loops — a second failure surfaces immediately to the caller.
+Synchronous calls use `createInternalClient(serviceUrl, INTERNAL_SERVICE_KEY)`, which automatically propagates `X-Request-Id`, applies a 5-second timeout, and retries once on 5xx with a 500 ms delay. The retry is tracked via a `_retried` flag on the Axios config to prevent infinite loops â€” a second failure surfaces immediately to the caller.
 
 | Caller | Callee | Purpose |
 |--------|--------|---------|
@@ -672,7 +672,7 @@ Synchronous calls use `createInternalClient(serviceUrl, INTERNAL_SERVICE_KEY)`, 
 | storage-service | course-service | Verify subject exists before upload |
 | outbox-worker | user-service | Approve user account on `registration.approved` event |
 | enrollment-service | user-service | Grant role on `role_requests/:id/approve` via `POST /internal/users/add-role` (V2) |
-| analytics-service | cell-service (Firestore direct) | Reads `cell_groups` and `cell_reports` — analytics-service is exempt from the cross-service HTTP rule (same as scheduled-jobs and outbox-worker background workers) |
+| analytics-service | cell-service (Firestore direct) | Reads `cell_groups` and `cell_reports` â€” analytics-service is exempt from the cross-service HTTP rule (same as scheduled-jobs and outbox-worker background workers) |
 
 ### Repository Pagination Pattern
 
@@ -680,14 +680,14 @@ All list repository methods return `{ items, nextCursor, total }`. Cursor is the
 
 ### Internal Route Auth Pattern
 
-Every service protects its `/internal/*` routes with a local `internalAuth` middleware (`src/http/middleware/internalAuth.ts`) that validates the `X-Internal-Service-Key` header against `INTERNAL_SERVICE_KEY`. Each service has its own copy — there is no shared version. Callers use `createInternalClient()` which attaches the key automatically.
+Every service protects its `/internal/*` routes with a local `internalAuth` middleware (`src/http/middleware/internalAuth.ts`) that validates the `X-Internal-Service-Key` header against `INTERNAL_SERVICE_KEY`. Each service has its own copy â€” there is no shared version. Callers use `createInternalClient()` which attaches the key automatically.
 
 ### Response Envelope Shapes
 
-Success and error responses have **asymmetric shapes** — this is intentional:
+Success and error responses have **asymmetric shapes** â€” this is intentional:
 
-- `sendSuccess(res, data, status?)` — sends `data` **directly** with no wrapper (e.g., `{ id, name, ... }`)
-- `sendPaginated(res, items, nextCursor, total)` — wraps as `{ items, nextCursor, total }`
+- `sendSuccess(res, data, status?)` â€” sends `data` **directly** with no wrapper (e.g., `{ id, name, ... }`)
+- `sendPaginated(res, items, nextCursor, total)` â€” wraps as `{ items, nextCursor, total }`
 - Error responses always use `{ error: { code: 'ERROR_CODE', message: '...' }, requestId: '...' }`
 
 The `requestId` is at the root of error responses (not nested inside `error`) so clients can correlate failures with server logs via `X-Request-Id`.
@@ -708,7 +708,7 @@ FIREBASE_STORAGE_BUCKET
 FIREBASE_WEB_API_KEY                    # Firebase web client key (auth-service password reset + user-service change-password)
 
 # Inter-service URLs (set all even if unused by a given service)
-SERVICE_AUTH_URL … SERVICE_AUDIT_URL
+SERVICE_AUTH_URL â€¦ SERVICE_AUDIT_URL
 SERVICE_CELL_URL, SERVICE_ANALYTICS_URL  # V2 services (cell-service :3009, analytics-service :3011)
 
 # Internal service authentication
@@ -718,11 +718,11 @@ INTERNAL_SERVICE_KEY                    # shared secret for /internal/* routes
 EMAIL_PROVIDER                          # "sendgrid" | "console" | "smtp"
 SENDGRID_API_KEY, EMAIL_FROM
 
-# Email (auth-service — OTP delivery)
+# Email (auth-service â€” OTP delivery)
 SMTP_HOST, SMTP_PORT                    # defaults: smtp.gmail.com / 587
 SMTP_USER, SMTP_PASS                    # SMTP credentials for OTP emails
 
-# Federated OAuth (auth-service — V2)
+# Federated OAuth (auth-service â€” V2)
 GOOGLE_CLIENT_ID                        # Google OAuth client ID for POST /auth/federated/google
 APPLE_CLIENT_ID                         # Apple OAuth client ID for POST /auth/federated/apple
 
@@ -735,13 +735,13 @@ AUTH_RATE_LIMIT_MAX                     # stricter limit for /auth/* routes
 ATTACHMENT_MAX_SIZE_BYTES               # storage-service (default: 26214400)
 OUTBOX_POLL_INTERVAL_SECONDS            # outbox-worker (default: 5)
 OUTBOX_BATCH_SIZE                       # outbox-worker (default: 20)
-APP_URL                                 # user-service — system URL included in welcome emails (default: 'https://tccr.lk')
+APP_URL                                 # user-service â€” system URL included in welcome emails (default: 'https://tccr.lk')
 ENROLLMENT_REJECTION_COOLOFF_HOURS      # enrollment-service
 BATCH_SWEEP_INTERVAL_MS                 # scheduled-jobs batchSweepJob interval (default: 60000)
 SEMESTER_SWEEP_INTERVAL_MS              # scheduled-jobs semesterSweepJob interval (default: 86400000)
 SNAPSHOT_CHECK_INTERVAL_MS             # scheduled-jobs snapshotJob poll interval
 SNAPSHOT_HOUR_UTC                       # UTC hour to run weekly snapshot (default: 0)
-SNAPSHOT_WEEKDAY                        # Day of week for snapshot (0=Sun … 6=Sat, default: 0)
+SNAPSHOT_WEEKDAY                        # Day of week for snapshot (0=Sun â€¦ 6=Sat, default: 0)
 
 # Observability
 OTEL_SERVICE_NAME                       # OpenTelemetry service name for tracing
@@ -757,12 +757,12 @@ Two Jest configs exist in the repo. A third (`jest.e2e.config.ts`) is referenced
 |--------|---------|-------|---------|
 | `jest.config.ts` | `npm run test` | `tests/unit/**/*.test.ts` | default |
 | `jest.integration.config.ts` | `npm run test:integration` | `tests/integration/**/*.test.ts` | 30 s |
-| *(missing)* `jest.e2e.config.ts` | `npm run test:e2e` | `tests/e2e/**/*.test.ts` | — |
+| *(missing)* `jest.e2e.config.ts` | `npm run test:e2e` | `tests/e2e/**/*.test.ts` | â€” |
 
-- **Unit tests** — No I/O. Mock repositories and service clients. Files live at `packages/<service>/tests/unit/application/` and `packages/<service>/tests/unit/domain/`.
-- **Integration tests** — Jest + Firestore emulator. Test use cases + repositories end-to-end. Files live at `packages/<service>/tests/integration/`. Run serially (`maxWorkers: 1`) because all tests share a single emulator instance. `jest.integration.config.ts` loads `tests/integration/setup.ts` via `setupFiles` to initialise emulator environment variables before tests run.
-- **E2E tests** — Supertest + all services running via Docker Compose. `jest.e2e.config.ts` must be created before `npm run test:e2e` works.
-- **Firestore Security Rules** — `@firebase/rules-unit-testing`. Verify that client-side writes to `audit_log` are denied and that each service's collections enforce expected rules.
+- **Unit tests** â€” No I/O. Mock repositories and service clients. Files live at `packages/<service>/tests/unit/application/` and `packages/<service>/tests/unit/domain/`.
+- **Integration tests** â€” Jest + Firestore emulator. Test use cases + repositories end-to-end. Files live at `packages/<service>/tests/integration/`. Run serially (`maxWorkers: 1`) because all tests share a single emulator instance. `jest.integration.config.ts` loads `tests/integration/setup.ts` via `setupFiles` to initialise emulator environment variables before tests run.
+- **E2E tests** â€” Supertest + all services running via Docker Compose. `jest.e2e.config.ts` must be created before `npm run test:e2e` works.
+- **Firestore Security Rules** â€” `@firebase/rules-unit-testing`. Verify that client-side writes to `audit_log` are denied and that each service's collections enforce expected rules.
 
 **Local seed accounts** (created by `node scripts/seed-emulator.js`, emulators must be running):
 
@@ -777,46 +777,46 @@ Two Jest configs exist in the repo. A third (`jest.e2e.config.ts`) is referenced
 
 **Firebase emulator ports** (from `firebase.json`): Auth `9099`, Firestore `8080`, Storage `9199`, UI `4000` (`http://localhost:4000`).
 
-**Postman:** Import `postman/CMP_Backend.postman_collection.json` (130 requests across 17 folders) with one of the two environment files:
+**Postman:** Import `postman/CMP_Backend.postman_collection.json` (139 requests across 17 folders) with one of the two environment files:
 
 | Environment file | `baseUrl` | `authBaseUrl` | `firebaseWebApiKey` |
 |-----------------|-----------|--------------|-------------------|
-| `CMP_Local.postman_environment.json` | `http://localhost:3000/api/v1` | `http://127.0.0.1:9099/…` | `fake-key` |
+| `CMP_Local.postman_environment.json` | `http://localhost:3000/api/v1` | `http://127.0.0.1:9099/â€¦` | `fake-key` |
 | `CMP_Online.postman_environment.json` | `https://cms.api.bethelnet.au/api/v1` | `https://identitytoolkit.googleapis.com/v1` | real key |
 
-**Folder breakdown** (run in order — each folder's pre-request scripts set variables consumed by later folders):
+**Folder breakdown** (run in order â€” each folder's pre-request scripts set variables consumed by later folders):
 
 | # | Folder | Requests |
 |---|--------|----------|
-| 0 | 🔐 Sign In (**run first** — populates all `*Token` and `*Id` vars) | 6 |
-| 1 | 1️⃣ Auth Service | 8 |
-| 2 | 2️⃣ User Service — Me | 10 |
-| 3 | 3️⃣ User Service — Admin Manage Users | 14 |
-| 4 | 4️⃣ User Service — Super Admin | 7 |
-| 5 | 5️⃣ Course Service — Build a Course | 18 |
-| 6 | 6️⃣ Batches (V2) | 6 |
-| 7 | 7️⃣ Enrollment | 10 |
-| 8 | 8️⃣ Role Requests (V2) | 5 |
-| 9 | 9️⃣ Progress Service | 5 |
-| 10 | 🔔 Notifications | 4 |
-| 11 | 📎 Storage Service | 3 |
-| 12 | 📋 Audit Log | 3 |
-| 13 | ⚡ Course Lifecycle | 6 |
-| 14 | 🏘 V2 — Cell Service (sub-folders: Member Search, Cell CRUD, Members, Join Requests, Cell Reports, Archive) | 18 |
-| 15 | 📊 V2 — Analytics Service | 6 |
-| 16 | 🏥 Health Checks | 1 |
+| 0 | ðŸ” Sign In (**run first** â€” populates all `*Token` and `*Id` vars) | 6 |
+| 1 | 1ï¸âƒ£ Auth Service | 8 |
+| 2 | 2ï¸âƒ£ User Service â€” Me | 10 |
+| 3 | 3ï¸âƒ£ User Service â€” Admin Manage Users | 14 |
+| 4 | 4ï¸âƒ£ User Service â€” Super Admin | 7 |
+| 5 | 5ï¸âƒ£ Course Service â€” Build a Course | 18 |
+| 6 | 6ï¸âƒ£ Batches (V2) | 6 |
+| 7 | 7ï¸âƒ£ Enrollment | 10 |
+| 8 | 8ï¸âƒ£ Role Requests (V2) | 5 |
+| 9 | 9ï¸âƒ£ Progress Service | 5 |
+| 10 | ðŸ”” Notifications | 4 |
+| 11 | ðŸ“Ž Storage Service | 3 |
+| 12 | ðŸ“‹ Audit Log | 3 |
+| 13 | âš¡ Course Lifecycle | 6 |
+| 14 | ðŸ˜ V2 â€” Cell Service (sub-folders: Member Search, Cell CRUD, Members, Join Requests, Cell Reports, Archive) | 18 |
+| 15 | ðŸ“Š V2 â€” Analytics Service | 6 |
+| 16 | ðŸ¥ Health Checks | 1 |
 
 **Collection-managed variables** (auto-set by test scripts, do not set manually): `superAdminToken`, `adminToken`, `leaderToken`, `g12Token`, `studentToken`, `student2Token`, `userId`, `student2Id`, `adminId`, `leaderId`, `g12Id`, `courseId`, `semesterId`, `subjectId`, `subjectId2`, `lessonId`, `batchId`, `enrollmentId`, `registrationId`, `roleRequestId`, `notificationId`, `attachmentId`, `cellId`, `joinRequestId`, `cellReportId`.
 
-The collection is generated by `scripts/build-postman-collection.js` — rerun it after adding endpoints. The `smoke-test.js` script covers a subset of 53 endpoints; the Newman run (`node scripts/newman-run.js`) exercises the full collection against the local stack. See `postman/README.md` for full usage guide.
+The collection is generated by `scripts/build-postman-collection.js` â€” rerun it after adding endpoints. The `smoke-test.js` script covers a subset of 53 endpoints; the Newman run (`node scripts/newman-run.js`) exercises the full collection against the local stack. See `postman/README.md` for full usage guide.
 
-Use `jest.clearAllMocks()` in `beforeEach` to prevent test bleed. When typing test-fixture arrays that will be passed to use-case inputs (e.g. `callerRoles`), use `as UserRole[]` instead of `as const` — `as const` creates a `readonly` tuple that is incompatible with mutable array parameters and causes a TypeScript compile error that silently drops the entire test suite (0 tests run, no failures reported). Integration tests use the Firebase emulator — `tests/integration/setup.ts` automatically sets `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080` and `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099` with fake credentials, so no real Firebase project credentials are needed. Just ensure the emulators are running before `npm run test:integration`.
+Use `jest.clearAllMocks()` in `beforeEach` to prevent test bleed. When typing test-fixture arrays that will be passed to use-case inputs (e.g. `callerRoles`), use `as UserRole[]` instead of `as const` â€” `as const` creates a `readonly` tuple that is incompatible with mutable array parameters and causes a TypeScript compile error that silently drops the entire test suite (0 tests run, no failures reported). Integration tests use the Firebase emulator â€” `tests/integration/setup.ts` automatically sets `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080` and `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099` with fake credentials, so no real Firebase project credentials are needed. Just ensure the emulators are running before `npm run test:integration`.
 
 Coverage thresholds enforced by `jest.config.ts`: branches 70%, functions/lines/statements 80%. `index.ts` and `server.ts` are excluded from coverage collection.
 
-**Unit test baseline:** 355+ tests across 80+ suites — every use case, handler, domain entity, validator, and infrastructure utility across all services (including cell-service, analytics-service, scheduled-jobs) has test coverage. Integration test suite: 99+ tests across 13+ suites.
+**Unit test baseline:** 355+ tests across 80+ suites â€” every use case, handler, domain entity, validator, and infrastructure utility across all services (including cell-service, analytics-service, scheduled-jobs) has test coverage. Integration test suite: 99+ tests across 13+ suites.
 
-**Gap test script** (`scripts/gap-test.js`) — supplements the smoke test by covering the 10 API doc endpoints not exercised by `smoke-test.js` (lesson CRUD, password-reset verify, avatar upload, course restore, title search, make-admin, health probes). Run with: `node scripts/gap-test.js` (requires all services running with `--online` credentials).
+**Gap test script** (`scripts/gap-test.js`) â€” supplements the smoke test by covering the 10 API doc endpoints not exercised by `smoke-test.js` (lesson CRUD, password-reset verify, avatar upload, course restore, title search, make-admin, health probes). Run with: `node scripts/gap-test.js` (requires all services running with `--online` credentials).
 
 ---
 
@@ -830,7 +830,7 @@ Project-specific commands live in `.claude/commands/`. Use them with `/command-n
 | `/new-service` | `new-service.md` | Scaffold a complete microservice (all 4 layers, Dockerfile, package.json) |
 | `/new-endpoint` | `new-endpoint.md` | Add a route + controller + use case + Zod validator + container wiring |
 | `/new-use-case` | `new-use-case.md` | Scaffold a use case (standard / with-event / idempotent templates) |
-| `/new-event` | `new-event.md` | Add a domain event — publisher, notification handler, outbox dispatcher wiring |
+| `/new-event` | `new-event.md` | Add a domain event â€” publisher, notification handler, outbox dispatcher wiring |
 | `/new-repository` | `new-repository.md` | Scaffold a Firestore repository with interface, implementation, and cursor pagination |
 | `/firestore-index` | `firestore-index.md` | Generate a composite index entry for `firestore.indexes.json` |
 | `/test-unit` | `test-unit.md` | Generate Jest unit tests for a use case |
@@ -842,7 +842,7 @@ Project-specific commands live in `.claude/commands/`. Use them with `/command-n
 
 ## Specification Files
 
-All specification files live in `.claude/specs/`. Read the relevant spec before implementing any feature — it defines acceptance criteria, endpoints, domain events, Firestore changes, and security constraints that the implementation must satisfy.
+All specification files live in `.claude/specs/`. Read the relevant spec before implementing any feature â€” it defines acceptance criteria, endpoints, domain events, Firestore changes, and security constraints that the implementation must satisfy.
 
 | File | Scope | Contents |
 |------|-------|----------|
@@ -855,22 +855,22 @@ All specification files live in `.claude/specs/`. Read the relevant spec before 
 **Feature specs** (generated by `/feature-spec-creator`) are also saved here as `<slug>.md`. When a new feature is specced, its file appears in this folder before any code is written.
 
 When reading a spec to implement a feature:
-- **Acceptance Criteria** defines what must be true — write tests against these
-- **Security Constraints** defines auth/authz/validation rules — these are non-negotiable
+- **Acceptance Criteria** defines what must be true â€” write tests against these
+- **Security Constraints** defines auth/authz/validation rules â€” these are non-negotiable
 - **Firestore Changes** lists any new composite indexes needed in `firestore.indexes.json`
 - **Domain Events** lists what the outbox must publish and who consumes it
-- **Out of Scope** tells you what NOT to build — do not add features listed there
+- **Out of Scope** tells you what NOT to build â€” do not add features listed there
 
 ---
 
 ## Reference Documents
 
-- **`.claude/Architecture/Version_02__Architecture_Overview.md`** — First read for any V2 work. Defines what changed from V1 to V2, service catalogue, migration strategy.
-- **`.claude/blueprint/Backend_Blueprint.md`** — V1 architecture specification, implementation patterns, all use case code samples, security requirements traceability.
-- **`.claude/blueprint/Version_02__Backend_Blueprint.md`** — V2 companion blueprint covering cell-service, analytics-service, scheduled-jobs, and extended service patterns.
-- **`.claude/APIdocument/API_Document.md`** — Complete V1 REST API reference (all endpoints, request/response schemas, error codes). Audited and corrected to match the actual implementation.
-- **`.claude/APIdocument/Version_02__API_Reference.md`** — V2 API reference covering role-requests, batches, cells, analytics, and other V2-only endpoints.
-- **`.claude/tracker/tracker.md`** — Phase-by-phase implementation checklist (Phases 0–19). Update `[ ]` → `[x]` as work completes. Check this before starting any phase to understand what's done and what's blocked.
-- **`.claude/plan/implementation-plan.md`** — Detailed implementation plan with phase dependencies and sequencing.
-- **`.claude/sprints/`** — Per-sprint breakdown (`sprint-1-*.md` through `sprint-7-*.md`) with user stories and acceptance criteria.
-- **`.claude/settings.local.json`** — Pre-approved PowerShell/Bash permission patterns so Claude Code does not prompt for common `npm run *`, `node *`, `docker-compose *`, and `git` operations. Edit this file (via `/update-config`) when new command patterns need approval.
+- **`.claude/Architecture/Version_02__Architecture_Overview.md`** â€” First read for any V2 work. Defines what changed from V1 to V2, service catalogue, migration strategy.
+- **`.claude/blueprint/Backend_Blueprint.md`** â€” V1 architecture specification, implementation patterns, all use case code samples, security requirements traceability.
+- **`.claude/blueprint/Version_02__Backend_Blueprint.md`** â€” V2 companion blueprint covering cell-service, analytics-service, scheduled-jobs, and extended service patterns.
+- **`.claude/APIdocument/API_Document.md`** â€” Complete V1 REST API reference (all endpoints, request/response schemas, error codes). Audited and corrected to match the actual implementation.
+- **`.claude/APIdocument/Version_02__API_Reference.md`** â€” V2 API reference covering role-requests, batches, cells, analytics, and other V2-only endpoints.
+- **`.claude/tracker/tracker.md`** â€” Phase-by-phase implementation checklist (Phases 0â€“19). Update `[ ]` â†’ `[x]` as work completes. Check this before starting any phase to understand what's done and what's blocked.
+- **`.claude/plan/implementation-plan.md`** â€” Detailed implementation plan with phase dependencies and sequencing.
+- **`.claude/sprints/`** â€” Per-sprint breakdown (`sprint-1-*.md` through `sprint-7-*.md`) with user stories and acceptance criteria.
+- **`.claude/settings.local.json`** â€” Pre-approved PowerShell/Bash permission patterns so Claude Code does not prompt for common `npm run *`, `node *`, `docker-compose *`, and `git` operations. Edit this file (via `/update-config`) when new command patterns need approval.
