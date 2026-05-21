@@ -49,8 +49,14 @@ export class CreateAdminUseCase {
       await this.userRepo.create(user);
 
       await this.outbox.publishWithBatch({
-        type:      'admin.created',
-        payload:   { uid, email: input.email, firstName: input.firstName, lastName: input.lastName },
+        type:    'admin.created',
+        payload: {
+          uid,
+          email:           input.email,
+          firstName:       input.firstName,
+          lastName:        input.lastName,
+          initialPassword: input.initialPassword,
+        },
         requestId,
       });
 

@@ -25,13 +25,14 @@ const makeRepo = (): jest.Mocked<IUserRepository> => ({
 });
 
 const makeAuthClient = (): jest.Mocked<FirebaseAuthClient> => ({
-  createUser:      jest.fn(),
-  setCustomClaims: jest.fn(),
-  disableUser:     jest.fn(),
-  enableUser:      jest.fn(),
-  updatePassword:  jest.fn(),
-  deleteUser:      jest.fn(),
-  verifyPassword:  jest.fn(),
+  createUser:                  jest.fn(),
+  setCustomClaims:             jest.fn(),
+  disableUser:                 jest.fn(),
+  enableUser:                  jest.fn(),
+  updatePassword:              jest.fn(),
+  deleteUser:                  jest.fn(),
+  verifyPassword:              jest.fn(),
+  generatePasswordResetLink:   jest.fn(),
 } as unknown as jest.Mocked<FirebaseAuthClient>);
 
 const makeOutbox = (): jest.Mocked<OutboxEventPublisher> =>
@@ -68,6 +69,7 @@ describe('CreateUserDirectlyUseCase', () => {
       repo.findByEmail.mockResolvedValue(null);
       authClient.createUser.mockResolvedValue('new-uid');
       authClient.setCustomClaims.mockResolvedValue(undefined);
+      authClient.generatePasswordResetLink.mockResolvedValue('https://reset.link/leader');
       repo.create.mockResolvedValue(undefined);
       outbox.publishWithBatch.mockResolvedValue(undefined);
 
@@ -86,6 +88,7 @@ describe('CreateUserDirectlyUseCase', () => {
       repo.findByEmail.mockResolvedValue(null);
       authClient.createUser.mockResolvedValue('new-uid');
       authClient.setCustomClaims.mockResolvedValue(undefined);
+      authClient.generatePasswordResetLink.mockResolvedValue('https://reset.link/leader');
       repo.create.mockResolvedValue(undefined);
       outbox.publishWithBatch.mockResolvedValue(undefined);
 
@@ -100,6 +103,7 @@ describe('CreateUserDirectlyUseCase', () => {
       repo.findByEmail.mockResolvedValue(null);
       authClient.createUser.mockResolvedValue('new-uid');
       authClient.setCustomClaims.mockResolvedValue(undefined);
+      authClient.generatePasswordResetLink.mockResolvedValue('https://reset.link/leader');
       repo.create.mockResolvedValue(undefined);
       outbox.publishWithBatch.mockResolvedValue(undefined);
 
@@ -111,10 +115,11 @@ describe('CreateUserDirectlyUseCase', () => {
       });
     });
 
-    it('publishes admin.created outbox event', async () => {
+    it('publishes admin.created outbox event with role, passwordResetUrl and systemUrl', async () => {
       repo.findByEmail.mockResolvedValue(null);
       authClient.createUser.mockResolvedValue('new-uid');
       authClient.setCustomClaims.mockResolvedValue(undefined);
+      authClient.generatePasswordResetLink.mockResolvedValue('https://reset.link/leader');
       repo.create.mockResolvedValue(undefined);
       outbox.publishWithBatch.mockResolvedValue(undefined);
 
@@ -123,8 +128,30 @@ describe('CreateUserDirectlyUseCase', () => {
       expect(outbox.publishWithBatch).toHaveBeenCalledWith(
         expect.objectContaining({
           type:      'admin.created',
-          payload:   expect.objectContaining({ uid: 'new-uid', email: LEADER_INPUT.email }),
+          payload:   expect.objectContaining({
+            uid:              'new-uid',
+            email:            LEADER_INPUT.email,
+            role:             'leader',
+            passwordResetUrl: 'https://reset.link/leader',
+          }),
           requestId: 'req-abc',
+        }),
+      );
+    });
+
+    it('still publishes event when generatePasswordResetLink fails (graceful fallback)', async () => {
+      repo.findByEmail.mockResolvedValue(null);
+      authClient.createUser.mockResolvedValue('new-uid');
+      authClient.setCustomClaims.mockResolvedValue(undefined);
+      authClient.generatePasswordResetLink.mockRejectedValue(new Error('Firebase link error'));
+      repo.create.mockResolvedValue(undefined);
+      outbox.publishWithBatch.mockResolvedValue(undefined);
+
+      await useCase.execute(LEADER_INPUT, 'req-fallback');
+
+      expect(outbox.publishWithBatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({ passwordResetUrl: null }),
         }),
       );
     });
@@ -135,6 +162,7 @@ describe('CreateUserDirectlyUseCase', () => {
       repo.findByEmail.mockResolvedValue(null);
       authClient.createUser.mockResolvedValue('g12-uid');
       authClient.setCustomClaims.mockResolvedValue(undefined);
+      authClient.generatePasswordResetLink.mockResolvedValue('https://reset.link/g12');
       repo.create.mockResolvedValue(undefined);
       outbox.publishWithBatch.mockResolvedValue(undefined);
 
@@ -148,6 +176,7 @@ describe('CreateUserDirectlyUseCase', () => {
       repo.findByEmail.mockResolvedValue(null);
       authClient.createUser.mockResolvedValue('g12-uid');
       authClient.setCustomClaims.mockResolvedValue(undefined);
+      authClient.generatePasswordResetLink.mockResolvedValue('https://reset.link/g12');
       repo.create.mockResolvedValue(undefined);
       outbox.publishWithBatch.mockResolvedValue(undefined);
 
@@ -157,6 +186,23 @@ describe('CreateUserDirectlyUseCase', () => {
         role:  'g12',
         roles: ['member', 'g12'],
       });
+    });
+
+    it('publishes admin.created event with role=g12 and passwordResetUrl', async () => {
+      repo.findByEmail.mockResolvedValue(null);
+      authClient.createUser.mockResolvedValue('g12-uid');
+      authClient.setCustomClaims.mockResolvedValue(undefined);
+      authClient.generatePasswordResetLink.mockResolvedValue('https://reset.link/g12');
+      repo.create.mockResolvedValue(undefined);
+      outbox.publishWithBatch.mockResolvedValue(undefined);
+
+      await useCase.execute(G12_INPUT, 'req-g12');
+
+      expect(outbox.publishWithBatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({ role: 'g12', passwordResetUrl: 'https://reset.link/g12' }),
+        }),
+      );
     });
   });
 
@@ -175,6 +221,7 @@ describe('CreateUserDirectlyUseCase', () => {
       repo.findByEmail.mockResolvedValue(null);
       authClient.createUser.mockResolvedValue('new-uid');
       authClient.setCustomClaims.mockResolvedValue(undefined);
+      authClient.generatePasswordResetLink.mockResolvedValue('https://reset.link/x');
       repo.create.mockRejectedValue(new Error('Firestore unavailable'));
       authClient.deleteUser.mockResolvedValue(undefined);
 
@@ -197,6 +244,7 @@ describe('CreateUserDirectlyUseCase', () => {
       repo.findByEmail.mockResolvedValue(null);
       authClient.createUser.mockResolvedValue('new-uid');
       authClient.setCustomClaims.mockResolvedValue(undefined);
+      authClient.generatePasswordResetLink.mockResolvedValue('https://reset.link/x');
       repo.create.mockResolvedValue(undefined);
       outbox.publishWithBatch.mockRejectedValue(new Error('Outbox error'));
       authClient.deleteUser.mockResolvedValue(undefined);

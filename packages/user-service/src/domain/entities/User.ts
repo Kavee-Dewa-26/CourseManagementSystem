@@ -17,6 +17,7 @@ export interface UserProps {
   roles:                    UserRole[];
   status:                   UserStatus;
   profilePhotoUrl:          string | null;
+  phoneNumber?:             string | null;
   preferredLanguage?:       string;
   fcmTokens?:               string[];
   notificationPreferences?: NotificationPreferences;
@@ -35,6 +36,7 @@ export class User {
   roles:                       UserRole[];
   status:                      UserStatus;
   profilePhotoUrl:             string | null;
+  phoneNumber:                 string | null;
   preferredLanguage:           string;
   fcmTokens:                   string[];
   notificationPreferences:     NotificationPreferences;
@@ -52,6 +54,7 @@ export class User {
     this.roles                    = props.roles;
     this.status                   = props.status;
     this.profilePhotoUrl          = props.profilePhotoUrl;
+    this.phoneNumber              = props.phoneNumber ?? null;
     this.preferredLanguage        = props.preferredLanguage ?? 'en';
     this.fcmTokens                = props.fcmTokens ?? [];
     this.notificationPreferences  = props.notificationPreferences ?? { email: true, push: true };
@@ -96,11 +99,13 @@ export class User {
     firstName?:         string;
     lastName?:          string;
     profilePhotoUrl?:   string | null;
+    phoneNumber?:       string | null;
     preferredLanguage?: string;
   }): void {
     if (fields.firstName         !== undefined) this.firstName         = fields.firstName;
     if (fields.lastName          !== undefined) this.lastName          = fields.lastName;
     if (fields.profilePhotoUrl   !== undefined) this.profilePhotoUrl   = fields.profilePhotoUrl;
+    if (fields.phoneNumber       !== undefined) this.phoneNumber       = fields.phoneNumber;
     if (fields.preferredLanguage !== undefined) this.preferredLanguage = fields.preferredLanguage;
     this.updatedAt = new Date().toISOString();
   }

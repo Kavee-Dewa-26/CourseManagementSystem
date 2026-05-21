@@ -7,6 +7,7 @@ export interface UpdateProfileInput {
   firstName?:        string;
   lastName?:         string;
   profilePhotoUrl?:  string | null;
+  phoneNumber?:      string | null;
   preferredLanguage?: string;
 }
 
@@ -21,6 +22,7 @@ export class UpdateProfileUseCase {
       firstName:         input.firstName,
       lastName:          input.lastName,
       profilePhotoUrl:   input.profilePhotoUrl,
+      phoneNumber:       input.phoneNumber,
       preferredLanguage: input.preferredLanguage,
     });
 

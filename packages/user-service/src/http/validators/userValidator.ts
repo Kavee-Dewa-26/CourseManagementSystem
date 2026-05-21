@@ -13,6 +13,11 @@ export const assignRoleSchema = z.object({
   action: z.enum(['add', 'remove']),
 });
 
+/** Used by G12 leaders — restricted to leader / g12 only. */
+export const promoteMemberSchema = z.object({
+  role: z.enum(['leader', 'g12']),
+});
+
 export const createUserDirectlySchema = z.object({
   firstName:       z.string().min(1).max(50),
   lastName:        z.string().min(1).max(50),

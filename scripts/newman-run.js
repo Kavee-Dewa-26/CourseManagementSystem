@@ -4,8 +4,8 @@
  *
  * What this script does:
  *   1. Clears Firebase Auth + Firestore emulator data (clean slate every run)
- *   2. Re-seeds the 4 test accounts via seed-emulator.js
- *   3. Signs in all 4 accounts and passes tokens to Newman as env vars
+ *   2. Re-seeds the 4 base accounts via seed-emulator.js + V2 roles via seed-v2-roles.js
+ *   3. Signs in all 6 accounts and passes tokens to Newman as env vars
  *   4. Runs every request in the collection — no manual copy-paste needed
  *   5. Generates a CLI report + HTML report at postman/newman-report.html
  *
@@ -61,6 +61,10 @@ async function seedAccounts() {
     cwd: path.join(__dirname, '..'),
     stdio: 'pipe',
   });
+  execSync('node scripts/seed-v2-roles.js', {
+    cwd: path.join(__dirname, '..'),
+    stdio: 'pipe',
+  });
 }
 
 // ── main ──────────────────────────────────────────────────────────────────────
@@ -103,22 +107,26 @@ async function main() {
 
   // 3. Sign in all seed accounts
   console.log('✓  Signing in seed accounts...');
-  let sa, admin, student1, student2;
+  let sa, admin, student1, student2, leader, g12;
   try {
-    [sa, admin, student1, student2] = await Promise.all([
+    [sa, admin, student1, student2, leader, g12] = await Promise.all([
       signIn('superadmin@cmp.com', 'SuperAdmin@123'),
       signIn('admin@cmp.com',      'Admin@12345'),
       signIn('student1@cmp.com',   'Student1@123'),
       signIn('student2@cmp.com',   'Student2@123'),
+      signIn('leader@cmp.com',     'Leader@12345'),
+      signIn('g12leader@cmp.com',  'G12Lead@123'),
     ]);
     console.log(`✓  Tokens ready`);
     console.log(`   super_admin: ${sa.uid}`);
     console.log(`   admin:       ${admin.uid}`);
     console.log(`   student1:    ${student1.uid}`);
     console.log(`   student2:    ${student2.uid}`);
+    console.log(`   leader:      ${leader.uid}`);
+    console.log(`   g12:         ${g12.uid}`);
   } catch (e) {
     console.error(`❌  Auth failed: ${e.message}`);
-    console.error('    Run: node scripts/seed-emulator.js  (emulators must be running)');
+    console.error('    Run: node scripts/seed-emulator.js && node scripts/seed-v2-roles.js  (emulators must be running)');
     process.exit(1);
   }
 
@@ -142,9 +150,9 @@ async function main() {
 
   console.log('\n▶  Running Newman collection...\n');
 
-  // 3. Run Newman — tokens are populated by the collection's Sign In block
-  //    Only inject config; all token/ID variables start empty so the
-  //    Postman scripts own them exclusively (avoids double-session issues).
+  // 3. Run Newman — pre-inject all tokens so the Sign In folder requests confirm
+  //    the credentials work AND downstream requests have tokens available even
+  //    if the Sign In folder is skipped or re-ordered.
   newman.run({
     collection:       path.join(__dirname, '../postman/CMP_Backend.postman_collection.json'),
     environment:      path.join(__dirname, '../postman/CMP_Local.postman_environment.json'),
@@ -152,6 +160,21 @@ async function main() {
       envVar('baseUrl',           BASE_URL),
       envVar('authBaseUrl',       AUTH_EMULATOR),
       envVar('firebaseWebApiKey', API_KEY),
+      // Pre-seed tokens — Sign In requests will overwrite these with fresh ones
+      envVar('superAdminToken',   sa.token),
+      envVar('superAdminId',      sa.uid),
+      envVar('adminToken',        admin.token),
+      envVar('adminId',           admin.uid),
+      // student2 is the approved student — used as {{studentToken}} across the collection
+      envVar('studentToken',      student2.token),
+      envVar('student2Token',     student2.token),
+      envVar('student2Id',        student2.uid),
+      envVar('student1Token',     student1.token),
+      envVar('student1Id',        student1.uid),
+      envVar('leaderToken',       leader.token),
+      envVar('leaderId',          leader.uid),
+      envVar('g12Token',          g12.token),
+      envVar('g12Id',             g12.uid),
     ],
     delayRequest:     400,
     timeoutRequest:   30000,

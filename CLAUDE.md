@@ -90,6 +90,19 @@ node scripts/seed-admin.js
 # Seed V2 role users (leader, g12) into emulators — run after seed-emulator.js
 node scripts/seed-v2-roles.js
 
+# Fix missing Firebase Auth account for the g12 seeded user in emulator (idempotent)
+node scripts/seed-g12.js
+
+# Seed an additional new G12 leader (newg12@cmp.com) into emulator
+node scripts/seed-new-g12.js
+
+# Seed an additional new G12 leader into online Firebase (reads creds from .env.local)
+node scripts/seed-new-g12-online.js
+
+# Regenerate the Postman collection from source (overwrites postman/CMP_Backend.postman_collection.json)
+# Run this after adding new endpoints — generates 138 requests across 18 folders
+node scripts/build-postman-collection.js
+
 # One-time migration: backfill `roles` array on all users in online Firebase
 # Usage: node scripts/migrate-roles.js path/to/serviceAccount.json
 node scripts/migrate-roles.js
@@ -390,6 +403,16 @@ helmet() → cors() → requestId → httpLogger → generalLimiter → healthRo
 
 Always use `createHttpError(status, 'ERROR_CODE', 'Human message')` from `@shared/errors`. Never throw plain `Error`. Controllers catch and forward with `next(err)`. The global `errorHandler` (registered last in `app.ts`) sanitises 5xx responses — stack traces never reach clients.
 
+**`AppError` property names** — `AppError` exposes `status` (number) and `errorCode` (string), **not** `statusCode` / `code`. Always use the correct names in unit-test assertions and any code that inspects a caught error:
+
+```typescript
+// ✅ correct
+.rejects.toMatchObject({ status: 404, errorCode: 'USER_NOT_FOUND' })
+
+// ❌ wrong — these properties do not exist on AppError
+.rejects.toMatchObject({ statusCode: 404, code: 'USER_NOT_FOUND' })
+```
+
 For multi-step operations that touch external systems (e.g., Firebase Auth then Firestore), clean up earlier writes on failure — e.g., delete the Firebase Auth user if the Firestore batch commit fails — to prevent orphaned records.
 
 ### Code Style
@@ -442,7 +465,7 @@ The outbox-worker's `EventDispatcher` routes each event type to one or more hand
 | `enrollment.withdrawn` | audit |
 | `course.published` | notify (silently dropped — no handler in notification-service), audit |
 | `progress.subjectCompleted` | audit |
-| `admin.created` | notify, audit |
+| `admin.created` | notify, audit — fired by both `CreateAdminUseCase` and `CreateUserDirectlyUseCase`; payload fields: `uid`, `email`, `firstName`, `lastName`, `initialPassword?`, `promoted?`, `role?` (e.g. `'leader'`, `'g12'`, `'admin'`), `passwordResetUrl?` (Firebase reset link — generated at creation time, `null` on emulator quirk), `systemUrl?` (from `APP_URL` env var). `AdminCreatedHandler` has **three** branches: (1) `promoted: true` → short promotion email, no password; (2) `role === 'leader'` or `'g12'` → leader/g12 welcome email with credentials + "Set Your Password" button; (3) default → admin welcome email. |
 | `admin.suspended` | notify, audit |
 | `audit.action` | audit |
 | `cell.created` | audit |
@@ -490,7 +513,19 @@ The `User` domain entity (`packages/user-service/src/domain/entities/User.ts`) g
 - `fcmTokens: string[]` — device FCM tokens for push notifications; updated via `POST /me/fcm-token`.
 - `notificationPreferences: { email: boolean; push: boolean }` — per-user notification opt-in flags; defaults `true` for both.
 
-**Implemented V2 user-service endpoints:** `POST /me/fcm-token` (register device FCM token — idempotent), `DELETE /me/fcm-token` (deregister), `PATCH /me/notifications/preferences` (opt-out per channel), `POST /me/providers/link` (link an OAuth provider), `DELETE /me/providers/:provider` (unlink an OAuth provider), and `PATCH /users/:uid/roles` (admin direct role assignment, bypasses the role-request flow — `authorize('admin', 'super_admin')`).
+**Implemented V2 user-service endpoints:** `POST /me/fcm-token` (register device FCM token — idempotent), `DELETE /me/fcm-token` (deregister), `PATCH /me/notifications/preferences` (opt-out per channel), `POST /me/providers/link` (link an OAuth provider), `DELETE /me/providers/:provider` (unlink an OAuth provider), `PATCH /users/:uid/roles` (admin/g12 direct role assignment, bypasses the role-request flow — `authorize('admin', 'g12')`), `POST /users/:uid/promote` (elevate a member/leader to `leader` or `g12` — `authorize('leader', 'g12', 'admin', 'super_admin')`), and `POST /users` (create a leader/g12 user directly — g12/admin-initiated; always assigns `['member', <role>]` as the roles array — `authorize('g12', 'admin', 'super_admin')`).
+
+**`GET /users` query filters:** `?limit`, `?cursor`, `?role=<UserRole>`, `?status=<UserStatus>`, `?name=<prefix>` (case-sensitive prefix search by first/last name). The list cache key includes the caller's roles to prevent cross-role data leakage.
+
+**Promote endpoint caller-role rules (`POST /users/:uid/promote`):** The use case enforces caller permissions beyond the route guard — `callerRoles` is passed in from `req.principal.roles` and checked inside `PromoteMemberUseCase`:
+- **g12 / admin / super_admin** callers: may promote to `leader` or `g12`
+- **leader** callers: may only promote to `g12` (cannot create more leaders)
+- Targeting an admin or super_admin always throws 403 regardless of caller.
+- Idempotent — silently returns if the target already holds the requested role.
+
+**Role mutation dual-write rule:** Any use case that adds or removes a role (`AddRoleUseCase`, `RemoveRoleUseCase`, `PromoteMemberUseCase`) must update **both** Firestore (via `userRepo.update(user)`) AND Firebase Auth custom claims (via `authClient.addRoleToUser` / `authClient.removeRoleFromUser`). Omitting the Firebase Auth write means the token's `roles` claim is stale and `authorize()` will fail on subsequent requests until the user refreshes their token. The `FirebaseAuthClient` methods do a read-modify-write on the claims object to preserve any existing claims.
+
+**`User.removeRole()` invariant:** The `member` role is permanently protected — `removeRole('member')` is a no-op. Do not rely on removing `member` to revoke base access; use account suspension (`suspend()`) instead.
 
 When writing new use cases or Firestore repository methods that touch the `users` collection, always read/write all V2 fields alongside existing fields.
 
@@ -692,6 +727,7 @@ AUTH_RATE_LIMIT_MAX                     # stricter limit for /auth/* routes
 ATTACHMENT_MAX_SIZE_BYTES               # storage-service (default: 26214400)
 OUTBOX_POLL_INTERVAL_SECONDS            # outbox-worker (default: 5)
 OUTBOX_BATCH_SIZE                       # outbox-worker (default: 20)
+APP_URL                                 # user-service — system URL included in welcome emails (default: 'https://tccr.lk')
 ENROLLMENT_REJECTION_COOLOFF_HOURS      # enrollment-service
 BATCH_SWEEP_INTERVAL_MS                 # scheduled-jobs batchSweepJob interval (default: 60000)
 SEMESTER_SWEEP_INTERVAL_MS              # scheduled-jobs semesterSweepJob interval (default: 86400000)
@@ -733,9 +769,9 @@ Two Jest configs exist in the repo. A third (`jest.e2e.config.ts`) is referenced
 
 **Firebase emulator ports** (from `firebase.json`): Auth `9099`, Firestore `8080`, Storage `9199`, UI `4000` (`http://localhost:4000`).
 
-**Postman:** Import `postman/CMP_Backend.postman_collection.json` (covers all 97 system routes) with either `postman/CMP_Local.postman_environment.json` (local Docker stack) or `postman/CMP_Online.postman_environment.json` (online Firebase) for manual API testing. The `smoke-test.js` script covers a subset of 53 endpoints; the Newman run (`node scripts/newman-run.js`) exercises the full 97.
+**Postman:** Import `postman/CMP_Backend.postman_collection.json` (138 requests across 18 folders — see `postman/README.md` for full usage guide) with either `postman/CMP_Local.postman_environment.json` (local Docker stack) or `postman/CMP_Online.postman_environment.json` (online Firebase) for manual API testing. The collection is generated by `scripts/build-postman-collection.js` — rerun it after adding endpoints. The `smoke-test.js` script covers a subset of 53 endpoints; the Newman run (`node scripts/newman-run.js`) exercises the full collection. **Must run the "🔐 Sign In" folder first** to populate auth tokens used by all other requests.
 
-Use `jest.clearAllMocks()` in `beforeEach` to prevent test bleed. Integration tests use the Firebase emulator — `tests/integration/setup.ts` automatically sets `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080` and `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099` with fake credentials, so no real Firebase project credentials are needed. Just ensure the emulators are running before `npm run test:integration`.
+Use `jest.clearAllMocks()` in `beforeEach` to prevent test bleed. When typing test-fixture arrays that will be passed to use-case inputs (e.g. `callerRoles`), use `as UserRole[]` instead of `as const` — `as const` creates a `readonly` tuple that is incompatible with mutable array parameters and causes a TypeScript compile error that silently drops the entire test suite (0 tests run, no failures reported). Integration tests use the Firebase emulator — `tests/integration/setup.ts` automatically sets `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080` and `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099` with fake credentials, so no real Firebase project credentials are needed. Just ensure the emulators are running before `npm run test:integration`.
 
 Coverage thresholds enforced by `jest.config.ts`: branches 70%, functions/lines/statements 80%. `index.ts` and `server.ts` are excluded from coverage collection.
 

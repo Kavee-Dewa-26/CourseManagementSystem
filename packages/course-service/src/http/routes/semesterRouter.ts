@@ -6,5 +6,5 @@ export const semesterRouter = Router();
 
 semesterRouter.patch( '/semesters/:id',           authenticate(), authorize('admin'), container.semesterController.update);
 semesterRouter.delete('/semesters/:id',           authenticate(), authorize('admin'), container.semesterController.remove);
-semesterRouter.get(   '/semesters/:id/subjects',  authenticate(), authorize('member', 'student', 'leader', 'g12', 'admin', 'super_admin'), container.subjectController.listBySemester);
+semesterRouter.get(   '/semesters/:id/subjects',  authenticate(), authorize('student', 'leader', 'g12', 'admin', 'super_admin'),          container.subjectController.listBySemester);
 semesterRouter.post(  '/semesters/:id/subjects',  authenticate(), authorize('admin'), container.subjectController.create);

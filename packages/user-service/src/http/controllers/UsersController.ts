@@ -9,19 +9,21 @@ import { ReactivateUserUseCase }          from '../../application/use-cases/Reac
 import { AddRoleUseCase }                 from '../../application/use-cases/AddRoleUseCase';
 import { RemoveRoleUseCase }              from '../../application/use-cases/RemoveRoleUseCase';
 import { CreateUserDirectlyUseCase }      from '../../application/use-cases/CreateUserDirectlyUseCase';
-import { listUsersSchema, assignRoleSchema, createUserDirectlySchema } from '../validators/userValidator';
+import { PromoteMemberUseCase }           from '../../application/use-cases/PromoteMemberUseCase';
+import { listUsersSchema, assignRoleSchema, createUserDirectlySchema, promoteMemberSchema } from '../validators/userValidator';
 import { TtlCache }                       from '../../infrastructure/cache/TtlCache';
 import { FindAllResult }                  from '../../domain/repositories/IUserRepository';
 
 export class UsersController {
   constructor(
-    private readonly getUsersUseCase:         GetUsersUseCase,
-    private readonly getUserByIdUseCase:      GetUserByIdUseCase,
-    private readonly suspendUserUseCase:      SuspendUserUseCase,
-    private readonly reactivateUseCase:       ReactivateUserUseCase,
-    private readonly addRoleUseCase:          AddRoleUseCase,
-    private readonly removeRoleUseCase:       RemoveRoleUseCase,
+    private readonly getUsersUseCase:           GetUsersUseCase,
+    private readonly getUserByIdUseCase:        GetUserByIdUseCase,
+    private readonly suspendUserUseCase:        SuspendUserUseCase,
+    private readonly reactivateUseCase:         ReactivateUserUseCase,
+    private readonly addRoleUseCase:            AddRoleUseCase,
+    private readonly removeRoleUseCase:         RemoveRoleUseCase,
     private readonly createUserDirectlyUseCase: CreateUserDirectlyUseCase,
+    private readonly promoteMemberUseCase:      PromoteMemberUseCase,
   ) {}
 
   private static readonly listCache = new TtlCache<FindAllResult>(30_000);
@@ -84,6 +86,31 @@ export class UsersController {
       } else {
         await this.removeRoleUseCase.execute(req.params.uid, parsed.data.role);
       }
+      res.status(204).send();
+    } catch (err) { next(err); }
+  };
+
+  /**
+   * POST /users/:uid/promote
+   * Authorized for g12, admin, super_admin.
+   * Allows a G12 leader to promote a member or leader to 'leader' or 'g12'.
+   */
+  promote = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = promoteMemberSchema.safeParse(req.body);
+      if (!parsed.success) return next(fromZodError(parsed.error));
+
+      const principal  = (req as AuthenticatedRequest).principal;
+      const requestId  = (req.headers['x-request-id'] as string) ?? '';
+
+      await this.promoteMemberUseCase.execute({
+        targetUid:   req.params.uid,
+        role:         parsed.data.role,
+        callerUid:   principal.uid,
+        callerRoles: principal.roles,
+        requestId,
+      });
+
       res.status(204).send();
     } catch (err) { next(err); }
   };

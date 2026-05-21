@@ -23,9 +23,9 @@ courseRouter.get( '/courses/:id/semesters', authenticate(), authorize('member', 
 courseRouter.post('/courses/:id/semesters', authenticate(), authorize('admin'), container.semesterController.create);
 
 // Batch routes — V2
-courseRouter.get(  '/courses/:id/batches',   tryAuthenticate(), container.batchController.list);
-courseRouter.post( '/courses/:id/batches',   authenticate(), authorize('admin'), container.batchController.create);
-courseRouter.get(  '/batches/:id',           tryAuthenticate(), container.batchController.getOne);
+courseRouter.get(  '/courses/:id/batches',   authenticate(), authorize('member', 'student', 'leader', 'g12', 'admin', 'super_admin'), container.batchController.list);
+courseRouter.post( '/courses/:id/batches',   authenticate(), authorize('admin'),                                                      container.batchController.create);
+courseRouter.get(  '/batches/:id',           authenticate(), authorize('member', 'student', 'leader', 'g12', 'admin', 'super_admin'), container.batchController.getOne);
 courseRouter.patch('/batches/:id',           authenticate(), authorize('admin'), container.batchController.update);
 courseRouter.post( '/batches/:id/open',      authenticate(), authorize('admin'), container.batchController.open);
 courseRouter.post( '/batches/:id/close',     authenticate(), authorize('admin'), container.batchController.close);

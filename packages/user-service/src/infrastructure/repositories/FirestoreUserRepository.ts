@@ -13,6 +13,7 @@ function toUser(id: string, data: FirebaseFirestore.DocumentData): User {
     roles:             (data.roles as UserRole[] | undefined) ?? [role],
     status:            data.status as UserProps['status'],
     profilePhotoUrl:   (data.profilePhotoUrl as string | null) ?? null,
+    phoneNumber:       (data.phoneNumber as string | null | undefined) ?? null,
     preferredLanguage: (data.preferredLanguage as string | undefined) ?? 'en',
     fcmTokens:                (data.fcmTokens as string[] | undefined) ?? [],
     notificationPreferences:  (data.notificationPreferences as NotificationPreferences | undefined) ?? { email: true, push: true },
@@ -55,14 +56,15 @@ export class FirestoreUserRepository implements IUserRepository {
       const end = opts.name + '';
       base = base.where('firstName', '>=', opts.name).where('firstName', '<=', end);
 
-      const countSnap = await base.count().get();
-      const total     = countSnap.data().count;
+      // Run count and cursor fetch in parallel to avoid two sequential round-trips
+      const [countSnap, cursorSnap] = await Promise.all([
+        base.count().get(),
+        opts.cursor ? this.col.doc(opts.cursor).get() : Promise.resolve(null),
+      ]);
+      const total = countSnap.data().count;
 
       let query = base.orderBy('firstName', 'asc').limit(opts.limit);
-      if (opts.cursor) {
-        const cursorSnap = await this.col.doc(opts.cursor).get();
-        if (cursorSnap.exists) query = query.startAfter(cursorSnap);
-      }
+      if (cursorSnap?.exists) query = query.startAfter(cursorSnap);
 
       const snap = await query.get();
       let items  = snap.docs.map(d => toUser(d.id, d.data()));
@@ -73,14 +75,15 @@ export class FirestoreUserRepository implements IUserRepository {
       return { items, nextCursor: snap.docs.length === opts.limit && last ? last.id : null, total };
     }
 
-    const countSnap = await base.count().get();
-    const total     = countSnap.data().count;
+    // Run count and cursor fetch in parallel to avoid two sequential round-trips
+    const [countSnap, cursorSnap] = await Promise.all([
+      base.count().get(),
+      opts.cursor ? this.col.doc(opts.cursor).get() : Promise.resolve(null),
+    ]);
+    const total = countSnap.data().count;
 
     let query = base.orderBy('createdAt', 'desc').limit(opts.limit);
-    if (opts.cursor) {
-      const cursorSnap = await this.col.doc(opts.cursor).get();
-      if (cursorSnap.exists) query = query.startAfter(cursorSnap);
-    }
+    if (cursorSnap?.exists) query = query.startAfter(cursorSnap);
 
     const snap = await query.get();
     let items  = snap.docs.map(d => toUser(d.id, d.data()));

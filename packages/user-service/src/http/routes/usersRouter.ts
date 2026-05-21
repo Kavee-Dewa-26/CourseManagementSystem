@@ -4,9 +4,11 @@ import { container }               from '../../container';
 
 export const usersRouter = Router();
 
-usersRouter.post('/users',               authenticate(), authorize('admin'), container.usersController.create);
-usersRouter.get( '/users',               authenticate(), authorize('admin', 'leader', 'g12'), container.usersController.list);
-usersRouter.get( '/users/:uid',          authenticate(), authorize('admin'), container.usersController.getOne);
-usersRouter.post( '/users/:uid/suspend',    authenticate(), authorize('admin'), container.usersController.suspend);
-usersRouter.post( '/users/:uid/reactivate', authenticate(), authorize('admin'), container.usersController.reactivate);
-usersRouter.patch('/users/:uid/roles',      authenticate(), authorize('admin'), container.usersController.assignRole);
+usersRouter.post('/users',                  authenticate(), authorize('g12', 'admin', 'super_admin'), container.usersController.create);
+usersRouter.get( '/users',                  authenticate(), authorize('admin'),                  container.usersController.list);
+usersRouter.get( '/users/:uid',             authenticate(), authorize('admin'),                  container.usersController.getOne);
+usersRouter.post('/users/:uid/suspend',     authenticate(), authorize('admin'),                  container.usersController.suspend);
+usersRouter.post('/users/:uid/reactivate',  authenticate(), authorize('admin'),                  container.usersController.reactivate);
+usersRouter.patch('/users/:uid/roles',      authenticate(), authorize('admin', 'g12'),           container.usersController.assignRole);
+// G12 leaders can promote a member/leader to 'leader' or 'g12'
+usersRouter.post('/users/:uid/promote',     authenticate(), authorize('leader', 'g12', 'admin', 'super_admin'), container.usersController.promote);

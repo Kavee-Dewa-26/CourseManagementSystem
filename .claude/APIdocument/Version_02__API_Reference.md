@@ -21,7 +21,7 @@
 4. [User Management — Admin](#4-user-management--admin)
    - 4.1 [List Users](#41-get-users) · 4.2 [Get User](#42-get-usersuid) · 4.3 [Assign Roles](#43-patch-usersuidroles--new-v2)
    - 4.4 [User Audit Log](#44-get-usersuidaudit-log--new-v2) · 4.5 [Suspend](#45-post-usersusidsuspend) · 4.6 [Reactivate](#46-post-usersuidreactivate)
-   - 4.7 [Create Leader/G12 User](#47-post-users--new)
+   - 4.7 [Provision Leader/G12 User (with welcome email)](#47-post-users--new) · 4.8 [Promote Existing User](#48-post-usersuidpromote--new-v2)
 5. [Role Requests — NEW V2](#5-role-requests--new-v2)
 6. [Course Endpoints](#6-course-endpoints)
    - 6.1–6.7 [List/Get/Create/Update/Publish/Unpublish/Archive](#61-get-courses)
@@ -477,7 +477,7 @@ Update per-channel notification opt-out (FR-NOT-006). Essential notifications al
 
 ### 4.1 `GET /users`
 
-List users with filtering.
+List users with filtering. **Restricted to admin/super_admin only** — leader and g12 do not have access to the full user list.
 
 **Authentication:** Bearer required | **Roles:** `admin`, `super_admin`
 
@@ -582,15 +582,24 @@ Per-user audit timeline — entries where user was actor or target (FR-SADM-005 
 
 ### 4.7 `POST /users` — NEW
 
-Create a new **leader** or **g12** account directly. Both a Firebase Auth account and a Firestore user record are created atomically — the user can log in immediately with the provided `initialPassword`.
+Provision a brand-new **leader** or **g12** account for a person who is **not yet registered** in the system. Both a Firebase Auth login and a Firestore user record are created atomically — the user can sign in immediately with the `initialPassword` provided.
 
-Use this when an admin provisions a cell leader or G12 leader account without requiring them to self-register and go through the role-request flow. This mirrors how `POST /super-admin/admins` provisions admin accounts.
+Use this when a G12 leader, admin, or super admin needs to on-board a cell leader or G12 leader without requiring self-registration or the role-request flow. For admin accounts use `POST /super-admin/admins` instead.
 
-> **Why this endpoint exists:** `PATCH /users/:uid/roles` only updates an existing user's roles — it cannot create a Firebase Auth login for a brand-new account. This endpoint is required to create leader/g12 accounts that can actually log in.
+> **Why this endpoint exists:** `PATCH /users/:uid/roles` can only update an already-registered user's roles — it cannot create a Firebase Auth account for a brand-new person. This endpoint fills that gap.
 
-**Side effects:** An `admin.created` outbox event is published → audit log entry written.
+**Side effects:**
+- Firebase Auth account created with `initialPassword`
+- Firestore user record created with `roles: ["member", "<role>"]` and `status: "approved"`
+- An `admin.created` outbox event is published → **welcome email sent** to the new user containing:
+  - Login email & temporary password
+  - One-time Firebase password-reset link (expires in 1 hour)
+  - System URL (`APP_URL` env var, default `https://tccr.lk`)
+- Audit log entry written
 
-**Authentication:** Bearer required | **Roles:** `admin`, `super_admin`
+**Authentication:** Bearer required | **Roles:** `g12`, `admin`, `super_admin`
+
+> **Caller restrictions:** A **g12** caller may provision both `leader` and `g12` accounts. An **admin / super_admin** caller may provision any `leader` or `g12` account.
 
 #### Request Body
 
@@ -608,9 +617,9 @@ Use this when an admin provisions a cell leader or G12 leader account without re
 |-------|------|:--------:|-----------|
 | `firstName` | string | Yes | 1–50 chars |
 | `lastName` | string | Yes | 1–50 chars |
-| `email` | string | Yes | Valid email; must be unique across the system |
+| `email` | string | Yes | Valid email; must be unique |
 | `initialPassword` | string | Yes | Min 8 characters |
-| `role` | string | Yes | `"leader"` or `"g12"` only — use `POST /super-admin/admins` for admin accounts |
+| `role` | string | Yes | `"leader"` or `"g12"` only |
 
 #### Responses
 
@@ -626,11 +635,22 @@ Use this when an admin provisions a cell leader or G12 leader account without re
   "roles":           ["member", "leader"],
   "status":          "approved",
   "profilePhotoUrl": null,
+  "phoneNumber":     null,
+  "preferredLanguage": "en",
   "createdAt":       "2026-05-19T08:00:00.000Z",
   "updatedAt":       "2026-05-19T08:00:00.000Z",
   "deletedAt":       null
 }
 ```
+
+**Welcome email received by the new user:**
+
+| Field | Value |
+|-------|-------|
+| Subject | `Your Cell Leader Account has been Created — TCCR` |
+| Credentials table | Email + temporary password |
+| Reset link | One-time Firebase password-reset button (1 hr TTL) |
+| System URL | Configured via `APP_URL` env var |
 
 **`409 Conflict`** — Email already registered
 ```json
@@ -640,6 +660,53 @@ Use this when an admin provisions a cell leader or G12 leader account without re
 **`400 Bad Request`** — Validation failure (wrong role, missing field, password too short)
 ```json
 { "error": { "code": "VALIDATION_ERROR", "message": "..." }, "requestId": "..." }
+```
+
+**`403 Forbidden`** — Caller is not `g12`, `admin`, or `super_admin`
+```json
+{ "error": { "code": "FORBIDDEN", "message": "Insufficient permissions." }, "requestId": "..." }
+```
+
+---
+
+### 4.8 `POST /users/:uid/promote` — NEW V2
+
+Promote an **already-registered** user to `leader` or `g12`. Unlike `POST /users` (section 4.7), this endpoint targets an existing user rather than creating a new account. Promotes the Firebase custom claims and Firestore `roles[]` array atomically.
+
+> **Use `POST /users` (4.7) to create a brand-new account.  
+> Use `POST /users/:uid/promote` (4.8) to elevate an existing member.**
+
+**Authentication:** Bearer required | **Roles:** `leader`, `g12`, `admin`, `super_admin`
+
+**Caller-role business rules (enforced in use case, beyond the route guard):**
+
+| Caller | Can promote to |
+|--------|---------------|
+| `g12`, `admin`, `super_admin` | `leader` or `g12` |
+| `leader` | `g12` only (cannot create more leaders) |
+| Any | Cannot target a user who holds `admin` or `super_admin` |
+
+**Idempotent** — if the target already holds the requested role, returns `204` without re-writing.
+
+#### Request Body
+
+```json
+{ "role": "leader" }
+```
+
+| Field | Type | Required | Validation |
+|-------|------|:--------:|-----------|
+| `role` | string | Yes | `"leader"` or `"g12"` only |
+
+#### Responses
+
+**`204 No Content`** — Role promoted successfully.
+
+**`404 Not Found`** → `USER_NOT_FOUND`
+
+**`403 Forbidden`** → `FORBIDDEN` — caller lacks permission to grant this role
+```json
+{ "error": { "code": "FORBIDDEN", "message": "..." }, "requestId": "..." }
 ```
 
 ---
@@ -1127,7 +1194,7 @@ Soft-delete a semester and all its subjects.
 
 List active subjects. Student must have approved enrollment in the parent course.
 
-**Authentication:** Bearer required | **Roles:** `student`+, `admin`+
+**Authentication:** Bearer required | **Roles:** `student`, `leader`, `g12`, `admin`, `super_admin`
 
 **`403`** → `SEMESTER_DISABLED` (FR-STU-005 — semester's endDate passed)
 
@@ -1181,7 +1248,7 @@ V2 adds `imageUrls[]` for PNG/JPG cover images (FR-CRS-005).
 
 Plain array of Lesson objects, ordered by `order` ascending (FR-LRN-001).
 
-**Authentication:** Bearer required | **Roles:** `student`+ (enrolled), `admin`+
+**Authentication:** Bearer required | **Roles:** `student`, `leader`, `g12` (enrolled), `admin`, `super_admin`
 
 **`200 OK`**
 ```json
@@ -1325,7 +1392,7 @@ Remove attachment or image from Cloud Storage and subject record.
 
 List own enrollments (SRS §7.3.5 path).
 
-**Authentication:** Bearer required | **Roles:** `student`+
+**Authentication:** Bearer required | **Roles:** `student`, `leader`, `g12`
 
 **`200 OK`**
 ```json
@@ -1350,7 +1417,7 @@ List own enrollments (SRS §7.3.5 path).
 
 **Already-Student path:** enroll in an additional course (FR-STU-004). No role grant needed.
 
-**Authentication:** Bearer required | **Roles:** `student`+
+**Authentication:** Bearer required | **Roles:** `student`, `leader`, `g12`
 
 ```json
 { "courseId": "course-def", "batchId": "batch-456" }
@@ -1425,7 +1492,7 @@ Approve an enrollment. Notifies student with approver name (FR-ENR-005).
 
 Mark subject complete. **Idempotent** — already-completed returns existing record unchanged (FR-LRN-003 / FR-STU-011).
 
-**Authentication:** Bearer required | **Roles:** `student`+
+**Authentication:** Bearer required | **Roles:** `student`, `leader`, `g12`
 
 ```json
 { "courseId": "course-abc", "semesterId": "sem-001", "batchId": "batch-xyz" }
@@ -1451,7 +1518,7 @@ Mark subject complete. **Idempotent** — already-completed returns existing rec
 
 Update `lastAccessedAt`. Transitions `not_started` → `in_progress` on first access (FR-LRN-007).
 
-**Authentication:** Bearer required | **Roles:** `student`+
+**Authentication:** Bearer required | **Roles:** `student`, `leader`, `g12`
 
 ```json
 { "courseId": "course-abc", "semesterId": "sem-001", "batchId": "batch-xyz" }
@@ -1465,7 +1532,7 @@ Update `lastAccessedAt`. Transitions `not_started` → `in_progress` on first ac
 
 Course-level progress aggregate (FR-LRN-004).
 
-**Authentication:** Bearer required | **Roles:** `student`+
+**Authentication:** Bearer required | **Roles:** `student`, `leader`, `g12`
 
 **`200 OK`**
 ```json
@@ -1480,7 +1547,7 @@ Course-level progress aggregate (FR-LRN-004).
 
 ### 12.4 `GET /me/progress/subjects/:subjectId`
 
-**Authentication:** Bearer required | **Roles:** `student`+
+**Authentication:** Bearer required | **Roles:** `student`, `leader`, `g12`
 
 **`200 OK`** — SubjectProgress object.
 

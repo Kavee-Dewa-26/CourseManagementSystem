@@ -4,6 +4,11 @@ export const updateProfileSchema = z.object({
   firstName:         z.string().min(1).max(100).optional(),
   lastName:          z.string().min(1).max(100).optional(),
   profilePhotoUrl:   z.string().url().nullable().optional(),
+  phoneNumber:       z
+    .string()
+    .regex(/^\+?[1-9]\d{6,14}$/, 'Invalid phone number. Use international format, e.g. +94771234567.')
+    .nullable()
+    .optional(),
   preferredLanguage: z.enum(['en', 'si', 'ta']).optional(),
 });
 

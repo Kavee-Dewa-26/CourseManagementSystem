@@ -16,7 +16,9 @@
     "test": "jest --config jest.config.ts",
     "test:integration": "jest --config jest.integration.config.ts",
     "test:e2e": "jest --config jest.e2e.config.ts",
-    "test:newman": "newman run postman/CMP_Backend.postman_collection.json --environment postman/CMP_Local.postman_environment.json --delay-request 500 --reporters cli,htmlextra --reporter-htmlextra-export postman/newman-report.html"
+    "test:newman": "node scripts/newman-run.js",
+    "test:newman:cell": "node scripts/newman-cell-service.js",
+    "test:newman:raw": "newman run postman/CMP_Backend.postman_collection.json --environment postman/CMP_Local.postman_environment.json --delay-request 500 --reporters cli,htmlextra --reporter-htmlextra-export postman/newman-report.html"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.1",

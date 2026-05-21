@@ -18,6 +18,7 @@ import { ApproveUserUseCase }      from './application/use-cases/ApproveUserUseC
 import { AddRoleUseCase }               from './application/use-cases/AddRoleUseCase';
 import { RemoveRoleUseCase }            from './application/use-cases/RemoveRoleUseCase';
 import { CreateUserDirectlyUseCase }    from './application/use-cases/CreateUserDirectlyUseCase';
+import { PromoteMemberUseCase }         from './application/use-cases/PromoteMemberUseCase';
 import { RegisterFcmTokenUseCase }              from './application/use-cases/RegisterFcmTokenUseCase';
 import { DeregisterFcmTokenUseCase }            from './application/use-cases/DeregisterFcmTokenUseCase';
 import { UpdateNotificationPreferencesUseCase } from './application/use-cases/UpdateNotificationPreferencesUseCase';
@@ -51,6 +52,7 @@ const approveUser      = new ApproveUserUseCase(userRepo, authClient);
 const addRole              = new AddRoleUseCase(userRepo, authClient);
 const removeRole           = new RemoveRoleUseCase(userRepo, authClient);
 const createUserDirectly   = new CreateUserDirectlyUseCase(userRepo, authClient, outbox);
+const promoteMember        = new PromoteMemberUseCase(userRepo, authClient, outbox);
 const registerFcm      = new RegisterFcmTokenUseCase(userRepo);
 const deregisterFcm    = new DeregisterFcmTokenUseCase(userRepo);
 const updateNotifPrefs = new UpdateNotificationPreferencesUseCase(userRepo);
@@ -64,7 +66,7 @@ export const container = {
     registerFcm, deregisterFcm, updateNotifPrefs,
     linkProvider, unlinkProvider,
   ),
-  usersController:      new UsersController(getUsers, getUserById, suspendUser, reactivate, addRole, removeRole, createUserDirectly),
+  usersController:      new UsersController(getUsers, getUserById, suspendUser, reactivate, addRole, removeRole, createUserDirectly, promoteMember),
   superAdminController: new SuperAdminController(createAdmin, deleteAdmin, getUsers, getUserById, suspendUser, reactivate, promoteToAdmin),
   internalController:   new InternalController(checkEmail, approveUser, getUsers, addRole),
 };

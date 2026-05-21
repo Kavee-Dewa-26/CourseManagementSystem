@@ -1,8 +1,10 @@
 import { createHttpError }      from '@shared/errors';
+import { logger }               from '@shared/logger';
 import { OutboxEventPublisher } from '@shared/events';
 import { IUserRepository }      from '../../domain/repositories/IUserRepository';
 import { FirebaseAuthClient }   from '../../infrastructure/clients/FirebaseAuthClient';
 import { User, UserRole }       from '../../domain/entities/User';
+import { config }               from '../../config';
 
 export interface CreateUserDirectlyInput {
   firstName:       string;
@@ -51,9 +53,27 @@ export class CreateUserDirectlyUseCase {
 
       await this.userRepo.create(user);
 
+      // Generate a Firebase password-reset link so the welcome email can include it.
+      // If generation fails (e.g. emulator quirk) we still proceed — email falls back gracefully.
+      const passwordResetUrl = await this.authClient
+        .generatePasswordResetLink(input.email)
+        .catch((e: unknown) => {
+          logger.warn({ err: e, email: input.email }, 'Could not generate password reset link; continuing without it');
+          return null;
+        });
+
       await this.outbox.publishWithBatch({
-        type:      'admin.created',
-        payload:   { uid, email: input.email, firstName: input.firstName, lastName: input.lastName },
+        type:    'admin.created',
+        payload: {
+          uid,
+          email:            input.email,
+          firstName:        input.firstName,
+          lastName:         input.lastName,
+          initialPassword:  input.initialPassword,
+          role:             input.role,
+          passwordResetUrl,
+          systemUrl:        config.appUrl,
+        },
         requestId,
       });
 
