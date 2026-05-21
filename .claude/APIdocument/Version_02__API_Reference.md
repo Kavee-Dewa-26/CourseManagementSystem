@@ -1,12 +1,12 @@
 # TCCR — API Reference Document
 ## The Christian Center Rathmalana · `tccr-backend`
-### REST API · Version 2.3.0 · Base URL: `https://api.tccr.lk/api/v1`
+### REST API · Version 2.4.0 · Base URL: `https://api.tccr.lk/api/v1`
 
-**Version:** 2.3.0
-**Date:** 17 May 2026
+**Version:** 2.4.0
+**Date:** 21 May 2026
 **Organisation:** Future CX Lanka (Pvt) Ltd
 **Status:** Release Baseline
-**Supersedes:** CMP API Reference v1.2.0 (13 May 2026)
+**Supersedes:** Version 2.3.0 (17 May 2026)
 
 ---
 
@@ -477,18 +477,19 @@ Update per-channel notification opt-out (FR-NOT-006). Essential notifications al
 
 ### 4.1 `GET /users`
 
-List users with filtering. **Restricted to admin/super_admin only** — leader and g12 do not have access to the full user list.
+List users with filtering.
 
-**Authentication:** Bearer required | **Roles:** `admin`, `super_admin`
+**Authentication:** Bearer required | **Roles:** `leader`, `g12`, `admin`, `super_admin`
 
-| Parameter | Description |
-|-----------|-------------|
-| `search` | Partial match on name or email |
-| `roles` | Comma-separated, e.g. `leader,g12` |
-| `status` | `approved` \| `suspended` |
-| `courseId` | Users enrolled in this course |
-| `batchId` | Users enrolled in this batch — **NEW V2** |
-| `limit`, `cursor` | Pagination |
+> **Scoped view for `leader` / `g12`:** These callers only see users with `status: "approved"` and without `admin` or `super_admin` roles — i.e. members, students, and other leaders/g12s. Admin callers see the full unfiltered list.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `role` | string | Filter by single role — `member` \| `student` \| `leader` \| `g12` \| `admin` \| `super_admin` |
+| `status` | string | `pending_approval` \| `approved` \| `rejected` \| `suspended` |
+| `name` | string | Case-sensitive prefix search on `firstName` (min 1, max 100 chars) |
+| `limit` | number | 1–100, default 20 |
+| `cursor` | string | Cursor from previous `nextCursor` |
 
 **`200 OK`** — Paginated User list.
 
@@ -506,23 +507,28 @@ Get a specific user's profile.
 
 ### 4.3 `PATCH /users/:uid/roles` — NEW V2
 
-Add/remove roles on a user. Role change rules:
+Add or remove a **single role** per request. Role change rules:
 
 | Caller | Can add | Can remove | Cannot |
 |--------|---------|-----------|--------|
 | `super_admin` | Any role except `super_admin` on others | Any role | Demote last super_admin |
 | `admin` | `student`, `leader`, `g12` | `student`, `leader`, `g12` | Touch `admin` or `super_admin` |
-| `g12` | `g12` (promote a `leader` only) | — | Touch any other role |
+| `g12` | `leader`, `g12` | `leader`, `g12` | Touch `admin`, `super_admin`, or `member` |
 
-> `member` can never be removed from any user. Admin cannot modify their own roles (FR-ADM-008).
+> `member` can never be removed from any user. Dual-write: every role mutation updates **both** Firestore `roles[]` and Firebase Auth custom claims atomically.
 
-**Authentication:** Bearer required | **Roles:** `admin`, `super_admin`, `g12`
+**Authentication:** Bearer required | **Roles:** `admin`, `g12` (super_admin inherits admin)
 
 ```json
-{ "add": ["leader"], "remove": ["student"] }
+{ "role": "leader", "action": "add" }
 ```
 
-**`200 OK`** → `{ "uid": "...", "roles": ["member", "leader"] }`
+| Field | Type | Required | Values |
+|-------|------|:--------:|--------|
+| `role` | string | Yes | Any `UserRole` |
+| `action` | string | Yes | `"add"` or `"remove"` |
+
+**`200 OK`** → Updated User object with new `roles[]` array.
 
 **`403 Forbidden`** → `FORBIDDEN` — caller does not have permission to assign this role
 
@@ -591,11 +597,15 @@ Use this when a G12 leader, admin, or super admin needs to on-board a cell leade
 **Side effects:**
 - Firebase Auth account created with `initialPassword`
 - Firestore user record created with `roles: ["member", "<role>"]` and `status: "approved"`
-- An `admin.created` outbox event is published → **welcome email sent** to the new user containing:
-  - Login email & temporary password
-  - One-time Firebase password-reset link (expires in 1 hour)
-  - System URL (`APP_URL` env var, default `https://tccr.lk`)
-- Audit log entry written
+- An `admin.created` outbox event is published → `AdminCreatedHandler` sends a **role-specific welcome email**:
+
+  | Condition | Email content |
+  |-----------|--------------|
+  | `role = "leader"` or `"g12"` | Full welcome with credentials table (email + temp password) + **"Set Your Password →"** button (Firebase reset link, 1 hr TTL) + system URL |
+  | `promoted: true` (admin promotion path) | Short promotion notice — no password shown |
+  | Default (admin account) | Legacy admin welcome with credentials + reset link |
+
+- Audit log entry written (`audit.action`)
 
 **Authentication:** Bearer required | **Roles:** `g12`, `admin`, `super_admin`
 
@@ -643,14 +653,15 @@ Use this when a G12 leader, admin, or super admin needs to on-board a cell leade
 }
 ```
 
-**Welcome email received by the new user:**
+**Welcome email received by the new user (`leader` / `g12` path):**
 
 | Field | Value |
 |-------|-------|
-| Subject | `Your Cell Leader Account has been Created — TCCR` |
+| Subject | `Your Cell Leader Account has been Created — TCCR` or `Your G12 Leader Account has been Created — TCCR` |
 | Credentials table | Email + temporary password |
-| Reset link | One-time Firebase password-reset button (1 hr TTL) |
-| System URL | Configured via `APP_URL` env var |
+| Reset button | `"Set Your Password →"` — Firebase one-time reset link (1 hr TTL) |
+| Fallback (no reset link) | Prompt to change via *My Profile → Change Password* |
+| System URL | Configured via `APP_URL` env var (default `https://tccr.lk`) |
 
 **`409 Conflict`** — Email already registered
 ```json
@@ -2639,7 +2650,7 @@ Events published to the `outbox` Firestore collection and dispatched by the Outb
 | `enrollment.withdrawn` | Enrollment Service | Audit | Student withdraws |
 | `course.published` | Course Service | Notification, Audit | Course published |
 | `progress.subjectCompleted` | Progress Service | Audit | Subject marked complete |
-| `admin.created` | User Service | Audit | Admin created or promoted |
+| `admin.created` | User Service | Notification, Audit | Admin/leader/g12 created or promoted — `AdminCreatedHandler` sends role-specific email (3 branches: promotion notice / leader+g12 welcome with credentials / default admin welcome) |
 | `admin.suspended` | User Service | Notification, Audit | Admin suspended |
 | `audit.action` | Any service | Audit | Direct audit write |
 

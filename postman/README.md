@@ -1,7 +1,7 @@
 # CMP / TCCR — Postman Collection
 
 API test collection for the **CMP → TCCR backend** (slp-backend).  
-**138 requests** across 18 folders covering every V1 and V2 endpoint.
+**130 requests** across 17 folders covering every V1 and V2 endpoint.
 
 ---
 
@@ -9,7 +9,7 @@ API test collection for the **CMP → TCCR backend** (slp-backend).
 
 | File | What it is |
 |------|-----------|
-| `CMP_Backend.postman_collection.json` | Main collection — all 138 requests |
+| `CMP_Backend.postman_collection.json` | Main collection — all 130 requests |
 | `CMP_Local.postman_environment.json` | Local dev environment (Firebase emulator) |
 | `CMP_Online.postman_environment.json` | Production environment (online Firebase) |
 

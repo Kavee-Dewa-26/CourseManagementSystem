@@ -100,7 +100,7 @@ node scripts/seed-new-g12.js
 node scripts/seed-new-g12-online.js
 
 # Regenerate the Postman collection from source (overwrites postman/CMP_Backend.postman_collection.json)
-# Run this after adding new endpoints — generates 138 requests across 18 folders
+# Run this after adding new endpoints — generates 130 requests across 17 folders
 node scripts/build-postman-collection.js
 
 # One-time migration: backfill `roles` array on all users in online Firebase
@@ -144,6 +144,14 @@ npm run test:newman
 # avatar upload, course restore, title search, make-admin, health probes)
 # Requires all services running with online Firebase credentials
 node scripts/gap-test.js
+
+# Bash curl-based smoke test — 53 V1 endpoints including health probes for all 9 core services
+# Requires bash (Git Bash / WSL on Windows) and all services running with online Firebase
+bash scripts/api-test.sh
+
+# Verify online Firebase connectivity (Firestore + Auth + outbox collection)
+# Reads credentials from .env.local — run before seeding or deploying to confirm creds are valid
+node scripts/check-firebase.js
 ```
 
 ---
@@ -513,9 +521,9 @@ The `User` domain entity (`packages/user-service/src/domain/entities/User.ts`) g
 - `fcmTokens: string[]` — device FCM tokens for push notifications; updated via `POST /me/fcm-token`.
 - `notificationPreferences: { email: boolean; push: boolean }` — per-user notification opt-in flags; defaults `true` for both.
 
-**Implemented V2 user-service endpoints:** `POST /me/fcm-token` (register device FCM token — idempotent), `DELETE /me/fcm-token` (deregister), `PATCH /me/notifications/preferences` (opt-out per channel), `POST /me/providers/link` (link an OAuth provider), `DELETE /me/providers/:provider` (unlink an OAuth provider), `PATCH /users/:uid/roles` (admin/g12 direct role assignment, bypasses the role-request flow — `authorize('admin', 'g12')`), `POST /users/:uid/promote` (elevate a member/leader to `leader` or `g12` — `authorize('leader', 'g12', 'admin', 'super_admin')`), and `POST /users` (create a leader/g12 user directly — g12/admin-initiated; always assigns `['member', <role>]` as the roles array — `authorize('g12', 'admin', 'super_admin')`).
+**Implemented V2 user-service endpoints:** `PATCH /me` (update profile — stores `firstName`, `lastName`, `profilePhotoUrl`, `phoneNumber`, `preferredLanguage` to Firestore), `POST /me/fcm-token` (register device FCM token — idempotent), `DELETE /me/fcm-token` (deregister), `PATCH /me/notifications/preferences` (opt-out per channel), `POST /me/providers/link` (link an OAuth provider), `DELETE /me/providers/:provider` (unlink an OAuth provider), `PATCH /users/:uid/roles` (admin/g12 direct role assignment, bypasses the role-request flow — `authorize('admin', 'g12')`), `POST /users/:uid/promote` (elevate a member/leader to `leader` or `g12` — `authorize('leader', 'g12', 'admin', 'super_admin')`), and `POST /users` (create a leader/g12 user directly — g12/admin-initiated; always assigns `['member', <role>]` as the roles array — `authorize('g12', 'admin', 'super_admin')`).
 
-**`GET /users` query filters:** `?limit`, `?cursor`, `?role=<UserRole>`, `?status=<UserStatus>`, `?name=<prefix>` (case-sensitive prefix search by first/last name). The list cache key includes the caller's roles to prevent cross-role data leakage.
+**`GET /users` query filters:** `?limit`, `?cursor`, `?role=<UserRole>`, `?status=<UserStatus>`, `?name=<prefix>` (case-sensitive prefix search on `firstName` only — not lastName). Accessible to `leader`, `g12`, and `admin` (super_admin inherits). The list cache key includes the caller's roles to prevent cross-role data leakage.
 
 **Promote endpoint caller-role rules (`POST /users/:uid/promote`):** The use case enforces caller permissions beyond the route guard — `callerRoles` is passed in from `req.principal.roles` and checked inside `PromoteMemberUseCase`:
 - **g12 / admin / super_admin** callers: may promote to `leader` or `g12`
@@ -663,7 +671,7 @@ Synchronous calls use `createInternalClient(serviceUrl, INTERNAL_SERVICE_KEY)`, 
 | progress-service | course-service | Get total subject count for progress % |
 | storage-service | course-service | Verify subject exists before upload |
 | outbox-worker | user-service | Approve user account on `registration.approved` event |
-| enrollment-service | user-service | Grant role on `role_requests/:id/approve` (V2) |
+| enrollment-service | user-service | Grant role on `role_requests/:id/approve` via `POST /internal/users/add-role` (V2) |
 | analytics-service | cell-service (Firestore direct) | Reads `cell_groups` and `cell_reports` — analytics-service is exempt from the cross-service HTTP rule (same as scheduled-jobs and outbox-worker background workers) |
 
 ### Repository Pagination Pattern
@@ -769,7 +777,38 @@ Two Jest configs exist in the repo. A third (`jest.e2e.config.ts`) is referenced
 
 **Firebase emulator ports** (from `firebase.json`): Auth `9099`, Firestore `8080`, Storage `9199`, UI `4000` (`http://localhost:4000`).
 
-**Postman:** Import `postman/CMP_Backend.postman_collection.json` (138 requests across 18 folders — see `postman/README.md` for full usage guide) with either `postman/CMP_Local.postman_environment.json` (local Docker stack) or `postman/CMP_Online.postman_environment.json` (online Firebase) for manual API testing. The collection is generated by `scripts/build-postman-collection.js` — rerun it after adding endpoints. The `smoke-test.js` script covers a subset of 53 endpoints; the Newman run (`node scripts/newman-run.js`) exercises the full collection. **Must run the "🔐 Sign In" folder first** to populate auth tokens used by all other requests.
+**Postman:** Import `postman/CMP_Backend.postman_collection.json` (130 requests across 17 folders) with one of the two environment files:
+
+| Environment file | `baseUrl` | `authBaseUrl` | `firebaseWebApiKey` |
+|-----------------|-----------|--------------|-------------------|
+| `CMP_Local.postman_environment.json` | `http://localhost:3000/api/v1` | `http://127.0.0.1:9099/…` | `fake-key` |
+| `CMP_Online.postman_environment.json` | `https://cms.api.bethelnet.au/api/v1` | `https://identitytoolkit.googleapis.com/v1` | real key |
+
+**Folder breakdown** (run in order — each folder's pre-request scripts set variables consumed by later folders):
+
+| # | Folder | Requests |
+|---|--------|----------|
+| 0 | 🔐 Sign In (**run first** — populates all `*Token` and `*Id` vars) | 6 |
+| 1 | 1️⃣ Auth Service | 8 |
+| 2 | 2️⃣ User Service — Me | 10 |
+| 3 | 3️⃣ User Service — Admin Manage Users | 14 |
+| 4 | 4️⃣ User Service — Super Admin | 7 |
+| 5 | 5️⃣ Course Service — Build a Course | 18 |
+| 6 | 6️⃣ Batches (V2) | 6 |
+| 7 | 7️⃣ Enrollment | 10 |
+| 8 | 8️⃣ Role Requests (V2) | 5 |
+| 9 | 9️⃣ Progress Service | 5 |
+| 10 | 🔔 Notifications | 4 |
+| 11 | 📎 Storage Service | 3 |
+| 12 | 📋 Audit Log | 3 |
+| 13 | ⚡ Course Lifecycle | 6 |
+| 14 | 🏘 V2 — Cell Service (sub-folders: Member Search, Cell CRUD, Members, Join Requests, Cell Reports, Archive) | 18 |
+| 15 | 📊 V2 — Analytics Service | 6 |
+| 16 | 🏥 Health Checks | 1 |
+
+**Collection-managed variables** (auto-set by test scripts, do not set manually): `superAdminToken`, `adminToken`, `leaderToken`, `g12Token`, `studentToken`, `student2Token`, `userId`, `student2Id`, `adminId`, `leaderId`, `g12Id`, `courseId`, `semesterId`, `subjectId`, `subjectId2`, `lessonId`, `batchId`, `enrollmentId`, `registrationId`, `roleRequestId`, `notificationId`, `attachmentId`, `cellId`, `joinRequestId`, `cellReportId`.
+
+The collection is generated by `scripts/build-postman-collection.js` — rerun it after adding endpoints. The `smoke-test.js` script covers a subset of 53 endpoints; the Newman run (`node scripts/newman-run.js`) exercises the full collection against the local stack. See `postman/README.md` for full usage guide.
 
 Use `jest.clearAllMocks()` in `beforeEach` to prevent test bleed. When typing test-fixture arrays that will be passed to use-case inputs (e.g. `callerRoles`), use `as UserRole[]` instead of `as const` — `as const` creates a `readonly` tuple that is incompatible with mutable array parameters and causes a TypeScript compile error that silently drops the entire test suite (0 tests run, no failures reported). Integration tests use the Firebase emulator — `tests/integration/setup.ts` automatically sets `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080` and `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099` with fake credentials, so no real Firebase project credentials are needed. Just ensure the emulators are running before `npm run test:integration`.
 

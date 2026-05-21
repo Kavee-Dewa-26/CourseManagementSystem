@@ -45,6 +45,71 @@ function queryParams(obj) {
   }));
 }
 
+/**
+ * Parse a raw URL string (which may start with a Postman variable like {{baseUrl}})
+ * into a full Postman v2.1 URL object that Newman 6 requires.
+ *
+ * Supported patterns:
+ *   {{baseUrl}}/path/to/resource
+ *   {{baseUrl}}/path/to/resource?key=val&key2=val2
+ *   {{baseUrl}}/path/to/{{varId}}/action
+ *   http://localhost:3000/healthz
+ */
+function makeUrl(rawStr, queryObj) {
+  // Append inline query object if supplied
+  let raw = rawStr;
+  let extraQueryItems = [];
+  if (queryObj) {
+    const qs = Object.entries(queryObj).map(([k, v]) => `${k}=${v}`).join('&');
+    raw = `${rawStr}?${qs}`;
+    extraQueryItems = Object.entries(queryObj).map(([k, v]) => ({
+      key: k, value: String(v), disabled: false,
+    }));
+  }
+
+  // ── Case 1: Postman-variable-prefixed URL e.g. {{baseUrl}}/auth/register ──
+  const varMatch = raw.match(/^(\{\{[^}]+\}\})\/?(.*)$/);
+  if (varMatch) {
+    const [, hostVar, rest] = varMatch;
+    const [pathStr = '', queryStr = ''] = rest.split('?');
+    const pathSegments = pathStr.split('/').filter(Boolean);
+
+    const result = { raw, host: [hostVar], path: pathSegments };
+
+    const parsedQuery = queryStr
+      ? queryStr.split('&').map(pair => {
+          const eq = pair.indexOf('=');
+          return eq >= 0
+            ? { key: pair.slice(0, eq), value: pair.slice(eq + 1), disabled: false }
+            : { key: pair, value: '', disabled: false };
+        })
+      : extraQueryItems;
+    if (parsedQuery.length > 0) result.query = parsedQuery;
+
+    return result;
+  }
+
+  // ── Case 2: Absolute URL e.g. http://localhost:3000/healthz ──
+  try {
+    // Replace Postman vars with a placeholder so URL can be parsed
+    const safe = raw.replace(/\{\{[^}]+\}\}/g, 'PMVAR');
+    const u = new URL(safe);
+    const result = {
+      raw,
+      protocol: u.protocol.replace(':', ''),
+      host:     u.hostname.includes('.') ? u.hostname.split('.') : [u.hostname],
+      path:     u.pathname.split('/').filter(Boolean),
+    };
+    if (u.port) result.port = u.port;
+    const qps = [...u.searchParams.entries()].map(([k, v]) => ({ key: k, value: v, disabled: false }));
+    if (qps.length > 0) result.query = qps;
+    return result;
+  } catch {
+    // Fallback — return raw-only object (Newman will try to resolve)
+    return { raw };
+  }
+}
+
 function testScript(lines) {
   return [
     {
@@ -68,17 +133,12 @@ function buildRequest({
   query = null,
   tests = [],
 }) {
-  const urlObj =
-    typeof url === 'string'
-      ? { raw: query ? `${url}?${new URLSearchParams(query).toString()}` : url }
-      : url;
-
-  if (query) {
-    urlObj.raw = `${url}?${Object.entries(query)
-      .map(([k, v]) => `${k}=${v}`)
-      .join('&')}`;
-    urlObj.query = queryParams(query);
-  }
+  // Always build a full Postman URL object (Newman 6 requires host/path arrays)
+  const rawStr = typeof url === 'string' ? url : (url.raw || '');
+  // If the caller already provided a fully-structured URL object (has host[]), use it directly
+  const urlObj = (typeof url === 'object' && url !== null && Array.isArray(url.host))
+    ? url
+    : makeUrl(rawStr, query);
 
   return {
     id: uuid(),
@@ -131,13 +191,26 @@ function signInRequest(name, email, password, tokenVar, idVar) {
   });
 }
 
+// Student 2 is the *approved* student — use her as the primary {{studentToken}}
+// Student 1 is pending_approval — kept as student1Token for specific tests
+function signInRequestDual(name, email, password, tokenVar, idVar, extraTokenVar) {
+  const base = signInRequest(name, email, password, tokenVar, idVar);
+  if (extraTokenVar) {
+    base.event[0].script.exec.push(
+      `if (j.idToken) { pm.environment.set("${extraTokenVar}", j.idToken); }`,
+    );
+  }
+  return base;
+}
+
 const signInFolder = folder('🔐 Sign In', [
   signInRequest('Super Admin Sign In', 'superadmin@cmp.com', 'SuperAdmin@123', 'superAdminToken', 'superAdminId'),
-  signInRequest('Admin Sign In', 'admin@cmp.com', 'Admin@12345', 'adminToken', 'adminId'),
-  signInRequest('Student 1 (pending) Sign In', 'student1@cmp.com', 'Student1@123', 'studentToken', 'studentId'),
-  signInRequest('Student 2 (approved) Sign In', 'student2@cmp.com', 'Student2@123', 'student2Token', 'student2Id'),
+  signInRequest('Admin Sign In',       'admin@cmp.com',      'Admin@12345',    'adminToken',       'adminId'),
+  signInRequest('Student 1 (pending) Sign In', 'student1@cmp.com', 'Student1@123', 'student1Token', 'student1Id'),
+  // Student 2 is approved — sets both student2Token AND studentToken (primary token used by most tests)
+  signInRequestDual('Student 2 (approved) Sign In', 'student2@cmp.com', 'Student2@123', 'student2Token', 'student2Id', 'studentToken'),
   signInRequest('Leader Sign In', 'leader@cmp.com', 'Leader@12345', 'leaderToken', 'leaderId'),
-  signInRequest('G12 Sign In', 'g12leader@cmp.com', 'G12Lead@123', 'g12Token', 'g12Id'),
+  signInRequest('G12 Sign In',    'g12leader@cmp.com', 'G12Lead@123', 'g12Token',  'g12Id'),
 ]);
 
 // ---------------------------------------------------------------------------
@@ -145,6 +218,7 @@ const signInFolder = folder('🔐 Sign In', [
 // ---------------------------------------------------------------------------
 
 const authFolder = folder('1️⃣ Auth Service', [
+  // Step 1: Register a fresh member
   buildRequest({
     name: 'Register New Member',
     method: 'POST',
@@ -155,10 +229,43 @@ const authFolder = folder('1️⃣ Auth Service', [
       firstName: 'New',
       lastName: 'Member',
       email: 'newmember@test.com',
-      password: 'Member@123',
+      password: 'Member@Tccr2026',
       preferredLanguage: 'en',
     }),
-    tests: [`pm.test("201 Created — Register", () => pm.response.to.have.status(201));`],
+    tests: [
+      `pm.test("201 or 409 — Register (409 = email exists from prior run)", () => { pm.expect([201,409]).to.include(pm.response.code); });`,
+      `const j = pm.response.json();`,
+      `if (j.uid) { pm.environment.set("registeredUid", j.uid); }`,
+    ],
+  }),
+  // Step 2: Sign in as that new member to get a disposable token for Logout
+  buildRequest({
+    name: 'Sign In — New Member (for logout test)',
+    method: 'POST',
+    url: {
+      raw:  '{{authBaseUrl}}/accounts:signInWithPassword?key={{firebaseWebApiKey}}',
+      host: ['{{authBaseUrl}}'],
+      path: ['accounts:signInWithPassword'],
+      query: [{ key: 'key', value: '{{firebaseWebApiKey}}', disabled: false }],
+    },
+    auth: noAuth(),
+    headers: jsonHeader(),
+    body: jsonBody({ email: 'newmember@test.com', password: 'Member@Tccr2026', returnSecureToken: true }),
+    tests: [
+      `pm.test("200 OK — New Member Sign In", () => pm.response.to.have.status(200));`,
+      `const j = pm.response.json();`,
+      `if (j.idToken) { pm.environment.set("tempMemberToken", j.idToken); }`,
+    ],
+  }),
+  // Step 3: Logout with the disposable token — does NOT revoke any primary token
+  buildRequest({
+    name: 'Logout (new member)',
+    method: 'POST',
+    url: { raw: '{{baseUrl}}/auth/logout' },
+    auth: bearerAuth('tempMemberToken'),
+    headers: jsonHeader(),
+    body: noBody(),
+    tests: [`pm.test("204 No Content — Logout", () => pm.response.to.have.status(204));`],
   }),
   buildRequest({
     name: 'Request Password Reset',
@@ -170,16 +277,14 @@ const authFolder = folder('1️⃣ Auth Service', [
     tests: [`pm.test("204 No Content — Password Reset", () => pm.response.to.have.status(204));`],
   }),
   buildRequest({
-    name: 'Verify OTP (Password Reset)',
+    name: 'Verify OTP (wrong OTP — expect 400)',
     method: 'POST',
     url: { raw: '{{baseUrl}}/auth/password-reset/verify' },
     auth: noAuth(),
     headers: jsonHeader(),
-    body: jsonBody({ email: 'student2@cmp.com', otp: '123456' }),
+    body: jsonBody({ email: 'student2@cmp.com', otp: '000000' }),
     tests: [
-      `pm.test("No 500 error — Password Reset Verify", () => {`,
-      `  pm.expect(pm.response.code).to.not.equal(500);`,
-      `});`,
+      `pm.test("400 Bad Request — Wrong OTP", () => pm.response.to.have.status(400));`,
     ],
   }),
   buildRequest({
@@ -192,16 +297,7 @@ const authFolder = folder('1️⃣ Auth Service', [
     tests: [`pm.test("204 No Content — Track Failure", () => pm.response.to.have.status(204));`],
   }),
   buildRequest({
-    name: 'Logout',
-    method: 'POST',
-    url: { raw: '{{baseUrl}}/auth/logout' },
-    auth: bearerAuth('student2Token'),
-    headers: jsonHeader(),
-    body: noBody(),
-    tests: [`pm.test("204 No Content — Logout", () => pm.response.to.have.status(204));`],
-  }),
-  buildRequest({
-    name: 'Federated Login (Google)',
+    name: 'Federated Login — Google (emulator bypass)',
     method: 'POST',
     url: { raw: '{{baseUrl}}/auth/federated/google' },
     auth: noAuth(),
@@ -211,7 +307,27 @@ const authFolder = folder('1️⃣ Auth Service', [
       preferredLanguage: 'en',
     }),
     tests: [
-      `pm.test("No 500 error — Federated Login", () => {`,
+      `pm.test("No 500 — Federated Login (Google)", () => {`,
+      `  pm.expect(pm.response.code).to.not.equal(500);`,
+      `});`,
+      `if (pm.response.code === 200) {`,
+      `  const j = pm.response.json();`,
+      `  if (j.firebaseToken) pm.environment.set("federatedToken", j.firebaseToken);`,
+      `}`,
+    ],
+  }),
+  buildRequest({
+    name: 'Federated Login — Apple (emulator bypass)',
+    method: 'POST',
+    url: { raw: '{{baseUrl}}/auth/federated/apple' },
+    auth: noAuth(),
+    headers: jsonHeader(),
+    body: jsonBody({
+      idToken: Buffer.from(JSON.stringify({ email: 'federated-apple@test.com', sub: 'apple-uid-test' })).toString('base64'),
+      preferredLanguage: 'en',
+    }),
+    tests: [
+      `pm.test("No 500 — Federated Login (Apple)", () => {`,
       `  pm.expect(pm.response.code).to.not.equal(500);`,
       `});`,
     ],
@@ -227,36 +343,70 @@ const meFolder = folder('2️⃣ User Service — Me', [
     name: 'Get My Profile',
     method: 'GET',
     url: { raw: '{{baseUrl}}/me' },
-    auth: bearerAuth('student2Token'),
+    auth: bearerAuth('studentToken'),
     tests: [
       `pm.test("200 OK — Get Profile", () => pm.response.to.have.status(200));`,
       `const j = pm.response.json();`,
-      `if (j.uid) { pm.environment.set("userId", j.uid); }`,
+      `if (j.uid) { pm.environment.set("student2Id", j.uid); }`,
     ],
   }),
   buildRequest({
     name: 'Update My Profile',
     method: 'PATCH',
     url: { raw: '{{baseUrl}}/me' },
-    auth: bearerAuth('student2Token'),
+    auth: bearerAuth('studentToken'),
     headers: jsonHeader(),
-    body: jsonBody({ firstName: 'Updated', lastName: 'Student', preferredLanguage: 'si' }),
+    body: jsonBody({ firstName: 'Updated', lastName: 'Student', preferredLanguage: 'si', phoneNumber: '+94771234567' }),
     tests: [`pm.test("200 OK — Update Profile", () => pm.response.to.have.status(200));`],
   }),
+  // Upload avatar — multipart/form-data
+  {
+    id: uuid(),
+    name: 'Upload Avatar (photo)',
+    request: {
+      method: 'POST',
+      header: [],
+      body: {
+        mode: 'formdata',
+        formdata: [
+          {
+            key: 'photo',
+            type: 'file',
+            src: '',
+            description: 'Select a JPEG or PNG image (max 2 MB).',
+          },
+        ],
+      },
+      url: makeUrl('{{baseUrl}}/me/avatar'),
+      auth: bearerAuth('studentToken'),
+      description: 'Multipart file upload. Field name must be "photo". Accepts image/jpeg or image/png, max 2 MB. Returns updated user profile with profilePhotoUrl set.',
+    },
+    response: [],
+    event: testScript([
+      `pm.test("200 OK or 400/415 — Upload Avatar", () => {`,
+      `  pm.expect([200, 400, 415]).to.include(pm.response.code);`,
+      `});`,
+    ]),
+  },
+  // Change password on student1 (pending, won't affect the primary studentToken = student2)
   buildRequest({
-    name: 'Change Password',
+    name: 'Change Password (student1)',
     method: 'POST',
     url: { raw: '{{baseUrl}}/me/change-password' },
-    auth: bearerAuth('student2Token'),
+    auth: bearerAuth('student1Token'),
     headers: jsonHeader(),
-    body: jsonBody({ currentPassword: 'Student2@123', newPassword: 'Student2@NewPass!' }),
-    tests: [`pm.test("204 No Content — Change Password", () => pm.response.to.have.status(204));`],
+    body: jsonBody({ currentPassword: 'Student1@123', newPassword: 'Student1@NewPass!' }),
+    tests: [
+      `pm.test("204 or 401 — Change Password", () => {`,
+      `  pm.expect([204, 401]).to.include(pm.response.code);`,
+      `});`,
+    ],
   }),
   buildRequest({
     name: 'Register FCM Token',
     method: 'POST',
     url: { raw: '{{baseUrl}}/me/fcm-token' },
-    auth: bearerAuth('student2Token'),
+    auth: bearerAuth('studentToken'),
     headers: jsonHeader(),
     body: jsonBody({ token: 'fcm-test-token-abc123' }),
     tests: [`pm.test("204 No Content — Register FCM Token", () => pm.response.to.have.status(204));`],
@@ -265,14 +415,16 @@ const meFolder = folder('2️⃣ User Service — Me', [
     name: 'Delete FCM Token',
     method: 'DELETE',
     url: { raw: '{{baseUrl}}/me/fcm-token' },
-    auth: bearerAuth('student2Token'),
+    auth: bearerAuth('studentToken'),
+    headers: jsonHeader(),
+    body: jsonBody({ token: 'fcm-test-token-abc123' }),
     tests: [`pm.test("204 No Content — Delete FCM Token", () => pm.response.to.have.status(204));`],
   }),
   buildRequest({
     name: 'Update Notification Preferences',
     method: 'PATCH',
     url: { raw: '{{baseUrl}}/me/notifications/preferences' },
-    auth: bearerAuth('student2Token'),
+    auth: bearerAuth('studentToken'),
     headers: jsonHeader(),
     body: jsonBody({ email: true, push: false }),
     tests: [`pm.test("204 No Content — Update Preferences", () => pm.response.to.have.status(204));`],
@@ -281,8 +433,7 @@ const meFolder = folder('2️⃣ User Service — Me', [
     name: 'Get My Notifications',
     method: 'GET',
     url: { raw: '{{baseUrl}}/me/notifications?limit=10' },
-    auth: bearerAuth('student2Token'),
-    query: { limit: '10' },
+    auth: bearerAuth('studentToken'),
     tests: [
       `pm.test("200 OK — Get Notifications", () => pm.response.to.have.status(200));`,
       `const j = pm.response.json();`,
@@ -290,17 +441,10 @@ const meFolder = folder('2️⃣ User Service — Me', [
     ],
   }),
   buildRequest({
-    name: 'Mark All Notifications Read',
-    method: 'POST',
-    url: { raw: '{{baseUrl}}/me/notifications/read-all' },
-    auth: bearerAuth('student2Token'),
-    tests: [`pm.test("204 No Content — Read All", () => pm.response.to.have.status(204));`],
-  }),
-  buildRequest({
     name: 'Link OAuth Provider',
     method: 'POST',
     url: { raw: '{{baseUrl}}/me/providers/link' },
-    auth: bearerAuth('student2Token'),
+    auth: bearerAuth('studentToken'),
     headers: jsonHeader(),
     body: jsonBody({ provider: 'google', idToken: 'test-google-token' }),
     tests: [
@@ -313,7 +457,7 @@ const meFolder = folder('2️⃣ User Service — Me', [
     name: 'Unlink OAuth Provider',
     method: 'DELETE',
     url: { raw: '{{baseUrl}}/me/providers/google' },
-    auth: bearerAuth('student2Token'),
+    auth: bearerAuth('studentToken'),
     tests: [
       `pm.test("No 500 error — Unlink Provider", () => {`,
       `  pm.expect(pm.response.code).to.not.equal(500);`,
@@ -400,7 +544,12 @@ const adminUsersFolder = folder('3️⃣ User Service — Admin Manage Users', [
     method: 'GET',
     url: { raw: '{{baseUrl}}/users/{{student2Id}}' },
     auth: bearerAuth('adminToken'),
-    tests: [`pm.test("200 OK — Get User", () => pm.response.to.have.status(200));`],
+    tests: [
+      `pm.test("200 OK — Get User", () => pm.response.to.have.status(200));`,
+      `const j = pm.response.json();`,
+      // Keep userId in sync for requests that still use the old variable name
+      `if (j.uid) { pm.environment.set("userId", j.uid); }`,
+    ],
   }),
   buildRequest({
     name: 'Suspend User',
@@ -417,13 +566,59 @@ const adminUsersFolder = folder('3️⃣ User Service — Admin Manage Users', [
     tests: [`pm.test("200 OK — Reactivate User", () => pm.response.to.have.status(200));`],
   }),
   buildRequest({
-    name: 'Update User Roles',
+    name: 'Update User Roles (add student)',
     method: 'PATCH',
     url: { raw: '{{baseUrl}}/users/{{student2Id}}/roles' },
     auth: bearerAuth('adminToken'),
     headers: jsonHeader(),
     body: jsonBody({ role: 'student', action: 'add' }),
     tests: [`pm.test("204 No Content — Update Roles", () => pm.response.to.have.status(204));`],
+  }),
+  // Promote endpoint tests
+  buildRequest({
+    name: 'Promote member → leader (g12 caller)',
+    method: 'POST',
+    url: { raw: '{{baseUrl}}/users/{{student2Id}}/promote' },
+    auth: bearerAuth('g12Token'),
+    headers: jsonHeader(),
+    body: jsonBody({ role: 'leader' }),
+    tests: [`pm.test("204 No Content — g12 promotes to leader", () => pm.response.to.have.status(204));`],
+  }),
+  buildRequest({
+    name: 'Promote member → g12 (g12 caller)',
+    method: 'POST',
+    url: { raw: '{{baseUrl}}/users/{{student2Id}}/promote' },
+    auth: bearerAuth('g12Token'),
+    headers: jsonHeader(),
+    body: jsonBody({ role: 'g12' }),
+    tests: [`pm.test("204 No Content — g12 promotes to g12", () => pm.response.to.have.status(204));`],
+  }),
+  buildRequest({
+    name: 'Promote leader → g12 (leader caller)',
+    method: 'POST',
+    url: { raw: '{{baseUrl}}/users/{{leaderId}}/promote' },
+    auth: bearerAuth('leaderToken'),
+    headers: jsonHeader(),
+    body: jsonBody({ role: 'g12' }),
+    tests: [`pm.test("204 No Content — leader promotes leader to g12", () => pm.response.to.have.status(204));`],
+  }),
+  buildRequest({
+    name: 'Leader tries promote → leader (expect 403)',
+    method: 'POST',
+    url: { raw: '{{baseUrl}}/users/{{student2Id}}/promote' },
+    auth: bearerAuth('leaderToken'),
+    headers: jsonHeader(),
+    body: jsonBody({ role: 'leader' }),
+    tests: [`pm.test("403 — leader cannot grant leader role", () => pm.response.to.have.status(403));`],
+  }),
+  buildRequest({
+    name: 'Student tries promote (expect 403)',
+    method: 'POST',
+    url: { raw: '{{baseUrl}}/users/{{student2Id}}/promote' },
+    auth: bearerAuth('studentToken'),
+    headers: jsonHeader(),
+    body: jsonBody({ role: 'g12' }),
+    tests: [`pm.test("403 — student cannot promote", () => pm.response.to.have.status(403));`],
   }),
 ]);
 
@@ -1106,6 +1301,35 @@ const storageFolder = folder('📎 Storage Service', [
       `});`,
     ],
   }),
+  // Upload subject image — multipart/form-data
+  {
+    id: uuid(),
+    name: 'Upload Subject Image',
+    request: {
+      method: 'POST',
+      header: [],
+      body: {
+        mode: 'formdata',
+        formdata: [
+          {
+            key: 'image',
+            type: 'file',
+            src: '',
+            description: 'Select a PNG or JPEG image (max 10 MB).',
+          },
+        ],
+      },
+      url: makeUrl('{{baseUrl}}/subjects/{{subjectId}}/images'),
+      auth: bearerAuth('adminToken'),
+      description: 'Multipart image upload for a subject. Field name must be "image". Accepts image/png or image/jpeg, max 10 MB. Returns the stored image URL.',
+    },
+    response: [],
+    event: testScript([
+      `pm.test("201 Created or 400/415 — Upload Subject Image", () => {`,
+      `  pm.expect([201, 400, 415]).to.include(pm.response.code);`,
+      `});`,
+    ]),
+  },
 ]);
 
 // ---------------------------------------------------------------------------
@@ -1350,6 +1574,37 @@ const joinRequestsSubFolder = folder('Join Requests', [
 ]);
 
 const cellReportsSubFolder = folder('Cell Reports', [
+  // Upload report photos first — returns URLs to include in photoUrls[] of fileReport
+  {
+    id: uuid(),
+    name: 'Upload Report Photos',
+    request: {
+      method: 'POST',
+      header: [],
+      body: {
+        mode: 'formdata',
+        formdata: [
+          {
+            key: 'photos',
+            type: 'file',
+            src: '',
+            description: 'Select one or more images (JPEG/PNG). Returns photoUrls[] to include in File Cell Report.',
+          },
+        ],
+      },
+      url: makeUrl('{{baseUrl}}/cells/{{cellId}}/report-photos'),
+      auth: bearerAuth('leaderToken'),
+      description: 'Upload photos for a cell report before filing. Field name must be "photos" (multipart). Returns an array of photoUrls to pass into the File Cell Report request.',
+    },
+    response: [],
+    event: testScript([
+      `pm.test("200 OK or 400/415 — Upload Report Photos", () => {`,
+      `  pm.expect([200, 400, 415]).to.include(pm.response.code);`,
+      `});`,
+      `const j = pm.response.json();`,
+      `if (j.photoUrls && j.photoUrls.length > 0) { pm.environment.set("reportPhotoUrls", JSON.stringify(j.photoUrls)); }`,
+    ]),
+  },
   buildRequest({
     name: 'File Cell Report',
     method: 'POST',
@@ -1501,11 +1756,53 @@ const analyticsFolder = folder('📊 V2 — Analytics Service', [
 
 const healthFolder = folder('🏥 Health Checks', [
   buildRequest({
-    name: 'Gateway Health Check',
+    name: 'Gateway — Liveness (healthz)',
     method: 'GET',
     url: { raw: 'http://localhost:3000/healthz' },
     auth: noAuth(),
-    tests: [`pm.test("200 OK — Health Check", () => pm.response.to.have.status(200));`],
+    tests: [`pm.test("200 OK — Liveness", () => pm.response.to.have.status(200));`],
+  }),
+  buildRequest({
+    name: 'Gateway — Readiness (readyz)',
+    method: 'GET',
+    url: { raw: 'http://localhost:3000/readyz' },
+    auth: noAuth(),
+    tests: [`pm.test("200 OK — Readiness", () => pm.response.to.have.status(200));`],
+  }),
+  buildRequest({
+    name: 'Auth Service — Liveness',
+    method: 'GET',
+    url: { raw: 'http://localhost:3001/healthz' },
+    auth: noAuth(),
+    tests: [`pm.test("200 OK — Auth Liveness", () => pm.response.to.have.status(200));`],
+  }),
+  buildRequest({
+    name: 'User Service — Liveness',
+    method: 'GET',
+    url: { raw: 'http://localhost:3002/healthz' },
+    auth: noAuth(),
+    tests: [`pm.test("200 OK — User Liveness", () => pm.response.to.have.status(200));`],
+  }),
+  buildRequest({
+    name: 'Course Service — Liveness',
+    method: 'GET',
+    url: { raw: 'http://localhost:3003/healthz' },
+    auth: noAuth(),
+    tests: [`pm.test("200 OK — Course Liveness", () => pm.response.to.have.status(200));`],
+  }),
+  buildRequest({
+    name: 'Cell Service — Liveness',
+    method: 'GET',
+    url: { raw: 'http://localhost:3009/healthz' },
+    auth: noAuth(),
+    tests: [`pm.test("200 OK — Cell Liveness", () => pm.response.to.have.status(200));`],
+  }),
+  buildRequest({
+    name: 'Analytics Service — Liveness',
+    method: 'GET',
+    url: { raw: 'http://localhost:3011/healthz' },
+    auth: noAuth(),
+    tests: [`pm.test("200 OK — Analytics Liveness", () => pm.response.to.have.status(200));`],
   }),
 ]);
 

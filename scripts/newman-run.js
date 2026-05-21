@@ -165,10 +165,12 @@ async function main() {
       envVar('superAdminId',      sa.uid),
       envVar('adminToken',        admin.token),
       envVar('adminId',           admin.uid),
-      // student2 is the approved student — used as {{studentToken}} across the collection
+      // student2 is the approved student — used as {{studentToken}} AND {{student2Token}}
       envVar('studentToken',      student2.token),
       envVar('student2Token',     student2.token),
       envVar('student2Id',        student2.uid),
+      // userId is an alias for student2Id (used by older requests)
+      envVar('userId',            student2.uid),
       envVar('student1Token',     student1.token),
       envVar('student1Id',        student1.uid),
       envVar('leaderToken',       leader.token),
