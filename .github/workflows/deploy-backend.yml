@@ -42,12 +42,16 @@ jobs:
         if: env.AUTH_CHANGED== 'true' || env.SHARED_CHANGED== 'true'
         run: |
           cd /home/node3/course-portal/backend/CourseManagementSystem
+          docker-compose stop auth-service || true
+          docker-compose rm -f auth-service || true
           docker-compose up -d auth-service
 
       - name: Rebuild the gateway
         if: env.GATEWAY_CHANGED== 'true' || env.SHARED_CHANGED== 'true'
         run: |
           cd /home/node3/course-portal/backend/CourseManagementSystem
+          docker-compose stop gateway || true
+          docker-compose rm -f gateway || true
           docker-compose up -d gateway
 
       - name: show all running containers
