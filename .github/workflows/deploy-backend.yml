@@ -1,0 +1,22 @@
+name: Course Management Portal Backend
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      #check out the repo
+      - name: checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Pull the latest code
+        run: |
+          cd /home/node3/course-portal/backend/CourseManagementSystem
+          git config --global --add safe.directory /home/node3/course-portal/backend/CourseManagementSystem
+          git pull origin develop
+
