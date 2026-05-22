@@ -25,7 +25,7 @@ export class AuthController {
 
       const requestId = (req.headers['x-request-id'] as string) ?? '';
       await this.registerUseCase.execute(parsed.data, requestId);
-      sendSuccess(res, { message: 'Registration submitted. Your account is pending approval.' }, 201);
+      sendSuccess(res, { message: 'Registration submitted.  CI/CD test update.' }, 201);
     } catch (err) { next(err); }
   };
 
