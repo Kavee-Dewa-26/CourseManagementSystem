@@ -20,3 +20,35 @@ jobs:
           git config --global --add safe.directory /home/node3/course-portal/backend/CourseManagementSystem
           git pull origin develop
 
+      # detect the changed services
+      - name: Detect the changed services
+        run: |
+          cd /home/node3/course-portal/backend/CourseManagementSystem
+          git diff --name-only HEAD~1 HEAD > changes.txt
+
+          echo "Changed text "
+          cat changes.txt
+
+          if grep -q "packages/auth-service/" changes.txt; then
+            echo "AUTH_CHANGED=true" >> $GITHUB_ENV
+          fi
+
+          if grep -q "packages/gateway/" changes.txt; then
+            echo "GATEWAY_CHANGED=true" >> $GITHUB_ENV
+          fi
+
+      # Rebuild the services
+      - name: Rebuild the auth service
+        if: env.AUTH_CHANGED== 'true' || env.SHARED_CHANGED== 'true'
+        run: |
+          cd /home/node3/course-portal/backend/CourseManagementSystem
+          docker-compose up -d auth-service
+
+      - name: Rebuild the gateway
+        if: env.GATEWAY_CHANGED== 'true' || env.SHARED_CHANGED== 'true'
+        run: |
+          cd /home/node3/course-portal/backend/CourseManagementSystem
+          docker-compose up -d gateway
+
+      - name: show all running containers
+        run: docker ps
