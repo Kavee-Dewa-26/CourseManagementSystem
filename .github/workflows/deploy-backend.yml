@@ -81,7 +81,7 @@ jobs:
 
 
       - name: Rebuild the course service
-        if: env.COURSE_CHANGED== 'true' || env.shared_changed== 'true'
+        if: env.COURSE_CHANGED== 'true' || env.SHARED_CHANGED== 'true'
         run: |
           cd /home/node3/course-portal/backend/CourseManagementSystem
           docker-compose stop course-service || true
@@ -90,7 +90,7 @@ jobs:
 
 
       - name: Rebuild the storage service
-        if: env_STORAGE_CHANGED== 'true' || env.SHARED_CHANGED== 'true'
+        if: env.STORAGE_CHANGED== 'true' || env.SHARED_CHANGED== 'true'
         run: |
           cd /home/node3/course-portal/backend/CourseManagementSystem
           docker-compose stop storage-service || true
