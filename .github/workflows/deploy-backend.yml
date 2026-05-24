@@ -37,6 +37,23 @@ jobs:
             echo "GATEWAY_CHANGED=true" >> $GITHUB_ENV
           fi
 
+          if grep -q "packages/user-service/" changes.txt; then
+            echo "USER_CHANGED=true" >> $GITHUB_ENV
+          fi
+
+
+          if grep -q "packages/course-service/" changes.txt; then
+            echo "COURSE_CHANGES=true" >> $GITHUB_ENV
+          fi
+
+          if grep -q "packages/storage-service/" changes.txt; then
+            echo  "STORAGE_CHANGED=true" >> $GITHUB_ENV
+          fi
+
+          if grep -q "packages/shared/" changes.txt; then
+            echo "SHARED_CHANGED=true" >> $GITHUB_ENV
+          fi
+
       # Rebuild the services
       - name: Rebuild the auth service
         if: env.AUTH_CHANGED== 'true' || env.SHARED_CHANGED== 'true'
@@ -53,6 +70,33 @@ jobs:
           docker-compose stop gateway || true
           docker-compose rm -f gateway || true
           docker-compose up -d gateway
+
+      - name: Rebuild the user service
+        if: env.USER_CHANGED== 'ture' || env.SHARED_CHANGED== 'true'
+        run: |
+          cd /home/node3/course-portal/backend/CourseManagementSystem
+          docker-compose stop user-service || true
+          docker-compose rm -f user-service || true
+          docker-compose up -d user-service
+
+
+      - name: Rebuild the course service
+        if: env.COURSE_CHANGED== 'true' || env.shared_changed== 'true'
+        run: |
+          cd /home/node3/course-portal/backend/CourseManagementSystem
+          docker-compose stop course-service || true
+          docker-compose rm -f course-service || true
+          docker-compose up -d course-service
+
+
+      - name: Rebuild the storage service
+        if: env_STORAGE_CHANGED== 'true' || env.SHARED_CHANGED== 'true'
+        run: |
+          cd /home/node3/course-portal/backend/CourseManagementSystem
+          docker-compose stop storage-service || true
+          docker-compose rm -f storage-service || true
+          docker-compose up -d storage-service
+
 
       - name: show all running containers
         run: docker ps
