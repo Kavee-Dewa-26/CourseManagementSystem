@@ -29,7 +29,7 @@ export class AuthController {
       if (!parsed.success) return next(fromZodError(parsed.error));
       const requestId = (req.headers['x-request-id'] as string) ?? '';
       const { uid } = await this.registerUseCase.execute(parsed.data, requestId);
-      sendSuccess(res, { uid, message: 'Registration successful. You are now an active member. for CI/CD testing' }, 201);
+      sendSuccess(res, { uid, message: 'Registration successful. You are now an active member. for CI/CD testing..' }, 201);
     } catch (err) { next(err); }
   };
 
