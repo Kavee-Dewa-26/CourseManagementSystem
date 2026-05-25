@@ -54,13 +54,43 @@ jobs:
             echo "SHARED_CHANGED=true" >> $GITHUB_ENV
           fi
 
+          if grep -q "packages/enrollment-service/" changes.txt; then
+            echo "ENTROLLMENT_CHANGED=true" >> $GITHUB_ENV
+          fi
+
+          if grep -q "packages/progress-service/" changes.txt; then
+            echo "PROGRESS_CHANGED=true" >> $GITHUB_ENV
+          fi
+
+          if grep -q "packages/outbox-worker/" changes.txt; then
+            echo "OUTBOX_CHANGED= true" >> $GITHUB_ENV
+          fi
+
+          if grep -q "packages/audit-service/" changes.txt; then
+            echo "AUDIT_CHANGED=true" >> $GITHUB_ENV
+          fi
+
+          if grep -q "pakcages/analytics-service/" changes.txt; then
+            echo "ANALYTICS_CHANGED=true" >> $GITHUB_ENV
+          fi
+
+          if grep -q "packages/notification-service/" changes.txt; then
+            echo "NOTIFICATION_CHANGED=true" >> $GITHUB_ENV
+          fi
+
+          if grep -q "packages/cell-service/" changes.txt; then
+            echo "CELL_CHANGED=true" >> $GITHUB_ENV
+          fi
+
       # Rebuild the services
       - name: Rebuild the auth service
         if: env.AUTH_CHANGED== 'true' || env.SHARED_CHANGED== 'true'
         run: |
           cd /home/node3/course-portal/backend/CourseManagementSystem
           docker-compose stop auth-service || true
-          docker-compose rm -f auth-service || true
+          docker start nysc-grafana
+          docker system prune -af
+          docker stop nysc-grafana
           docker-compose up -d auth-service
 
       - name: Rebuild the gateway
@@ -68,16 +98,22 @@ jobs:
         run: |
           cd /home/node3/course-portal/backend/CourseManagementSystem
           docker-compose stop gateway || true
-          docker-compose rm -f gateway || true
-          docker-compose up -d gateway
+          docker-compose stop auth-service || true
+          docker start nysc-grafana
+          docker system prune -af
+          docker stop nysc-grafana
+          docker-compose up -d gateway auth-service
 
       - name: Rebuild the user service
         if: env.USER_CHANGED== 'ture' || env.SHARED_CHANGED== 'true'
         run: |
           cd /home/node3/course-portal/backend/CourseManagementSystem
           docker-compose stop user-service || true
-          docker-compose rm -f user-service || true
-          docker-compose up -d user-service
+          docker-compose stop auth-service || true
+          docker start nysc-grafana
+          docker system prune -af
+          docker stop nysc-grafana
+          docker-compose up -d user-service auth-service
 
 
       - name: Rebuild the course service
@@ -85,8 +121,11 @@ jobs:
         run: |
           cd /home/node3/course-portal/backend/CourseManagementSystem
           docker-compose stop course-service || true
-          docker-compose rm -f course-service || true
-          docker-compose up -d course-service
+          docker-compose stop auth-service || true
+          docker start nysc-grafana
+          docker system prune -af
+          docker stop nysc-grafana
+          docker-compose up -d course-service auth-service
 
 
       - name: Rebuild the storage service
@@ -97,6 +136,52 @@ jobs:
           docker-compose rm -f storage-service || true
           docker-compose up -d storage-service
 
+      - name: Rebuild the enrollment service
+        if: env.ENROLLMENT_CHANGED== 'true' || env.SHARED_CHANGED== 'true'
+        run: |
+          cd /home/node3/course-portal/backend/CourseManagementSystem
+          docker-compose stop enrollment-service || true
+          docker-compose rm -f enrollment-service || true
+          docker-compose up -d enrollment-service
 
+      - name: Rebuild the progress service
+        if: env.PROGRESS_CHANGED=='true' || env.SHARED_CHANGED== 'true'
+        run: |
+          cd /home/node3/course-portal/backend/CourseManagementSystem
+          docker-compose stop progress-service || true
+          docker-compose rm -f progress-service || true
+          docker-compose up -d progress-service
+
+      - name: Rebuil the outbox worker
+        if: env.OUTBOX_CHANGED== 'true' || env.SHARED_CHANGED== 'true'
+        run: |
+          cd /home/node3/course-portal/backend/CourseManagementSystem
+          docker-compose stop outbox-worker || true
+          docker-compose rm -f outbox-worker|| true
+          docker-compose up -d outbox-worker
+
+      - name: Rebuild the audit  service
+        if: env.AUDIT_CHANGED=='true' || env.SHARED_CHANGED== 'true'
+        run: |
+          cd /home/node3/course-portal/backend/CourseManagementSystem
+          docker-compose stop audit-service || true
+          docker-compose rm -f audit-service || true
+          docker-compose up -d audit-service
+
+      - name: Rebuild the analytics service
+        if: env.ANALYTCS_CHANGED=='true' || env.SHARED_CHANGED== 'true'
+        run: |
+          cd /home/node3/course-portal/backend/CourseManagementSystem
+          docker-compose stop analytics-service || true
+          docker-compose rm -f analytics-service || true
+          docker-compose up -d analytics-service
+
+      - name: Rebuild the notification service
+        if: env.NOTIFICATION_CHANGED=='true' || env.SHARED_CHANGED== 'true'
+        run: |
+          cd /home/node3/course-portal/backend/CourseManagementSystem
+          docker-compose stop notification-service || true
+          docker-compose rm -f notification-service || true
+          docker-compose up -d notification-service
       - name: show all running containers
         run: docker ps
